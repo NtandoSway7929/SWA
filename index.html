@@ -17807,7 +17807,7 @@ section[id] {
         
        
 <!-- MOTION JOURNEY -->
-<section class="sway-journey" id="digital-journey" data-sway-journey aria-labelledby="sway-journey-title">
+<section class="sway-journey" id="digital-journey" data-sway-journey data-stage="0" aria-labelledby="sway-journey-title">
     <div class="sway-journey-inner">
         <div class="sway-journey-copy">
             <span class="sway-journey-eyebrow">A connected digital experience</span>
@@ -17821,146 +17821,317 @@ section[id] {
             </div>
         </div>
 
-        <div class="sway-journey-graphic" aria-label="Illustrative animated view of a connected business journey">
+        <div class="sway-journey-graphic" aria-label="Illustrative animated demonstration of a connected customer journey for Kopano Home Services">
             <div class="sway-journey-graphic-head">
-                <span class="sway-journey-graphic-brand">SWAYPHICS / THE CUSTOMER JOURNEY</span>
-                <span class="sway-journey-illustrative">ILLUSTRATIVE</span>
+                <div class="sway-journey-graphic-brand">
+                    <strong>Kopano Home Services</strong>
+                    <span>Connected customer journey</span>
+                </div>
+                <span class="sway-journey-illustrative">Illustrative demo</span>
             </div>
 
-            <div class="sway-journey-steps" role="group" aria-label="Choose a journey stage">
-                <button class="sway-journey-step is-current" type="button" data-sway-journey-step="0" aria-label="Show step 1: Website foundation" aria-current="step"><span>01</span><span class="sway-journey-step-fill"></span></button>
-                <button class="sway-journey-step" type="button" data-sway-journey-step="1" aria-label="Show step 2: Search presence"><span>02</span><span class="sway-journey-step-fill"></span></button>
-                <button class="sway-journey-step" type="button" data-sway-journey-step="2" aria-label="Show step 3: Discovery"><span>03</span><span class="sway-journey-step-fill"></span></button>
-                <button class="sway-journey-step" type="button" data-sway-journey-step="3" aria-label="Show step 4: Enquiries"><span>04</span><span class="sway-journey-step-fill"></span></button>
-                <button class="sway-journey-step" type="button" data-sway-journey-step="4" aria-label="Show step 5: Continuous improvement"><span>05</span><span class="sway-journey-step-fill"></span></button>
+            <div class="sway-journey-mobile-bar" aria-hidden="true">
+                <span class="sway-journey-mobile-stage" data-sway-journey-mobile-label>Stage 1 of 5 · Website design</span>
+                <div class="sway-journey-mobile-segments">
+                    <button type="button" class="sway-journey-mobile-seg is-current" data-sway-journey-seg="0" tabindex="-1"><span class="sway-journey-step-fill"></span></button>
+                    <button type="button" class="sway-journey-mobile-seg" data-sway-journey-seg="1" tabindex="-1"><span class="sway-journey-step-fill"></span></button>
+                    <button type="button" class="sway-journey-mobile-seg" data-sway-journey-seg="2" tabindex="-1"><span class="sway-journey-step-fill"></span></button>
+                    <button type="button" class="sway-journey-mobile-seg" data-sway-journey-seg="3" tabindex="-1"><span class="sway-journey-step-fill"></span></button>
+                    <button type="button" class="sway-journey-mobile-seg" data-sway-journey-seg="4" tabindex="-1"><span class="sway-journey-step-fill"></span></button>
+                </div>
             </div>
 
-            <div class="sway-journey-window">
-                <article class="sway-journey-panel is-active" data-sway-journey-panel="0" data-step-title="Website foundation" aria-hidden="false">
-                    <div class="sway-journey-panel-head">
-                        <span class="sway-journey-panel-kicker">STEP 01 · WEBSITE BUILT AROUND YOUR CUSTOMER</span>
-                        <strong>01 / 05</strong>
+            <div class="sway-journey-steps" role="tablist" aria-label="Choose a journey stage">
+                <button class="sway-journey-step is-current" id="sway-journey-tab-0" type="button" role="tab" aria-selected="true" aria-controls="sway-journey-panel-0" tabindex="0" data-sway-journey-step="0" aria-current="step">
+                    <span class="sway-journey-step-num">01</span>
+                    <span class="sway-journey-step-label">Website</span>
+                    <span class="sway-journey-step-fill" aria-hidden="true"></span>
+                </button>
+                <button class="sway-journey-step" id="sway-journey-tab-1" type="button" role="tab" aria-selected="false" aria-controls="sway-journey-panel-1" tabindex="-1" data-sway-journey-step="1">
+                    <span class="sway-journey-step-num">02</span>
+                    <span class="sway-journey-step-label">Local</span>
+                    <span class="sway-journey-step-fill" aria-hidden="true"></span>
+                </button>
+                <button class="sway-journey-step" id="sway-journey-tab-2" type="button" role="tab" aria-selected="false" aria-controls="sway-journey-panel-2" tabindex="-1" data-sway-journey-step="2">
+                    <span class="sway-journey-step-num">03</span>
+                    <span class="sway-journey-step-label">Discovery</span>
+                    <span class="sway-journey-step-fill" aria-hidden="true"></span>
+                </button>
+                <button class="sway-journey-step" id="sway-journey-tab-3" type="button" role="tab" aria-selected="false" aria-controls="sway-journey-panel-3" tabindex="-1" data-sway-journey-step="3">
+                    <span class="sway-journey-step-num">04</span>
+                    <span class="sway-journey-step-label">Enquiry</span>
+                    <span class="sway-journey-step-fill" aria-hidden="true"></span>
+                </button>
+                <button class="sway-journey-step" id="sway-journey-tab-4" type="button" role="tab" aria-selected="false" aria-controls="sway-journey-panel-4" tabindex="-1" data-sway-journey-step="4">
+                    <span class="sway-journey-step-num">05</span>
+                    <span class="sway-journey-step-label">Support</span>
+                    <span class="sway-journey-step-fill" aria-hidden="true"></span>
+                </button>
+            </div>
+
+            <div class="sway-journey-stage" aria-hidden="true">
+                <!-- Persistent Layer 1: Kopano Home Services Website Browser -->
+                <div class="sj-layer sj-layer-browser">
+                    <div class="sj-browser-bar">
+                        <span class="sj-browser-dots"><i></i><i></i><i></i></span>
+                        <span class="sj-browser-url">
+                            <svg class="sj-icon-lock" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3">
+                                <rect x="2.5" y="5.5" width="7" height="5" rx="1.2"></rect>
+                                <path d="M4 5.5V4a2 2 0 1 1 4 0v1.5"></path>
+                            </svg>
+                            <span>kopanohomeservices.co.za</span>
+                        </span>
                     </div>
-                    <div class="sway-journey-browser">
-                        <div class="sway-journey-browser-bar">
-                            <span class="sway-journey-browser-controls" aria-hidden="true"><i></i><i></i><i></i></span>
-                            <span class="sway-journey-browser-address">yourbusiness.co.za</span>
-                        </div>
-                        <div class="sway-journey-browser-content">
-                            <div class="sway-journey-browser-copy">
-                                <small>MADE FOR YOUR CUSTOMERS</small>
-                                <h3>Make it easy to choose you.</h3>
-                                <p>Clear services, useful information and a next step customers can find.</p>
-                                <span class="sway-journey-browser-cta">Make an enquiry</span>
+                    <div class="sj-browser-viewport">
+                        <div class="sj-browser-scroll">
+                            <div class="sj-web-nav">
+                                <span class="sj-web-brand">
+                                    <svg class="sj-web-mark" viewBox="0 0 18 18" fill="none">
+                                        <path d="M2.5 8.5L9 3l6.5 5.5" stroke="#002096" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                                        <path d="M4.5 8.2V14.5h9V8.2" stroke="#0152F4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    </svg>
+                                    <span>Kopano Home Services</span>
+                                </span>
+                                <span class="sj-web-links">
+                                    <span>Services</span>
+                                    <span>About</span>
+                                    <span class="sj-web-nav-cta">Enquire</span>
+                                </span>
                             </div>
-                            <div class="sway-journey-browser-art" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-                        </div>
-                    </div>
-                </article>
 
-                <article class="sway-journey-panel" data-sway-journey-panel="1" data-step-title="Search presence" aria-hidden="true">
-                    <div class="sway-journey-panel-head">
-                        <span class="sway-journey-panel-kicker">STEP 02 · MAKE THE RIGHT INFORMATION EASIER TO FIND</span>
-                        <strong>02 / 05</strong>
-                    </div>
-                    <div class="sway-journey-searchbar"><b aria-hidden="true">⌕</b><span>your service + your area</span></div>
-                    <div class="sway-journey-results">
-                        <div class="sway-journey-result is-featured">
-                            <small>YOUR WEBSITE</small>
-                            <strong>Services explained clearly</strong>
-                            <p>Relevant service information with a direct route to contact your business.</p>
-                        </div>
-                        <div class="sway-journey-result">
-                            <small>GOOGLE BUSINESS PROFILE</small>
-                            <strong>Accurate local business details</strong>
-                            <p>Consistent contact, location and service information for local discovery.</p>
-                        </div>
-                    </div>
-                </article>
+                            <div class="sj-web-hero">
+                                <div class="sj-web-hero-copy">
+                                    <span class="sj-web-kicker">HOME CARE &amp; MAINTENANCE</span>
+                                    <strong class="sj-web-h1">Reliable home care, clearly booked.</strong>
+                                    <p class="sj-web-sub">Plumbing, electrical and general repairs with a straightforward route to get help.</p>
+                                    <span class="sj-web-cta">Request a quote</span>
+                                </div>
+                                <div class="sj-web-hero-visual">
+                                    <svg viewBox="0 0 156 118" fill="none">
+                                        <rect x="1" y="1" width="154" height="116" rx="9" fill="#F4F8FF" stroke="#DCE8FB"></rect>
+                                        <path d="M22 86V50l28-20 28 20v36" stroke="#002096" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                        <rect x="40" y="62" width="20" height="24" rx="2" fill="#DCEBFF" stroke="#0152F4" stroke-width="1.5"></rect>
+                                        <rect x="90" y="34" width="46" height="22" rx="5" fill="#FFFFFF" stroke="#D3E2FA"></rect>
+                                        <line x1="98" y1="42" x2="124" y2="42" stroke="#0152F4" stroke-width="2.2" stroke-linecap="round"></line>
+                                        <line x1="98" y1="49" x2="118" y2="49" stroke="#77C1FC" stroke-width="2" stroke-linecap="round"></line>
+                                        <rect x="90" y="64" width="46" height="22" rx="5" fill="#FFFFFF" stroke="#D3E2FA"></rect>
+                                        <line x1="98" y1="72" x2="126" y2="72" stroke="#002096" stroke-width="2.2" stroke-linecap="round"></line>
+                                        <line x1="98" y1="79" x2="114" y2="79" stroke="#9EC8FB" stroke-width="2" stroke-linecap="round"></line>
+                                        <line x1="16" y1="96" x2="140" y2="96" stroke="#D3E2FA" stroke-width="1.4" stroke-linecap="round"></line>
+                                    </svg>
+                                </div>
+                            </div>
 
-                <article class="sway-journey-panel" data-sway-journey-panel="2" data-step-title="Discovery touchpoints" aria-hidden="true">
-                    <div class="sway-journey-panel-head">
-                        <span class="sway-journey-panel-kicker">STEP 03 · CONNECT THE DISCOVERY TOUCHPOINTS</span>
-                        <strong>03 / 05</strong>
-                    </div>
-                    <div class="sway-journey-channel-grid">
-                        <div class="sway-journey-channel">
-                            <span class="sway-journey-channel-index">01</span>
-                            <div><small>WEBSITE</small><strong>Service pages</strong></div>
-                            <p>Help visitors understand what you offer and what to do next.</p>
-                        </div>
-                        <div class="sway-journey-channel">
-                            <span class="sway-journey-channel-index">02</span>
-                            <div><small>LOCAL</small><strong>Business profile</strong></div>
-                            <p>Keep essential business details clear and consistent.</p>
-                        </div>
-                        <div class="sway-journey-channel">
-                            <span class="sway-journey-channel-index">03</span>
-                            <div><small>CONTACT</small><strong>Direct pathways</strong></div>
-                            <p>Make it straightforward to enquire, call or request a booking.</p>
-                        </div>
-                    </div>
-                </article>
+                            <div class="sj-web-services">
+                                <div class="sj-web-service-card">
+                                    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M5 13.5l8.5-8.5M10.5 4.5l3 3M4 11l3 3" stroke-linecap="round"></path>
+                                    </svg>
+                                    <strong>Plumbing</strong>
+                                    <span>Leaks &amp; fittings</span>
+                                </div>
+                                <div class="sj-web-service-card">
+                                    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M10 2.5L4.5 10h4.5l-1 5.5L13.5 8H9l1-5.5z" stroke-linejoin="round"></path>
+                                    </svg>
+                                    <strong>Electrical</strong>
+                                    <span>Faults &amp; safety</span>
+                                </div>
+                                <div class="sj-web-service-card">
+                                    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="3" y="4" width="12" height="10" rx="2"></rect>
+                                        <path d="M6.5 9h5M6.5 11.5h3" stroke-linecap="round"></path>
+                                    </svg>
+                                    <strong>Maintenance</strong>
+                                    <span>Home upkeep</span>
+                                </div>
+                            </div>
 
-                <article class="sway-journey-panel" data-sway-journey-panel="3" data-step-title="Enquiry pathways" aria-hidden="true">
-                    <div class="sway-journey-panel-head">
-                        <span class="sway-journey-panel-kicker">STEP 04 · GIVE INTEREST A CLEAR NEXT STEP</span>
-                        <strong>04 / 05</strong>
-                    </div>
-                    <div class="sway-journey-feed">
-                        <div class="sway-journey-feed-row">
-                            <span class="sway-journey-feed-icon">WEB</span>
-                            <span class="sway-journey-feed-copy"><strong>Website enquiry</strong><small>Service question · Request details</small></span>
-                            <span class="sway-journey-feed-status">Enquiry route</span>
-                        </div>
-                        <div class="sway-journey-feed-row">
-                            <span class="sway-journey-feed-icon">CHAT</span>
-                            <span class="sway-journey-feed-copy"><strong>WhatsApp conversation</strong><small>Availability · Follow-up</small></span>
-                            <span class="sway-journey-feed-status">Direct contact</span>
-                        </div>
-                        <div class="sway-journey-feed-row">
-                            <span class="sway-journey-feed-icon">BOOK</span>
-                            <span class="sway-journey-feed-copy"><strong>Booking request</strong><small>Service selected · Appointment details</small></span>
-                            <span class="sway-journey-feed-status">Booking flow</span>
+                            <div class="sj-web-action-strip">
+                                <span>Clear pricing scope and fast enquiry route</span>
+                                <span class="sj-web-strip-btn">Request a quote</span>
+                            </div>
                         </div>
                     </div>
-                </article>
+                </div>
 
-                <article class="sway-journey-panel" data-sway-journey-panel="4" data-step-title="Continuous improvement" aria-hidden="true">
-                    <div class="sway-journey-panel-head">
-                        <span class="sway-journey-panel-kicker">STEP 05 · REVIEW, REFINE AND IMPROVE</span>
-                        <strong>05 / 05</strong>
-                    </div>
-                    <div class="sway-journey-growth">
-                        <small>A CONTINUOUS IMPROVEMENT CYCLE</small>
-                        <svg class="sway-journey-growth-chart" viewBox="0 0 420 160" role="img" aria-label="Illustrative rising path representing ongoing review and improvement">
-                            <defs>
-                                <linearGradient id="swayJourneyAreaFill" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#77c1fc" stop-opacity=".42"></stop>
-                                    <stop offset="100%" stop-color="#77c1fc" stop-opacity="0"></stop>
-                                </linearGradient>
-                            </defs>
-                            <path class="sway-journey-growth-area" d="M10 132 C52 120 73 135 112 104 S177 111 211 79 S278 87 309 56 S372 57 408 20 L408 150 L10 150 Z"></path>
-                            <path class="sway-journey-growth-line" pathLength="100" d="M10 132 C52 120 73 135 112 104 S177 111 211 79 S278 87 309 56 S372 57 408 20"></path>
+                <!-- Persistent Layer 2: Local Search + Business Profile Card -->
+                <div class="sj-layer sj-layer-local">
+                    <div class="sj-search-bar">
+                        <svg class="sj-icon-search" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7">
+                            <circle cx="7" cy="7" r="4.5"></circle>
+                            <path d="M10.5 10.5L14 14" stroke-linecap="round"></path>
                         </svg>
-                        <div class="sway-journey-growth-steps">
-                            <div><strong>Review</strong><small>Understand the experience</small></div>
-                            <div><strong>Refine</strong><small>Improve what needs work</small></div>
-                            <div><strong>Repeat</strong><small>Keep the journey useful</small></div>
+                        <span class="sj-search-query"><span>home maintenance near me</span></span>
+                    </div>
+                    <div class="sj-profile-card">
+                        <div class="sj-profile-map">
+                            <svg viewBox="0 0 260 66" fill="none" preserveAspectRatio="xMidYMid slice">
+                                <rect width="260" height="66" fill="#EFF5FF"></rect>
+                                <path d="M-10 20L76 26L146 14L270 30" stroke="#FFFFFF" stroke-width="6"></path>
+                                <path d="M40 -6L62 72" stroke="#FFFFFF" stroke-width="5"></path>
+                                <path d="M162 -6L142 72" stroke="#FFFFFF" stroke-width="5"></path>
+                                <path d="M10 54L120 44L255 58" stroke="#DCEBFF" stroke-width="3"></path>
+                                <rect x="180" y="34" width="52" height="22" rx="4" fill="#DCEBFF"></rect>
+                                <path d="M126 16c-5.5 0-10 4.4-10 9.8 0 6.8 10 18.2 10 18.2s10-11.4 10-18.2c0-5.4-4.5-9.8-10-9.8z" fill="#0152F4"></path>
+                                <circle cx="126" cy="25.5" r="3.4" fill="#FFFFFF"></circle>
+                            </svg>
+                        </div>
+                        <div class="sj-profile-body">
+                            <span class="sj-profile-kicker">GOOGLE BUSINESS PROFILE</span>
+                            <strong>Kopano Home Services</strong>
+                            <p>Home maintenance · Local service area · Open weekdays</p>
+                            <div class="sj-profile-actions">
+                                <span class="sj-profile-btn sj-profile-btn-primary">Website</span>
+                                <span class="sj-profile-btn">Call</span>
+                                <span class="sj-profile-btn">Directions</span>
+                            </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Persistent Layer 3: SVG Discovery Path Connector -->
+                <svg class="sj-layer-connector sj-connector-desktop" viewBox="0 0 600 380" fill="none" preserveAspectRatio="none">
+                    <path class="sj-connector-path" pathLength="100" d="M98 286 C132 286 144 246 174 246"></path>
+                    <path class="sj-connector-arrow" d="M168 240 L176 246 L168 252" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                <svg class="sj-layer-connector sj-connector-mobile" viewBox="0 0 320 368" fill="none" preserveAspectRatio="none">
+                    <path class="sj-connector-path" pathLength="100" d="M68 148 L68 168"></path>
+                    <path class="sj-connector-arrow" d="M63 163 L68 169 L73 163" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+
+                <!-- Persistent Layer 4: Mobile Enquiry Phone -->
+                <div class="sj-layer sj-layer-phone">
+                    <div class="sj-phone-notch"></div>
+                    <div class="sj-phone-screen">
+                        <div class="sj-phone-head">
+                            <span>KOPANO HOME SERVICES</span>
+                            <strong>Request a quote</strong>
+                        </div>
+                        <div class="sj-phone-field sj-field-1">
+                            <small>Name</small>
+                            <span>Thabo M. (Example)</span>
+                        </div>
+                        <div class="sj-phone-field sj-field-2">
+                            <small>Service needed</small>
+                            <span>Plumbing &amp; leaks</span>
+                        </div>
+                        <div class="sj-phone-field sj-field-3">
+                            <small>Preferred day</small>
+                            <span>Thursday morning</span>
+                        </div>
+                        <div class="sj-phone-submit">
+                            <span class="sj-submit-default">Send enquiry</span>
+                            <span class="sj-submit-sent">Enquiry sent</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Persistent Layer 5: Business Client Workspace / Inbox -->
+                <div class="sj-layer sj-layer-inbox">
+                    <div class="sj-inbox-head">
+                        <strong>Client Workspace</strong>
+                        <span>Enquiry routes</span>
+                    </div>
+                    <div class="sj-inbox-featured">
+                        <div class="sj-inbox-featured-top">
+                            <span class="sj-inbox-tag">Website form</span>
+                            <span class="sj-inbox-status-wrap">
+                                <span class="sj-status-pill sj-status-new">New</span>
+                                <span class="sj-status-pill sj-status-replied">Replied</span>
+                                <span class="sj-status-pill sj-status-booked">Booked</span>
+                            </span>
+                        </div>
+                        <strong>Plumbing &amp; leaks enquiry</strong>
+                        <p>Thursday morning · Callback requested</p>
+                    </div>
+                    <div class="sj-inbox-row">
+                        <span class="sj-inbox-channel">WhatsApp</span>
+                        <span class="sj-inbox-summary">Availability question</span>
+                        <span class="sj-inbox-state">Direct reply</span>
+                    </div>
+                    <div class="sj-inbox-row">
+                        <span class="sj-inbox-channel">Booking</span>
+                        <span class="sj-inbox-summary">Electrical inspection</span>
+                        <span class="sj-inbox-state">Scheduled</span>
+                    </div>
+                </div>
+
+                <!-- Persistent Layer 6: Ongoing Care & Support Checklist -->
+                <div class="sj-layer sj-layer-support">
+                    <div class="sj-support-head">
+                        <span>ONGOING DIGITAL SUPPORT</span>
+                        <strong>Every touchpoint kept current</strong>
+                    </div>
+                    <ul class="sj-support-list">
+                        <li class="sj-support-item sj-check-1">
+                            <span class="sj-check-box">
+                                <svg viewBox="0 0 14 14" fill="none">
+                                    <path pathLength="100" d="M3 7.3L5.8 10L11 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
+                            </span>
+                            <span>Website services and copy updated</span>
+                        </li>
+                        <li class="sj-support-item sj-check-2">
+                            <span class="sj-check-box">
+                                <svg viewBox="0 0 14 14" fill="none">
+                                    <path pathLength="100" d="M3 7.3L5.8 10L11 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
+                            </span>
+                            <span>Business profile details kept consistent</span>
+                        </li>
+                        <li class="sj-support-item sj-check-3">
+                            <span class="sj-check-box">
+                                <svg viewBox="0 0 14 14" fill="none">
+                                    <path pathLength="100" d="M3 7.3L5.8 10L11 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
+                            </span>
+                            <span>Enquiry and booking routes tested</span>
+                        </li>
+                        <li class="sj-support-item sj-check-4">
+                            <span class="sj-check-box">
+                                <svg viewBox="0 0 14 14" fill="none">
+                                    <path pathLength="100" d="M3 7.3L5.8 10L11 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
+                            </span>
+                            <span>Regular review and refinement</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="sway-journey-captions">
+                <article class="sway-journey-panel is-active" id="sway-journey-panel-0" role="tabpanel" aria-labelledby="sway-journey-tab-0" data-sway-journey-panel="0" data-step-title="Website design" aria-hidden="false">
+                    <span class="sway-journey-panel-kicker">Stage 01 · Website design</span>
+                    <p>A clear, structured website presents Kopano Home Services cleanly and gives visitors an obvious next step.</p>
+                </article>
+                <article class="sway-journey-panel" id="sway-journey-panel-1" role="tabpanel" aria-labelledby="sway-journey-tab-1" data-sway-journey-panel="1" data-step-title="Local visibility" aria-hidden="true">
+                    <span class="sway-journey-panel-kicker">Stage 02 · Local visibility</span>
+                    <p>When someone searches locally, a consistent Google Business Profile surfaces accurate details and direct actions.</p>
+                </article>
+                <article class="sway-journey-panel" id="sway-journey-panel-2" role="tabpanel" aria-labelledby="sway-journey-tab-2" data-sway-journey-panel="2" data-step-title="Discovery" aria-hidden="true">
+                    <span class="sway-journey-panel-kicker">Stage 03 · Discovery</span>
+                    <p>One tap on the profile moves the visitor straight into the matching service section and quote button.</p>
+                </article>
+                <article class="sway-journey-panel" id="sway-journey-panel-3" role="tabpanel" aria-labelledby="sway-journey-tab-3" data-sway-journey-panel="3" data-step-title="Enquiry workflow" aria-hidden="true">
+                    <span class="sway-journey-panel-kicker">Stage 04 · Enquiry workflow</span>
+                    <p>A short mobile enquiry lands straight inside the business workspace alongside WhatsApp and booking requests.</p>
+                </article>
+                <article class="sway-journey-panel" id="sway-journey-panel-4" role="tabpanel" aria-labelledby="sway-journey-tab-4" data-sway-journey-panel="4" data-step-title="Ongoing support" aria-hidden="true">
+                    <span class="sway-journey-panel-kicker">Stage 05 · Ongoing support</span>
+                    <p>Website, profile and enquiry routes stay aligned through routine checks and refinements as the business grows.</p>
                 </article>
             </div>
 
             <div class="sway-journey-controls">
-                <span class="sway-journey-status" data-sway-journey-status role="status" aria-live="off">01 / 05 · Website foundation</span>
+                <span class="sway-journey-status" data-sway-journey-status role="status" aria-live="off">01 / 05 · Website design</span>
                 <div class="sway-journey-control-buttons">
                     <button type="button" data-sway-journey-previous aria-label="Previous journey stage">←</button>
                     <button type="button" data-sway-journey-toggle aria-pressed="false" aria-label="Pause the animated journey">Pause</button>
                     <button type="button" data-sway-journey-next aria-label="Next journey stage">→</button>
                 </div>
             </div>
-            <p class="sway-journey-note">Illustrative workflow · no live client, ranking or campaign performance data is shown.</p>
+            <p class="sway-journey-note">Illustrative workflow using fictional sample business Kopano Home Services. No real contact details, rankings or performance data are shown.</p>
         </div>
     </div>
 </section>
