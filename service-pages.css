@@ -477,8 +477,7 @@ body.sp-page {
 .sp-related a {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 14px;
+    justify-content: flex-start;
     padding: 18px 19px;
     border: 1px solid rgba(0,32,150,.1);
     border-radius: 15px;
@@ -488,7 +487,6 @@ body.sp-page {
     transition: border-color .2s ease, transform .2s ease;
 }
 .sp-related a:hover { transform: translateY(-2px); border-color: rgba(1,82,244,.35); }
-.sp-related span { color: var(--sp-accent); font-size: 1.1rem; }
 
 .sp-bottom-cta { padding: 85px 0; background: linear-gradient(135deg,#EAF3FF 0%,#F9FBFF 55%,#DDEBFF 100%); text-align: center; }
 .sp-bottom-cta h2 { max-width: 760px; margin: 0 auto 16px; color: var(--sp-navy); font-family: var(--sp-heading); font-size: clamp(2.3rem,4.7vw,4rem); font-weight: 800; letter-spacing: -.065em; line-height: 1.02; }
@@ -1488,10 +1486,6 @@ body.sp-page {
     border-color: rgba(1,82,244,.32);
 }
 
-.sp-related span {
-    color: #0152F4;
-}
-
 .sp-footer {
     background: #00145F;
 }
@@ -1663,7 +1657,7 @@ body.sp-page {
 }
 
 /* Filled blue CTAs always use a high-contrast white label,
-   including nested arrow spans and interactive states. */
+   including nested CTA elements and interactive states. */
 .sp-button:not(.sp-button--outline):not(.sp-button--light),
 .sp-button:not(.sp-button--outline):not(.sp-button--light):link,
 .sp-button:not(.sp-button--outline):not(.sp-button--light):visited,
