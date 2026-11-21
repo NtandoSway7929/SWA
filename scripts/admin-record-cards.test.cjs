@@ -148,7 +148,7 @@ assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHan
 
 assert.ok(workspace.includes("Archive this invoice first. Sent, paid and overdue invoice records should be retained"),
     "issued, paid and overdue invoices must be protected from permanent deletion");
-const invoiceActionStart = workspace.indexOf('workspace.querySelectorAll("[data-invoice-action]")');
+const invoiceActionStart = workspace.indexOf('.querySelectorAll("[data-invoice-action]")');
 const invoiceDeleteStart = workspace.indexOf('if (action === "delete")', invoiceActionStart);
 const invoiceDeleteEnd = workspace.indexOf("await logActivity(", invoiceDeleteStart);
 assert.ok(invoiceActionStart >= 0 && invoiceDeleteStart > invoiceActionStart && invoiceDeleteEnd > invoiceDeleteStart,
