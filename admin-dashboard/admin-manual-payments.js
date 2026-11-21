@@ -18,8 +18,17 @@
     return new Intl.NumberFormat("en-ZA",{style:"currency",currency:currency || "ZAR"}).format(Number(value || 0));
   }
   function today() {
-    var d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+    var parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Johannesburg",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date());
+    var values = {};
+    parts.forEach(function (part) {
+      if (part.type !== "literal") values[part.type] = part.value;
+    });
+    return values.year + "-" + values.month + "-" + values.day;
   }
   function token() {
     try { return localStorage.getItem(ACCESS_KEY) || ""; } catch (_) { return ""; }
