@@ -24884,6 +24884,8 @@ function simpleBars(items, color) {
             return;
         }
 
+        let cleanupWarning = "";
+
         if (type === "clients") {
             const purgeResult = await api(
                 "/rest/v1/rpc/admin_delete_client_financial_bundle",
@@ -24899,6 +24901,28 @@ function simpleBars(items, color) {
                 throw new Error(
                     "The client and linked financial records were not deleted. Supabase did not confirm completion."
                 );
+            }
+
+            const proofPaths = Array.isArray(purgeResult.private_proof_storage_paths)
+                ? purgeResult.private_proof_storage_paths.filter(Boolean)
+                : [];
+
+            if (proofPaths.length) {
+                try {
+                    await api(
+                        "/storage/v1/object/swayphics-payment-proofs",
+                        {
+                            method: "DELETE",
+                            body: JSON.stringify({
+                                prefixes: proofPaths
+                            })
+                        }
+                    );
+                } catch (storageError) {
+                    cleanupWarning =
+                        "The client and financial database records were deleted, but one or more private bank-transfer proof files could not be removed from storage. Please retry storage cleanup or contact support.";
+                    console.error("Client payment-proof storage cleanup failed.", storageError);
+                }
             }
         } else {
             const deletedRecords = await api(
@@ -24933,6 +24957,10 @@ function simpleBars(items, color) {
         await refreshData();
         renderShell();
         renderView();
+
+        if (cleanupWarning) {
+            swayAlert(cleanupWarning);
+        }
     }
 
     async function completeTask(id) {
