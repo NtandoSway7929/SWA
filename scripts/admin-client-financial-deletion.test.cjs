@@ -63,8 +63,8 @@ for (const contract of [
   assert.ok(migration.toLowerCase().includes(contract.toLowerCase()),
     "migration must include security/transaction contract: " + contract);
 }
-assert.ok(migration.includes("grant select, update, delete on table\\n    public.client_deletion_storage_cleanup\\n    to service_role;"), "only the service role should receive cleanup-queue privileges");
-assert.ok(migration.includes("grant execute on function public.admin_delete_client_with_financial_records(uuid)\\n    to authenticated;"), "only authenticated users should receive RPC execution permission");
+assert.ok(migration.includes("grant select, update, delete on table public.client_deletion_storage_cleanup") && migration.includes("to service_role;"), "only the service role should receive cleanup-queue privileges");
+assert.ok(migration.includes("grant execute on function public.admin_delete_client_with_financial_records(uuid)") && migration.includes("to authenticated;"), "only authenticated users should receive RPC execution permission");
 
 const deletionOrder = [
   "delete from public.bank_transfer_submissions",
