@@ -153,6 +153,8 @@ assert.match(deletionMigration, /payment_reconciliation_actions/);
 assert.match(deletionMigration, /payment_reconciliation_evidence/);
 assert.match(deletionMigration, /payment_webhook_events/);
 assert.match(deletionMigration, /bank_transfer_submissions/);
+assert.match(deletionMigration, /Swayphics owners can delete payment proof files/);
+assert.match(deletionMigration, /bucket_id = 'swayphics-payment-proofs'/);
 assert.match(deletionMigration, /invoice_items/);
 assert.match(deletionMigration, /status in \('created', 'pending', 'requires_review'\)/);
 assert.match(deletionMigration, /grant execute on function public\.delete_swayphics_client\(uuid\) to authenticated/);
