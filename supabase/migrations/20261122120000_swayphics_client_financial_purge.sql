@@ -75,7 +75,7 @@ begin
 end;
 $function$;
 
-create or replace function public.delete_swayphics_client(p_client_id uuid)
+create or replace function innerme_private.delete_swayphics_client(p_client_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -287,7 +287,23 @@ begin
 end;
 $function$;
 
+-- Keep the privileged implementation outside PostgREST's exposed public schema.
+revoke all on function innerme_private.delete_swayphics_client(uuid) from public, anon;
+grant usage on schema innerme_private to authenticated;
+grant execute on function innerme_private.delete_swayphics_client(uuid) to authenticated;
+
+-- Public API wrapper runs as the caller; the private function performs its own owner check.
+create or replace function public.delete_swayphics_client(p_client_id uuid)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $function$
+    select innerme_private.delete_swayphics_client(p_client_id);
+$function$;
+
 revoke all on function public.delete_swayphics_client(uuid) from public, anon;
 grant execute on function public.delete_swayphics_client(uuid) to authenticated;
+revoke all on function public.prevent_yoco_reconciliation_history_mutation() from public, anon, authenticated;
 
 commit;
