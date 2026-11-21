@@ -6,6 +6,7 @@ on:
       - feature/yoco-client-payments
     paths:
       - "supabase/**"
+      - "supabase/tests/202611220002_client_financial_deletion.test.sql"
       - "client-portal/index.html"
       - "admin-dashboard/bank-transfer-review.js"
       - "admin-dashboard/yoco-invoice-settings.js"
@@ -23,6 +24,7 @@ on:
       - feature/yoco-client-payments
     paths:
       - "supabase/**"
+      - "supabase/tests/202611220002_client_financial_deletion.test.sql"
       - "client-portal/index.html"
       - "admin-dashboard/bank-transfer-review.js"
       - "admin-dashboard/yoco-reconciliation.js"
