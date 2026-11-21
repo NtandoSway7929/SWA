@@ -11,6 +11,8 @@ on:
       - "admin-dashboard/yoco-invoice-settings.js"
       - "admin-dashboard/yoco-reconciliation.js"
       - "admin-dashboard/index.html"
+      - "admin-dashboard/admin-workspace.js"
+      - "scripts/admin-client-financial-deletion.test.cjs"
       - "scripts/yoco-invoice-settings.test.cjs"
       - "scripts/yoco-reconciliation-ui.test.cjs"
       - "scripts/bank-transfer-review.test.cjs"
@@ -26,6 +28,8 @@ on:
       - "admin-dashboard/yoco-reconciliation.js"
       - "admin-dashboard/yoco-invoice-settings.js"
       - "admin-dashboard/index.html"
+      - "admin-dashboard/admin-workspace.js"
+      - "scripts/admin-client-financial-deletion.test.cjs"
       - "scripts/yoco-invoice-settings.test.cjs"
       - "scripts/yoco-reconciliation-ui.test.cjs"
       - "scripts/bank-transfer-review.test.cjs"
@@ -78,7 +82,8 @@ jobs:
             supabase/functions/yoco-payment-webhook/index.ts \
             supabase/functions/get-payment-status/index.ts \
             supabase/functions/reconcile-payment/index.ts \
-            supabase/functions/bank-transfer/index.ts
+            supabase/functions/bank-transfer/index.ts \
+            supabase/functions/admin-delete-client/index.ts
 
       - name: Run Yoco Deno tests
         env:
@@ -176,9 +181,10 @@ jobs:
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
-            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \) \
+            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \
+            -o -name '202611220001_client_financial_deletion.sql' \) \
             | sort)
-          test "${#migrations[@]}" -eq 15
+          test "${#migrations[@]}" -eq 16
           for migration in "${migrations[@]}"; do
             echo "Applying $migration"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
@@ -259,7 +265,8 @@ jobs:
             supabase/tests/yoco-source/202611110005_yoco_ledger_invariants.test.sql \
             supabase/tests/yoco-source/202611110010_yoco_admin_invoice_settings.test.sql \
             supabase/tests/yoco-source/202611110011_yoco_reconciliation_admin_workflow.test.sql \
-            supabase/tests/yoco-source/202611120002_bank_transfer_submissions.test.sql
+            supabase/tests/yoco-source/202611120002_bank_transfer_submissions.test.sql \
+            supabase/tests/yoco-source/202611220002_client_financial_deletion.test.sql
 
       - name: Run Yoco webhook lease transaction scenarios
         shell: bash
