@@ -148,8 +148,17 @@ assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHan
 
 assert.ok(workspace.includes("Archive this invoice first. Sent, paid and overdue invoice records should be retained"),
     "issued, paid and overdue invoices must be protected from permanent deletion");
-assert.ok(workspace.includes("/rest/v1/invoice_items?invoice_id=eq."),
-    "invoice deletion must remove invoice items before the invoice record");
+const invoiceActionStart = workspace.indexOf('workspace.querySelectorAll("[data-invoice-action]")');
+const invoiceDeleteStart = workspace.indexOf('if (action === "delete")', invoiceActionStart);
+const invoiceDeleteEnd = workspace.indexOf("await logActivity(", invoiceDeleteStart);
+assert.ok(invoiceActionStart >= 0 && invoiceDeleteStart > invoiceActionStart && invoiceDeleteEnd > invoiceDeleteStart,
+    "invoice delete action handler must exist");
+const invoiceDeleteHandler = workspace.slice(invoiceDeleteStart, invoiceDeleteEnd);
+assert.match(invoiceDeleteHandler, /state\.payments\.filter/);
+assert.match(invoiceDeleteHandler, /invoicePayments\.length/);
+assert.match(invoiceDeleteHandler, /\/rest\/v1\/invoices\?id=eq\./);
+assert.doesNotMatch(invoiceDeleteHandler, /\/rest\/v1\/invoice_items\?invoice_id=eq\./,
+    "invoice items must not be deleted before the invoice; the database cascade runs only after successful invoice deletion");
 assert.ok(workspace.includes("Permanently delete this archived invoice?"),
     "archived invoices must have an explicit permanent-delete confirmation");
 
