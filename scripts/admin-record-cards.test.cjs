@@ -132,6 +132,26 @@ for (const view of ["tasks", "followups", "communications"]) {
     assert.ok(renderer.includes("data-admin-table-no-results=\"" + view + "\""),
         view + " must retain its filtered-empty state");
 }
+const clientDeleteHandler = section(
+    workspace, "    async function removeRecord(type, id)", "record deletion handler"
+);
+assert.match(clientDeleteHandler, /state\.invoices\.filter/);
+assert.match(clientDeleteHandler, /state\.payments\.filter/);
+assert.match(clientDeleteHandler, /clientInvoices\.length/);
+assert.match(clientDeleteHandler, /clientPayments\.length/);
+assert.match(clientDeleteHandler, /archive the client/i);
+assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\)/,
+    "client deletion must not cascade-delete invoice history");
+assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHandler.indexOf("swayConfirm(confirmMessage)"),
+    "financial-history checks must run before asking to confirm client deletion");
+
+assert.ok(workspace.includes("Archive this invoice first. Sent, paid and overdue invoice records should be retained"),
+    "issued, paid and overdue invoices must be protected from permanent deletion");
+assert.ok(workspace.includes("/rest/v1/invoice_items?invoice_id=eq."),
+    "invoice deletion must remove invoice items before the invoice record");
+assert.ok(workspace.includes("Permanently delete this archived invoice?"),
+    "archived invoices must have an explicit permanent-delete confirmation");
+
 const invoiceRenderer = section(
     workspace, "    function renderInvoices(", "invoice card renderer"
 );
