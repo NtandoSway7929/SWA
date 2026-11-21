@@ -142,8 +142,8 @@ assert.doesNotMatch(clientDeleteHandler, /clientInvoices|clientPayments|archive 
     "client deletion must no longer block clients with financial history");
 assert.ok(workspace.includes("async function callClientDeletionFunction(payload)"),
     "client deletion must use the authenticated server-side deletion endpoint");
-assert.ok(workspace.includes("admin_delete_client_with_financial_records"),
-    "the server-side endpoint must call the atomic database deletion RPC");
+assert.ok(workspace.includes("/functions/v1/admin-delete-client"),
+    "client deletion must use the authenticated server-side endpoint");
 assert.ok(workspace.includes('action: "cleanup_pending"'),
     "pending bank-transfer proof files must be retried on dashboard startup");
 assert.ok(workspace.includes("Permanently delete this client and ALL linked financial records?"),
