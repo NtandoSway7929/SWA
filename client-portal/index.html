@@ -606,6 +606,7 @@ body{
 }
 
 </style>
+    <link rel="stylesheet" href="/swayphics-motion.css?v=20261121-motion-system-1">
 </head>
 <body>
 <div id="app" class="loading">
@@ -1877,5 +1878,6 @@ load();
 <script>
 (function(){if(!("MutationObserver" in window))return;const busyPattern=/^(loading|syncing|uploading|saving|sending|processing|refreshing|deleting|generating|enabling|submitting|creating)(?:\s|\.\.\.|…|$)/i;function updateButton(button){if(!(button instanceof HTMLButtonElement))return;const text=String(button.textContent||"").trim();const isBusy=busyPattern.test(text)&&/(?:\.\.\.|…)$/.test(text);button.classList.toggle("sway-loading-button",isBusy)}document.querySelectorAll("button").forEach(updateButton);new MutationObserver(function(mutations){mutations.forEach(function(mutation){const button=mutation.target instanceof Element?mutation.target.closest("button"):mutation.target.parentElement?.closest("button");if(button)updateButton(button)})}).observe(document.body,{subtree:true,childList:true,characterData:true})})();
 </script>
+    <script src="/swayphics-motion.js?v=20261121-motion-system-1" defer></script>
 </body>
 </html>
