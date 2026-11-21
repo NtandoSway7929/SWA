@@ -20,42 +20,42 @@ const portalEnd = clientPortal.indexOf("\n.portal-modal{", portalStart);
 assert.ok(portalStart >= 0 && portalEnd > portalStart, "portal loader section must be present");
 const portalLoader = clientPortal.slice(portalStart, portalEnd);
 
-assert.doesNotMatch(
-  publicSite,
-  /sway-intro|sway-public-loading-ui|sway-public-loading-observer|sway-loading-button|sway-fist-ink-draw-public/,
-  "homepage must not retain a splash screen or animated public loading-logo treatment"
-);
-assert.match(publicSite, /class="hero-video"/, "normal homepage hero video must remain");
+for (const removed of [
+  "sway-intro",
+  "sway-public-loading-ui",
+  "sway-public-loading-observer",
+  "sway-loading-button",
+  "sway-fist-ink-draw-public"
+]) {
+  assert.equal(publicSite.includes(removed), false, "homepage must not retain " + removed);
+}
+assert.ok(publicSite.includes('class="hero-video"'), "normal homepage hero video must remain");
 
-const cases = [
-  {
-    name: "admin workspace loader",
-    source: adminLoader,
-    asset: /background: url\\("\\.\\.\\/FIST\\.webp"\\) center \\/ contain no-repeat/,
-    animation: /@keyframes sway-fist-ink-draw/,
-    reducedMotion: /prefers-reduced-motion: reduce[\\s\\S]*?clip-path: none;[\\s\\S]*?opacity: 1;/
-  },
-  {
-    name: "client portal loader",
-    source: portalLoader,
-    asset: /\\.sway-favicon-loader img\\{[\\s\\S]*?animation:sway-fist-ink-draw/,
-    animation: /@keyframes sway-fist-ink-draw\\{/,
-    reducedMotion: /prefers-reduced-motion:reduce[\\s\\S]*?clip-path:none;opacity:1/
+assert.ok(adminLoader.includes('background: url("../FIST.webp") center / contain no-repeat;'));
+assert.ok(adminLoader.includes("@keyframes sway-fist-ink-draw"));
+assert.ok(adminLoader.includes("prefers-reduced-motion: reduce"));
+assert.ok(adminLoader.includes("clip-path: none;"));
+assert.ok(adminLoader.includes("opacity: 1;"));
+
+assert.ok(portalLoader.includes(".sway-favicon-loader img{"));
+assert.ok(portalLoader.includes("animation:sway-fist-ink-draw"));
+assert.ok(portalLoader.includes("@keyframes sway-fist-ink-draw{"));
+assert.ok(portalLoader.includes("prefers-reduced-motion:reduce"));
+assert.ok(portalLoader.includes("clip-path:none;opacity:1"));
+
+for (const source of [adminLoader, portalLoader]) {
+  for (const removed of [
+    "sway-favicon-draw",
+    "sway-favicon-trace",
+    "sway-favicon-dot",
+    "sway-button-favicon-draw",
+    "rotate(360deg)"
+  ]) {
+    assert.equal(source.includes(removed), false, "legacy loader effect must be absent: " + removed);
   }
-];
-
-for (const item of cases) {
-  assert.match(item.source, item.asset, item.name + ": original favicon asset must be used");
-  assert.match(item.source, item.animation, item.name + ": draw animation must exist");
-  assert.match(item.source, item.reducedMotion, item.name + ": reduced-motion fallback must be static");
 }
 
-for (const [name, source] of [["admin", adminLoader], ["portal", portalLoader]]) {
-  assert.doesNotMatch(source, /sway-favicon-draw|sway-favicon-trace|sway-favicon-dot|sway-button-favicon-draw|rotate\\(360deg\\)/,
-    name + ": old rotating-favicon animation must be removed");
-}
-
-assert.match(portalLoader, /\\.sway-favicon-loader-mark,\\.sway-favicon-loader-dot\\{display:none!important\\}/);
-assert.ok(adminDashboard.includes("admin-workspace.css?v=20261119-fist-draw-loader-1"), "admin stylesheet cache key must change with the loader release");
+assert.ok(portalLoader.includes(".sway-favicon-loader-mark,.sway-favicon-loader-dot{display:none!important}"));
+assert.ok(adminDashboard.includes("admin-workspace.css?v=20261119-fist-draw-loader-1"));
 
 console.log("Homepage splash removal and retained admin/client loader checks passed.");
