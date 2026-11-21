@@ -24,7 +24,14 @@ function createServiceClient() {
 
 function createUserClient(token: string) {
   const url = Deno.env.get("SUPABASE_URL");
-  const key = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+  const legacy = Deno.env.get("SUPABASE_ANON_KEY");
+  let key = legacy || "";
+  if (!key) {
+    try {
+      const parsed = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
+      key = typeof parsed.default === "string" ? parsed.default : "";
+    } catch { key = ""; }
+  }
   if (!url || !key) throw new Error("Server configuration is unavailable.");
   return createClient(url, key, {
     global: { headers: { Authorization: "Bearer " + token } },
