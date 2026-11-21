@@ -160,4 +160,19 @@ assert.match(css, /prefers-reduced-motion/);
 assert.match(html, /admin-workspace\.js\?v=20261118-dynamic-modal-accessibility-1/,
     "the communication viewer workspace script must use a refreshed cache key");
 
+
+const clientDeletion = section(
+    workspace,
+    "    async function removeRecord(",
+    "record deletion handler"
+);
+assert.match(clientDeletion, /state\.invoices\.filter/);
+assert.match(clientDeletion, /state\.payments \|\| \[\]/);
+assert.match(clientDeletion, /clientInvoices\.length > 0 \|\| clientPayments\.length > 0/,
+    "client deletion must stop when linked invoices or payment records exist");
+assert.match(clientDeletion, /Resolve or retain the financial records first/);
+assert.match(clientDeletion, /archive the client in the meantime/);
+assert.doesNotMatch(clientDeletion, /\/rest\/v1\/invoices\?id=eq\./,
+    "client deletion must never bypass the invoice deletion safeguards");
+
 console.log("Admin record-card contract tests passed for 15 dashboard views and communication viewing.");
