@@ -24854,7 +24854,7 @@ function simpleBars(items, color) {
 
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client and ALL linked local records? This includes invoices, invoice items, payments, payment attempts, receipts, refunds, payment reconciliation history, webhook records, bank-transfer submissions and proof files, client documents, projects, tasks, follow-ups, communication logs and client-portal records. Quotes will be retained with the client link cleared. This cannot be undone. This does not cancel or reverse transactions held by Yoco, Paystack or a bank. A client with a live payment checkout cannot be deleted until that checkout is resolved."
+                ? "Permanently delete this client and ALL linked local records? This includes invoices, invoice items, payments, payment attempts, receipts, refunds, payment reconciliation history, webhook records, bank-transfer submissions and proof files, client documents, projects, tasks, follow-ups, communication logs and client-portal records. Quotes will be retained with the client link cleared. This cannot be undone. This does not cancel or reverse transactions held by Yoco, Paystack or a bank. A client with a live checkout or unresolved provider event cannot be deleted until it is resolved."
                 : "Delete this " +
                   config.title.toLowerCase() +
                   "?";
