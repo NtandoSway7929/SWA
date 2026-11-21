@@ -91,13 +91,6 @@
   text-transform: uppercase;
 }
 
-.sway-journey-eyebrow::before {
-  width: 24px;
-  height: 2px;
-  content: "";
-  background: linear-gradient(90deg, #002096, #77c1fc);
-}
-
 .sway-journey-copy h2 {
   margin: 0;
   color: #081533;
