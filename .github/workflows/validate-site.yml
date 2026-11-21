@@ -131,6 +131,9 @@ jobs:
       - name: Test invoice payment settings navigation
         run: node scripts/yoco-invoice-settings.test.cjs
 
+      - name: Test payment receipt email delivery
+        run: node scripts/payment-receipt-delivery.test.cjs
+
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
 
