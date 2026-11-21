@@ -136,15 +136,20 @@ for (const view of ["tasks", "followups", "communications"]) {
 const clientDeleteHandler = section(
     workspace, "    async function removeRecord(type, id)", "record deletion handler"
 );
-assert.match(clientDeleteHandler, /state\.invoices\.filter/);
-assert.match(clientDeleteHandler, /state\.payments\.filter/);
-assert.match(clientDeleteHandler, /clientInvoices\.length/);
-assert.match(clientDeleteHandler, /clientPayments\.length/);
-assert.match(clientDeleteHandler, /archive the client/i);
-assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\)/,
-    "client deletion must not cascade-delete invoice history");
-assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHandler.indexOf("swayConfirm(confirmMessage)"),
-    "financial-history checks must run before asking to confirm client deletion");
+assert.match(clientDeleteHandler, /callClientDeletionFunction/);
+assert.match(clientDeleteHandler, /type === "clients"/);
+assert.doesNotMatch(clientDeleteHandler, /clientInvoices|clientPayments|archive the client/i,
+    "client deletion must no longer block clients with financial history");
+assert.ok(workspace.includes("async function callClientDeletionFunction(payload)"),
+    "client deletion must use the authenticated server-side deletion endpoint");
+assert.ok(workspace.includes("admin_delete_client_with_financial_records"),
+    "the server-side endpoint must call the atomic database deletion RPC");
+assert.ok(workspace.includes('action: "cleanup_pending"'),
+    "pending bank-transfer proof files must be retried on dashboard startup");
+assert.ok(workspace.includes("Permanently delete this client and ALL linked financial records?"),
+    "the confirmation must disclose the complete destructive scope");
+assert.ok(clientDeleteHandler.indexOf("callClientDeletionFunction") < clientDeleteHandler.indexOf("await logActivity("),
+    "the client must be deleted successfully before recording the activity log");
 
 assert.ok(workspace.includes("Archive this invoice first. Sent, paid and overdue invoice records should be retained"),
     "issued, paid and overdue invoices must be protected from permanent deletion");
