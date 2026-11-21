@@ -444,6 +444,30 @@ async function main() {
         return route.fulfill(jsonResponse({ ok: true, files: [] }));
       }
 
+      // The dashboard retries previously queued proof-file cleanup on startup.
+      // This is a server-side maintenance call, not a dashboard data mutation.
+      // Keep it entirely inside the in-memory browser test.
+      if (method === "POST" && url.pathname === "/functions/v1/admin-delete-client") {
+        const payload = JSON.parse(request.postData() || "{}");
+        if (payload.action === "cleanup_pending") {
+          metrics.mockedStartupCalls.push({
+            method,
+            path: url.pathname,
+            action: payload.action
+          });
+          return route.fulfill(jsonResponse({
+            ok: true,
+            deleted: null,
+            storage_cleanup: { removed: 0, pending: 0, checked: 0, error: false }
+          }));
+        }
+        metrics.apiMutationsBlocked.push({ method, path: url.pathname });
+        return route.fulfill(jsonResponse({
+          ok: false,
+          error: "Read-only dashboard browser test: client deletion is disabled."
+        }, 403));
+      }
+
       if (method === "POST" && url.pathname === "/functions/v1/delete-email-messages") {
         const payload = JSON.parse(request.postData() || "{}");
         const requestedIds = Array.isArray(payload.message_ids) ? payload.message_ids.map(String) : [];
@@ -1468,6 +1492,11 @@ async function main() {
       "unexpected outbound requests were blocked: " + JSON.stringify(metrics.unexpectedExternalRequests));
     assert.equal(metrics.pageErrors.length, 0,
       "uncaught browser errors were observed: " + JSON.stringify(metrics.pageErrors));
+
+    assert.ok(metrics.mockedStartupCalls.some(item =>
+      item.path === "/functions/v1/admin-delete-client" &&
+      item.action === "cleanup_pending"
+    ), "startup proof-file cleanup should be intercepted without contacting Supabase");
 
     assert.ok(metrics.mockedStartupCalls.some(item => item.path === "/rest/v1/rpc/process_swayphics_stale_leads"),
       "dashboard startup must invoke the stale-lead automation against the isolated mock");
