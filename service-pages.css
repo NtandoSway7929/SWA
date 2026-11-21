@@ -488,6 +488,19 @@ body.sp-page {
 }
 .sp-related a:hover { transform: translateY(-2px); border-color: rgba(1,82,244,.35); }
 
+/* Use a CSS marker rather than a platform-dependent Unicode map glyph. */
+.sp-map-marker {
+    position: absolute;
+    left: 54%;
+    top: 27%;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #FFFFFF;
+    border-radius: 50%;
+    background: #0152F4;
+    box-shadow: 0 0 0 4px rgba(1,82,244,.14), 0 2px 5px rgba(0,32,150,.2);
+}
+
 .sp-bottom-cta { padding: 85px 0; background: linear-gradient(135deg,#EAF3FF 0%,#F9FBFF 55%,#DDEBFF 100%); text-align: center; }
 .sp-bottom-cta h2 { max-width: 760px; margin: 0 auto 16px; color: var(--sp-navy); font-family: var(--sp-heading); font-size: clamp(2.3rem,4.7vw,4rem); font-weight: 800; letter-spacing: -.065em; line-height: 1.02; }
 .sp-bottom-cta p { max-width: 610px; margin: 0 auto; color: var(--sp-muted); font-size: .96rem; line-height: 1.8; }
