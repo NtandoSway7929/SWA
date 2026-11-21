@@ -155,7 +155,8 @@ assert.ok(invoiceActionStart >= 0 && invoiceDeleteStart > invoiceActionStart && 
     "invoice delete action handler must exist");
 const invoiceDeleteHandler = workspace.slice(invoiceDeleteStart, invoiceDeleteEnd);
 assert.match(invoiceDeleteHandler, /state\.payments\.filter/);
-assert.match(invoiceDeleteHandler, /invoicePayments\.length/);
+assert.match(invoiceDeleteHandler, /state\.paymentAttempts\.filter/);
+assert.match(invoiceDeleteHandler, /invoicePayments\.length \|\| invoiceAttempts\.length/);
 assert.match(invoiceDeleteHandler, /\/rest\/v1\/invoices\?id=eq\./);
 assert.doesNotMatch(invoiceDeleteHandler, /\/rest\/v1\/invoice_items\?invoice_id=eq\./,
     "invoice items must not be deleted before the invoice; the database cascade runs only after successful invoice deletion");
