@@ -24865,7 +24865,7 @@ function simpleBars(items, color) {
             return;
         }
 
-        let storageCleanupFailed = false;
+        let failedStorageCleanupCount = 0;
 
         if (type === "clients") {
             const purgeResult = await api(
@@ -24898,25 +24898,31 @@ function simpleBars(items, color) {
                 const bucket = entry[0];
                 const paths = entry[1];
 
-                try {
-                    await api(
-                        "/storage/v1/object/" + encodeURIComponent(bucket),
-                        {
-                            method: "DELETE",
-                            headers: headers({
-                                "Content-Type": "application/json"
-                            }),
-                            body: JSON.stringify({
-                                prefixes: paths
-                            })
-                        }
-                    );
-                } catch (storageError) {
-                    storageCleanupFailed = true;
-                    console.error(
-                        "Client was deleted, but linked storage cleanup failed for bucket " + bucket + ".",
-                        storageError
-                    );
+                // Supabase Storage limits each remove request to 1,000 objects.
+                for (let offset = 0; offset < paths.length; offset += 1000) {
+                    const batch = paths.slice(offset, offset + 1000);
+
+                    try {
+                        await api(
+                            "/storage/v1/object/" + encodeURIComponent(bucket),
+                            {
+                                method: "DELETE",
+                                headers: headers({
+                                    "Content-Type": "application/json"
+                                }),
+                                body: JSON.stringify({
+                                    prefixes: batch
+                                })
+                            }
+                        );
+                    } catch (storageError) {
+                        failedStorageCleanupCount += batch.length;
+                        console.error(
+                            "Client was deleted, but linked storage cleanup failed for bucket " + bucket + ". Paths:",
+                            batch,
+                            storageError
+                        );
+                    }
                 }
             }
         } else {
@@ -24957,9 +24963,11 @@ function simpleBars(items, color) {
         renderShell();
         renderView();
 
-        if (storageCleanupFailed) {
+        if (failedStorageCleanupCount > 0) {
             swayAlert(
-                "The client and linked database records were deleted, but one or more private files could not be removed from storage. Check the browser console and remove the remaining files from Supabase Storage."
+                "The client and linked database records were deleted, but " +
+                failedStorageCleanupCount +
+                " private file(s) could not be removed from storage. Their bucket and path details are in the browser console for cleanup."
             );
         }
     }
