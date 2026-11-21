@@ -374,26 +374,6 @@ async function main() {
     }
 
     if (method !== "GET" && method !== "HEAD") {
-      if (method === "POST" && url.pathname === "/functions/v1/admin-delete-client") {
-        let payload = null;
-        try {
-          payload = request.postDataJSON();
-        } catch {
-          payload = null;
-        }
-        if (payload && payload.action === "cleanup_pending") {
-          metrics.mockedStartupCalls.push({
-            method,
-            path: url.pathname,
-            action: payload.action
-          });
-          return route.fulfill(jsonResponse({
-            ok: true,
-            deleted: null,
-            storage_cleanup: { removed: 0, pending: 0, checked: 0, error: false }
-          }));
-        }
-      }
       if (method === "PATCH" && url.pathname === "/rest/v1/admin_notifications") {
         const filter = String(url.searchParams.get("id") || "");
         const id = filter.startsWith("eq.") ? decodeURIComponent(filter.slice(3)) : "";
