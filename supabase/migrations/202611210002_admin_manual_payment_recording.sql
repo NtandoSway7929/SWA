@@ -3,8 +3,8 @@ begin;
 -- Idempotency ledger for administrator-entered offline payments.
 create table if not exists public.manual_payment_record_requests (
   idempotency_key uuid primary key,
-  invoice_id uuid not null references public.invoices(id) on delete restrict,
-  payment_id uuid unique references public.payments(id) on delete restrict,
+  invoice_id uuid not null references public.invoices(id) on delete cascade,
+  payment_id uuid unique references public.payments(id) on delete cascade,
   recorded_by uuid not null references auth.users(id) on delete restrict,
   created_at timestamptz not null default now()
 );
@@ -52,7 +52,7 @@ begin
     raise exception 'An active Swayphics administrator is required.';
   end if;
 
-  if p_method not in ('EFT','Cash','Other') then
+  if p_method is null or p_method not in ('EFT','Cash','Other') then
     raise exception 'Choose EFT, Cash or Other for a manually recorded payment.';
   end if;
 
