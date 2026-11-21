@@ -69,7 +69,7 @@
     list.innerHTML = receipts.map(function (row) {
       var client = row.client || {}, delivery = row.delivery || {};
       var state = String(delivery.status || "pending");
-      var label = state === "sent" ? "Email sent" : state === "failed" ? "Delivery failed" : state === "sending" ? "Sending" : "Awaiting delivery";
+      var label = state === "sent" ? "Email accepted" : state === "failed" ? "Delivery failed" : state === "sending" ? "Sending" : "Awaiting delivery";
       var canSend = state !== "sent" && state !== "sending";
       return '<article class="pr-item">' +
         '<div class="pr-item-head"><div><strong>' + esc(row.receipt_number) + '</strong><small>' + esc(client.business_name || client.contact_name || "Client") + ' · ' + esc(date(row.issued_at)) + '</small></div>' +
