@@ -52,9 +52,9 @@ function validProofPath(value: unknown) {
 }
 
 async function processPendingProofCleanup(admin: any) {
-  const { data: rows, error: queryError } = await admin
+  const { data: rows, error: queryError, count } = await admin
     .from("client_deletion_storage_cleanup")
-    .select("id,bucket_id,object_path,attempts")
+    .select("id,bucket_id,object_path,attempts", { count: "exact" })
     .order("created_at", { ascending: true })
     .limit(200);
 
@@ -117,7 +117,12 @@ async function processPendingProofCleanup(admin: any) {
     removed += items.length;
   }
 
-  return { removed, pending, checked: (rows || []).length };
+  return {
+    removed,
+    pending: Math.max(pending, Number(count ?? (rows || []).length) - removed),
+    checked: (rows || []).length,
+    error: false,
+  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -151,8 +156,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "A valid request body is required." }, 400);
     }
 
-    const admin = createServiceClient();
-    let deleted: unknown = null;
+    let deleted: any = null;
 
     if (body.action !== "cleanup_pending") {
       if (!validUuid(body.client_id)) {
@@ -175,7 +179,21 @@ Deno.serve(async (req: Request) => {
       deleted = data;
     }
 
-    const storageCleanup = await processPendingProofCleanup(admin);
+    let storageCleanup = { removed: 0, pending: 0, checked: 0, error: false };
+    try {
+      storageCleanup = await processPendingProofCleanup(createServiceClient());
+    } catch (cleanupError) {
+      console.error("Client deletion proof-file cleanup is pending.", cleanupError);
+      if (!deleted && body.action === "cleanup_pending") {
+        throw cleanupError;
+      }
+      storageCleanup = {
+        removed: 0,
+        pending: Number(deleted?.payment_proof_files_queued_for_deletion || 0),
+        checked: 0,
+        error: true,
+      };
+    }
     return json({ ok: true, deleted, storage_cleanup: storageCleanup });
   } catch (error) {
     console.error("Client deletion or proof cleanup failed.", error);
