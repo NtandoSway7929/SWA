@@ -24852,34 +24852,9 @@ function simpleBars(items, color) {
             return;
         }
 
-        if (type === "clients") {
-            const clientInvoices =
-                state.invoices.filter(function (invoice) {
-                    return String(invoice.client_id || "") === String(id);
-                });
-            const clientPayments =
-                state.payments.filter(function (payment) {
-                    return String(payment.client_id || "") === String(id);
-                });
-
-            if (clientInvoices.length) {
-                swayAlert(
-                    "This client still has invoice records. Delete eligible draft or archived invoices individually first. Sent, paid, overdue and payment-linked financial records must be retained; archive the client if you need to preserve that history."
-                );
-                return;
-            }
-
-            if (clientPayments.length) {
-                swayAlert(
-                    "This client has payment records. They must be retained for financial history, so the client cannot be permanently deleted. Archive the client instead."
-                );
-                return;
-            }
-        }
-
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client? Linked projects, tasks, follow-ups, communication logs and client-portal records will be removed according to their database relationships. Quotes will be retained with the client link cleared. Financial records must be removed or retained separately first. This cannot be undone."
+                ? "Permanently delete this client and ALL linked local records? This includes invoices, invoice items, payments, payment attempts, receipts, refunds, payment reconciliation history, webhook records, bank-transfer submissions and proof files, client documents, projects, tasks, follow-ups, communication logs and client-portal records. Quotes will be retained with the client link cleared. This cannot be undone. This does not cancel or reverse transactions held by Yoco, Paystack or a bank. A client with a live payment checkout cannot be deleted until that checkout is resolved."
                 : "Delete this " +
                   config.title.toLowerCase() +
                   "?";
@@ -24890,33 +24865,90 @@ function simpleBars(items, color) {
             return;
         }
 
-        const deletedRecords =
-            await api(
-                "/rest/v1/" +
-                config.table +
-                "?id=eq." +
-                encodeURIComponent(id),
+        let storageCleanupFailed = false;
+
+        if (type === "clients") {
+            const purgeResult = await api(
+                "/rest/v1/rpc/delete_swayphics_client",
                 {
-                    method: "DELETE",
+                    method: "POST",
                     headers: headers({
-                        "Prefer":
-                            "return=representation"
+                        "Content-Type": "application/json"
+                    }),
+                    body: JSON.stringify({
+                        p_client_id: id
                     })
                 }
             );
 
-        if (
-            Array.isArray(deletedRecords) &&
-            deletedRecords.length === 0
-        ) {
-            throw new Error(
-                "The record was not deleted. Supabase returned no deleted rows, which usually means the current database permissions or RLS policy is blocking this action."
-            );
+            const storageObjects = Array.isArray(purgeResult && purgeResult.storage_objects)
+                ? purgeResult.storage_objects
+                : [];
+            const storageByBucket = new Map();
+
+            storageObjects.forEach(function (file) {
+                if (!file || !file.bucket || !file.path) return;
+                if (!storageByBucket.has(file.bucket)) {
+                    storageByBucket.set(file.bucket, []);
+                }
+                storageByBucket.get(file.bucket).push(file.path);
+            });
+
+            for (const entry of storageByBucket.entries()) {
+                const bucket = entry[0];
+                const paths = entry[1];
+
+                try {
+                    await api(
+                        "/storage/v1/object/" + encodeURIComponent(bucket),
+                        {
+                            method: "DELETE",
+                            headers: headers({
+                                "Content-Type": "application/json"
+                            }),
+                            body: JSON.stringify({
+                                prefixes: paths
+                            })
+                        }
+                    );
+                } catch (storageError) {
+                    storageCleanupFailed = true;
+                    console.error(
+                        "Client was deleted, but linked storage cleanup failed for bucket " + bucket + ".",
+                        storageError
+                    );
+                }
+            }
+        } else {
+            const deletedRecords =
+                await api(
+                    "/rest/v1/" +
+                    config.table +
+                    "?id=eq." +
+                    encodeURIComponent(id),
+                    {
+                        method: "DELETE",
+                        headers: headers({
+                            "Prefer":
+                                "return=representation"
+                        })
+                    }
+                );
+
+            if (
+                Array.isArray(deletedRecords) &&
+                deletedRecords.length === 0
+            ) {
+                throw new Error(
+                    "The record was not deleted. Supabase returned no deleted rows, which usually means the current database permissions or RLS policy is blocking this action."
+                );
+            }
         }
 
         await logActivity(
-            "Deleted " +
-            config.title.toLowerCase(),
+            type === "clients"
+                ? "Deleted client and linked financial history"
+                : "Deleted " + config.title.toLowerCase(),
             config.table,
             id
         );
@@ -24924,6 +24956,12 @@ function simpleBars(items, color) {
         await refreshData();
         renderShell();
         renderView();
+
+        if (storageCleanupFailed) {
+            swayAlert(
+                "The client and linked database records were deleted, but one or more private files could not be removed from storage. Check the browser console and remove the remaining files from Supabase Storage."
+            );
+        }
     }
 
     async function completeTask(id) {
