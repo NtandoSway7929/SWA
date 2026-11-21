@@ -161,11 +161,11 @@ begin
     returning id into v_payment_id;
 
     insert into public.payments (
-        client_id, project_id, invoice_id, amount, status, method,
+        client_id, amount, status, method,
         provider, provider_transaction_id, currency
     )
     values (
-        v_client_id, v_project_id, v_invoice_id, 20, 'paid', 'Card',
+        v_client_id, 20, 'paid', 'Card',
         'paystack', 'client-delete-paystack-payment-' || gen_random_uuid()::text, 'ZAR'
     )
     returning id into v_paystack_payment_id;
