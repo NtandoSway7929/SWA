@@ -131,6 +131,21 @@ create table public."invoices" (
   "archived_at" timestamp with time zone
 );
 
+create table public."services" (
+  "id" uuid default gen_random_uuid() not null
+);
+
+create table public."invoice_items" (
+  "id" uuid default gen_random_uuid() not null,
+  "invoice_id" uuid not null,
+  "service_id" uuid,
+  "description" text not null,
+  "quantity" numeric default 1 not null,
+  "unit_price" numeric default 0 not null,
+  "line_total" numeric,
+  "created_at" timestamp with time zone default now() not null
+);
+
 create table public."client_portal_tokens" (
   "id" uuid default gen_random_uuid() not null,
   "client_id" uuid not null,
@@ -165,6 +180,8 @@ alter table public."client_portal_tokens" add constraint "client_portal_tokens_t
 alter table public."client_projects" add constraint "client_projects_pkey" PRIMARY KEY (id);
 alter table public."clients" add constraint "clients_pkey" PRIMARY KEY (id);
 alter table public."invoices" add constraint "invoices_pkey" PRIMARY KEY (id);
+alter table public."services" add constraint "services_pkey" PRIMARY KEY (id);
+alter table public."invoice_items" add constraint "invoice_items_pkey" PRIMARY KEY (id);
 alter table public."invoices" add constraint "invoices_invoice_number_key" UNIQUE (invoice_number);
 alter table public."leads" add constraint "leads_pkey" PRIMARY KEY (id);
 alter table public."payments" add constraint "payments_pkey" PRIMARY KEY (id);
@@ -177,6 +194,8 @@ alter table public."client_projects" add constraint "client_projects_status_chec
 alter table public."clients" add constraint "clients_status_check" CHECK (status = ANY (ARRAY['active'::text, 'archived'::text]));
 alter table public."invoices" add constraint "invoices_email_status_check" CHECK (email_status = ANY (ARRAY['not sent'::text, 'sending'::text, 'sent'::text, 'failed'::text]));
 alter table public."invoices" add constraint "invoices_status_check" CHECK (status = ANY (ARRAY['draft'::text, 'sent'::text, 'partially paid'::text, 'paid'::text, 'overdue'::text, 'cancelled'::text]));
+alter table public."invoice_items" add constraint "invoice_items_quantity_check" CHECK (quantity > 0::numeric);
+alter table public."invoice_items" add constraint "invoice_items_unit_price_check" CHECK (unit_price >= 0::numeric);
 alter table public."leads" add constraint "leads_status_check" CHECK (status = ANY (ARRAY['new'::text, 'contacted'::text, 'interested'::text, 'proposal sent'::text, 'negotiating'::text, 'follow-up'::text, 'not interested'::text, 'won'::text, 'lost'::text]));
 alter table public."payments" add constraint "payments_method_check" CHECK (method = ANY (ARRAY['EFT'::text, 'Cash'::text, 'Card'::text, 'PayFast'::text, 'Other'::text]));
 alter table public."payments" add constraint "payments_status_check" CHECK (status = ANY (ARRAY['due'::text, 'partially paid'::text, 'paid'::text, 'overdue'::text]));
@@ -191,6 +210,8 @@ alter table public."clients" add constraint "clients_source_lead_id_fkey" FOREIG
 alter table public."invoices" add constraint "invoices_client_id_fkey" FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT;
 alter table public."invoices" add constraint "invoices_created_by_fkey" FOREIGN KEY (created_by) REFERENCES admin_users(user_id) ON DELETE SET NULL;
 alter table public."invoices" add constraint "invoices_project_id_fkey" FOREIGN KEY (project_id) REFERENCES client_projects(id) ON DELETE SET NULL;
+alter table public."invoice_items" add constraint "invoice_items_invoice_id_fkey" FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE;
+alter table public."invoice_items" add constraint "invoice_items_service_id_fkey" FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL;
 alter table public."leads" add constraint "leads_assessment_updated_by_fkey" FOREIGN KEY (assessment_updated_by) REFERENCES admin_users(user_id) ON DELETE SET NULL;
 alter table public."leads" add constraint "leads_assigned_to_fkey" FOREIGN KEY (assigned_to) REFERENCES admin_users(user_id) ON DELETE SET NULL;
 alter table public."leads" add constraint "leads_contacted_manually_by_fkey" FOREIGN KEY (contacted_manually_by) REFERENCES admin_users(user_id) ON DELETE SET NULL;
@@ -208,6 +229,8 @@ alter table public."clients" enable row level security;
 alter table public."client_projects" enable row level security;
 alter table public."payments" enable row level security;
 alter table public."invoices" enable row level security;
+alter table public."services" enable row level security;
+alter table public."invoice_items" enable row level security;
 alter table public."client_portal_tokens" enable row level security;
 alter table public."quotes" enable row level security;
 
