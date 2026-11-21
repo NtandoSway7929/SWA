@@ -3,6 +3,15 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
+
+-- The focused Yoco disposable baseline omits the later Paystack provider
+-- constraint migration. Mirror the production provider union for this
+-- cross-provider deletion fixture; this test-only change is rolled back.
+alter table public.payments drop constraint if exists payments_provider_check;
+alter table public.payments
+    add constraint payments_provider_check
+    check (provider is null or provider = any (array['yoco'::text, 'paystack'::text]));
+
 select extensions.plan(32);
 
 select extensions.has_table('innerme_private', 'client_financial_deletion_context',
