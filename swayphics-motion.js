@@ -10,8 +10,6 @@
     : { matches: false };
 
   var revealSelector = [
-    ".hero-intro",
-    ".hero-showcase",
     ".services-intro",
     ".package-card",
     ".custom-services-header",
@@ -42,7 +40,6 @@
     ".portfolio-admin-list > *",
     ".testimonials-admin-list > *",
     ".testimonial-admin-card",
-    ".portal-hero",
     ".next-step-card",
     ".portal-section-head",
     ".stat-card",
