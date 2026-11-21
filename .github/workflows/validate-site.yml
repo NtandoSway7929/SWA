@@ -119,6 +119,9 @@ jobs:
       - name: Test homepage clean presentation
         run: node --test scripts/homepage-clean-presentation.test.cjs
 
+      - name: Test service-page button contrast
+        run: node --test scripts/service-page-button-contrast.test.cjs
+
       - name: Test client portal link and access reliability
         run: node --test scripts/client-portal-access-reliability.test.cjs
 
