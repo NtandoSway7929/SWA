@@ -58,7 +58,6 @@ for (const contract of [
   "set search_path = ''",
   "innerme_private.client_financial_deletion_context",
   "client_financial_deletion_is_authorized",
-  "alter table public.client_deletion_storage_cleanup enable row level security",
   "alter table public.client_deletion_storage_cleanup enable row level security"
 ]) {
   assert.ok(migration.toLowerCase().includes(contract.toLowerCase()),
