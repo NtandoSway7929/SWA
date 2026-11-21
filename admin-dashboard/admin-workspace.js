@@ -29025,6 +29025,18 @@ function simpleBars(items, color) {
                                     return;
                                 }
 
+                                const invoicePayments =
+                                    state.payments.filter(function (payment) {
+                                        return String(payment.invoice_id || "") === String(id);
+                                    });
+
+                                if (invoicePayments.length) {
+                                    swayAlert(
+                                        "This invoice has payment records. They must be retained for financial history, so the invoice cannot be permanently deleted."
+                                    );
+                                    return;
+                                }
+
                                 if (
                                     invoice.status !== "draft" &&
                                     !invoice.archived
@@ -29044,17 +29056,8 @@ function simpleBars(items, color) {
                                     return;
                                 }
 
-                                await api(
-                                    "/rest/v1/invoice_items?invoice_id=eq." +
-                                    encodeURIComponent(id),
-                                    {
-                                        method: "DELETE",
-                                        headers: headers({
-                                            "Prefer":
-                                                "return=representation"
-                                        })
-                                    }
-                                );
+                                // invoice_items use ON DELETE CASCADE. Delete the invoice first so a
+                                // restrictive financial FK cannot leave an empty invoice behind.
 
                                 const deletedInvoices =
                                     await api(
