@@ -84,11 +84,13 @@ as $$
 declare
     v_actor uuid := auth.uid();
     v_invoice_ids uuid[];
+    v_project_ids uuid[];
     v_payment_ids uuid[];
     v_attempt_ids uuid[];
     v_refund_ids uuid[];
     v_reconciliation_ids uuid[];
     v_invoice_count integer := 0;
+    v_invoice_item_count integer := 0;
     v_payment_count integer := 0;
     v_attempt_count integer := 0;
     v_refund_count integer := 0;
@@ -118,8 +120,15 @@ begin
       from public.invoices where client_id = p_client_id;
 
     select coalesce(array_agg(id), '{}'::uuid[])
+      into v_project_ids
+      from public.client_projects where client_id = p_client_id;
+
+    select coalesce(array_agg(id), '{}'::uuid[])
       into v_payment_ids
-      from public.payments where client_id = p_client_id;
+      from public.payments
+     where client_id = p_client_id
+        or project_id = any(v_project_ids)
+        or invoice_id = any(v_invoice_ids);
 
     select coalesce(array_agg(id), '{}'::uuid[])
       into v_attempt_ids
@@ -147,9 +156,9 @@ begin
     select coalesce(jsonb_agg(proof_storage_path), '[]'::jsonb)
       into v_proof_paths
       from public.bank_transfer_submissions
-     where client_id = p_client_id
+     where (client_id = p_client_id
         or invoice_id = any(v_invoice_ids)
-        or payment_id = any(v_payment_ids)
+        or payment_id = any(v_payment_ids))
        and proof_storage_path is not null;
 
     -- A transaction-scoped authorization marker allows this administrator-only
@@ -200,6 +209,9 @@ begin
      where id = any(v_payment_ids);
     get diagnostics v_payment_count = row_count;
 
+    select count(*)::integer into v_invoice_item_count
+      from public.invoice_items where invoice_id = any(v_invoice_ids);
+
     delete from public.invoices
      where id = any(v_invoice_ids);
     get diagnostics v_invoice_count = row_count;
@@ -218,6 +230,7 @@ begin
         'client_id', p_client_id,
         'clients_deleted', v_client_count,
         'invoices_deleted', v_invoice_count,
+        'invoice_items_deleted', v_invoice_item_count,
         'payments_deleted', v_payment_count,
         'payment_attempts_deleted', v_attempt_count,
         'payment_refunds_deleted', v_refund_count,
