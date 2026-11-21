@@ -116,6 +116,9 @@ jobs:
       - name: Test Swayphics loader
         run: node scripts/swayphics-loader.test.cjs
 
+      - name: Test homepage clean presentation
+        run: node --test scripts/homepage-clean-presentation.test.cjs
+
       - name: Test client portal link and access reliability
         run: node --test scripts/client-portal-access-reliability.test.cjs
 

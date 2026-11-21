@@ -33,7 +33,7 @@
 
 <meta
     property="og:title"
-    content="Swayphics — Build a Brand Worth Remembering"
+    content="Swayphics - Build a Brand Worth Remembering"
 >
 
 <meta
@@ -70,7 +70,7 @@
 
 <meta
     name="twitter:title"
-    content="Swayphics — Build a Brand Worth Remembering"
+    content="Swayphics - Build a Brand Worth Remembering"
 >
 
 <meta
@@ -131,7 +131,7 @@
         }
 
         /* =========================================================
-   SWAYPHICS — LIQUID NAVIGATION
+   SWAYPHICS - LIQUID NAVIGATION
    ========================================================= */
 
 nav {
@@ -500,7 +500,7 @@ nav.scrolled .logo img {
     }
 }
         /* =========================================================
-   SWAYPHICS HERO — FINAL BALANCED LAYOUT
+   SWAYPHICS HERO - FINAL BALANCED LAYOUT
    ========================================================= */
 
 .hero {
@@ -958,7 +958,7 @@ nav.scrolled .logo img {
 }
 
         /* =========================================================
-   SWAYPHICS — ABOUT
+   SWAYPHICS - ABOUT
    ========================================================= */
 
 .about {
@@ -1387,7 +1387,7 @@ nav.scrolled .logo img {
 
 
 /* =========================================================
-   SWAYPHICS — PUBLIC INNERME
+   SWAYPHICS - PUBLIC INNERME
    ========================================================= */
 
 .innerme-section {
@@ -1465,15 +1465,6 @@ nav.scrolled .logo img {
     line-height: 1.5;
 }
 
-.innerme-note-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #0152F4;
-    box-shadow: 0 0 0 6px rgba(1,82,244,0.08);
-    flex: 0 0 auto;
-}
-
 .innerme-card {
     width: 100%;
     max-width: 650px;
@@ -1508,44 +1499,6 @@ nav.scrolled .logo img {
     display: flex;
     align-items: center;
     gap: 13px;
-}
-
-.innerme-orb {
-    position: relative;
-    width: 42px;
-    height: 42px;
-    border-radius: 15px;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at 35% 30%, #77C1FC 0%, #0152F4 42%, #002096 100%);
-    box-shadow:
-        0 10px 22px rgba(1,82,244,0.24),
-        inset 0 1px 0 rgba(255,255,255,0.45);
-    animation: innerme-orb-breathe 4.8s ease-in-out infinite;
-}
-
-.innerme-orb::before {
-    content: "";
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    top: 8px;
-    left: 9px;
-    border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.92);
-    opacity: 0.92;
-}
-
-.innerme-orb::after {
-    content: "";
-    position: absolute;
-    width: 10px;
-    height: 4px;
-    left: 16px;
-    bottom: 9px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.92);
-    box-shadow: 0 -7px 0 -1px rgba(255,255,255,0.78);
 }
 
 .innerme-identity-copy {
@@ -1666,41 +1619,11 @@ nav.scrolled .logo img {
 }
 
 .innerme-typing {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
+    display: block;
     min-height: 18px;
-}
-
-.innerme-typing span {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #6E7C92;
-    animation: innerme-typing-bounce 0.9s infinite ease-in-out;
-}
-
-.innerme-typing span:nth-child(2) {
-    animation-delay: 0.14s;
-}
-
-.innerme-typing span:nth-child(3) {
-    animation-delay: 0.28s;
-}
-
-@keyframes innerme-orb-breathe {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow:
-            0 10px 22px rgba(1,82,244,0.24),
-            0 0 0 0 rgba(1,82,244,0);
-    }
-    50% {
-        transform: scale(1.045);
-        box-shadow:
-            0 12px 26px rgba(1,82,244,0.27),
-            0 0 0 7px rgba(1,82,244,0.045);
-    }
+    color: #6E7C92;
+    font-size: 0.62rem;
+    font-weight: 650;
 }
 
 @keyframes innerme-message-in {
@@ -1747,12 +1670,7 @@ nav.scrolled .logo img {
     }
 }
 
-@keyframes innerme-typing-bounce {
-    0%, 60%, 100% {
-        transform: translateY(0);
-        opacity: 0.36;
-    }
-    30% {
+30% {
         transform: translateY(-4px);
         opacity: 1;
     }
@@ -2075,13 +1993,7 @@ nav.scrolled .logo img {
         padding: 16px;
     }
 
-    .innerme-orb {
-        width: 38px;
-        height: 38px;
-        border-radius: 13px;
-    }
-
-    .innerme-status {
+.innerme-status {
         padding: 6px 9px;
         font-size: 0.56rem;
     }
@@ -2151,18 +2063,13 @@ nav.scrolled .logo img {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .innerme-orb,
     .innerme-message,
     .innerme-quick button,
     .innerme-recommendation {
         animation: none;
     }
 
-    .innerme-typing span {
-        animation: none;
-    }
-
-    .innerme-send,
+.innerme-send,
     .innerme-quick button,
     .innerme-input {
         transition: none;
@@ -2572,7 +2479,7 @@ footer {
 }
 
 /* =========================================================
-   FEATURED SERVICE — BRAND IDENTITY
+   FEATURED SERVICE - BRAND IDENTITY
    ========================================================= */
 
 .identity-grid {
@@ -2835,7 +2742,7 @@ footer {
 }
 
         /* =========================================================
-   SWAYPHICS — PREMIUM SCROLL REVEAL
+   SWAYPHICS - PREMIUM SCROLL REVEAL
    ========================================================= */
 
 .reveal {
@@ -3409,7 +3316,7 @@ footer {
 }
 
 /* =========================================================
-   SWAYPHICS 2.0 — PHASE 1
+   SWAYPHICS 2.0 - PHASE 1
    GLOBAL VISUAL SYSTEM
    ========================================================= */
 
@@ -3507,7 +3414,7 @@ nav {
 
 
 /* -------------------------
-   HERO — SWAYPHICS VISUAL
+   HERO - SWAYPHICS VISUAL
    ------------------------- */
 
 .hero {
@@ -3595,7 +3502,7 @@ nav {
 }
 
         /* =========================================================
-   SWAYPHICS HERO — RESPONSIVE
+   SWAYPHICS HERO - RESPONSIVE
    ========================================================= */
 
 @media (max-width: 900px) {
@@ -3760,7 +3667,7 @@ nav {
 
 
 /* =========================================================
-   SWAYPHICS SERVICES — PACKAGES + CATALOG
+   SWAYPHICS SERVICES - PACKAGES + CATALOG
    ========================================================= */
 
 .services {
@@ -4135,44 +4042,12 @@ nav {
 
 
 .package-features div {
-    position:
-        relative;
-
-    padding-left:
-        20px;
-
-    color:
-        var(--text-dark);
-
-    font-size:
-        0.92rem;
-}
-
-.package-features div::before {
-    content:
-        "✓";
-
-    position:
-        absolute;
-
-    left:
-        0;
-
-    color:
-        var(--sway-accent);
-
-    font-weight:
-        800;
+    color: var(--text-dark);
+    font-size: 0.92rem;
 }
 
 .package-featured .package-features div {
-    color:
-        rgba(255,255,255,0.88);
-}
-
-.package-featured .package-features div::before {
-    color:
-        #77C1FC;
+    color: rgba(255,255,255,0.88);
 }
 
 
@@ -4839,7 +4714,7 @@ footer strong {
     }
 
     /* =========================================================
-   SWAYPHICS HERO — ACTUAL WAVE
+   SWAYPHICS HERO - ACTUAL WAVE
    ========================================================= */
 
 .hero {
@@ -4969,7 +4844,7 @@ footer strong {
 }
 
     /* =========================================================
-   FEATURED SERVICE — FIX TEXT + OUTCOME
+   FEATURED SERVICE - FIX TEXT + OUTCOME
    ========================================================= */
 
 /* Make identity descriptions visible */
@@ -5650,7 +5525,7 @@ footer strong {
 }
 
     /* =========================================================
-   WHY SWAYPHICS — ISOLATED TYPOGRAPHY
+   WHY SWAYPHICS - ISOLATED TYPOGRAPHY
    ========================================================= */
 
 .why-swayphics,
@@ -5803,7 +5678,7 @@ footer strong {
 }
 
     /* =========================================================
-   WHY SWAYPHICS — DESKTOP FIX
+   WHY SWAYPHICS - DESKTOP FIX
    ========================================================= */
 
 @media (min-width: 701px) {
@@ -5998,7 +5873,7 @@ footer strong {
 }
 
     /* =========================================================
-   SWAYPHICS — SECTION TRANSITION POLISH
+   SWAYPHICS - SECTION TRANSITION POLISH
    ========================================================= */
 
 /* Services fades gently into the next section */
@@ -6179,7 +6054,7 @@ textarea:focus-visible {
 }    
 
 /* =========================================================
-   LIQUID NAVIGATION — ACTIVE SECTION
+   LIQUID NAVIGATION - ACTIVE SECTION
    ========================================================= */
 
 .nav-links a.active {
@@ -6220,161 +6095,12 @@ textarea:focus-visible {
 }
     
  
-/* Swayphics first-load logo reveal */
-.sway-intro {
-    position: fixed;
-    inset: 0;
-    z-index: 20000;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    background: #F7F9FD;
-    animation: sway-intro-exit 700ms cubic-bezier(.76,0,.24,1) 8.35s forwards;
-}
-.sway-intro__grid {
-    position: absolute;
-    inset: -18%;
-    background-image:
-        linear-gradient(rgba(52,58,64,.15) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(52,58,64,.15) 1px, transparent 1px),
-        linear-gradient(rgba(1,82,244,.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(1,82,244,.07) 1px, transparent 1px);
-    background-size: 88px 88px, 88px 88px, 352px 352px, 352px 352px;
-    mask-image: radial-gradient(ellipse at center, #000 8%, transparent 72%);
-    opacity: 0;
-    transform: scale(1.12) rotate(-4deg);
-    animation: sway-intro-grid-in 1500ms cubic-bezier(.2,.8,.2,1) 100ms forwards;
-}
-.sway-intro__tiles {
-    position: absolute;
-    display: grid;
-    grid-template-columns: repeat(2, 40px);
-    gap: 6px;
-    transform: rotate(-12deg);
-    animation: sway-intro-tiles-exit 420ms ease-in 1.82s forwards;
-}
-.sway-intro__tiles span {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    opacity: 0;
-}
-.sway-intro__tiles span:nth-child(1) {
-    background: linear-gradient(145deg, #343A40, #59636E);
-    animation: sway-intro-tile 760ms cubic-bezier(.2,.8,.2,1) 300ms forwards;
-}
-.sway-intro__tiles span:nth-child(2) {
-    background: linear-gradient(145deg, #002096, #0031C5);
-    animation: sway-intro-tile 760ms cubic-bezier(.2,.8,.2,1) 600ms forwards;
-}
-.sway-intro__tiles span:nth-child(3) {
-    background: linear-gradient(145deg, #0152F4, #2C91FC);
-    animation: sway-intro-tile 760ms cubic-bezier(.2,.8,.2,1) 900ms forwards;
-}
-.sway-intro__tiles span:nth-child(4) {
-    background: linear-gradient(145deg, #2C91FC, #77C1FC);
-    animation: sway-intro-tile 760ms cubic-bezier(.2,.8,.2,1) 1200ms forwards;
-}
-.sway-intro__lockup {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 13px;
-    opacity: 0;
-    transform: translateY(12px) scale(.94);
-    animation: sway-intro-logo 850ms cubic-bezier(.2,.8,.2,1) 2.30s forwards;
-}
-.sway-intro__logo {
-    display: block;
-    width: min(250px, 66vw);
-    height: auto;
-}
-.sway-intro__welcome {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin: 0;
-    color: var(--sway-charcoal);
-    text-align: center;
-}
-.sway-intro__welcome strong {
-    color: var(--sway-charcoal);
-    font-size: .7rem;
-    font-weight: 800;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-}
-.sway-intro__welcome span {
-    color: var(--sway-charcoal-soft);
-    font-size: clamp(.82rem, 1.1vw, .95rem);
-    font-weight: 500;
-    letter-spacing: .005em;
-}
-@keyframes sway-intro-grid-in {
-    to { opacity: 1; transform: scale(1) rotate(0); }
-}
-@keyframes sway-intro-tile {
-    from { opacity: 0; transform: translate(var(--from-x, 0), var(--from-y, 0)) rotate(-30deg) scale(.58); }
-    to { opacity: .96; transform: translate(0,0) rotate(0) scale(1); }
-}
-.sway-intro__tiles span:nth-child(1) { --from-x: -48px; --from-y: -34px; }
-.sway-intro__tiles span:nth-child(2) { --from-x: 48px; --from-y: -34px; }
-.sway-intro__tiles span:nth-child(3) { --from-x: -48px; --from-y: 34px; }
-.sway-intro__tiles span:nth-child(4) { --from-x: 48px; --from-y: 34px; }
-@keyframes sway-intro-logo {
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes sway-intro-tiles-exit {
-    to { opacity: 0; transform: rotate(-12deg) scale(1.18); }
-}
-@keyframes sway-intro-exit {
-    to { opacity: 0; visibility: hidden; }
-}
-@media (max-width: 600px) {
-    .sway-intro__grid { background-size: 60px 60px, 60px 60px, 240px 240px, 240px 240px; }
-    .sway-intro__tiles { grid-template-columns: repeat(2, 32px); gap: 5px; }
-    .sway-intro__tiles span { width: 32px; height: 32px; border-radius: 8px; }
-    .sway-intro__logo { width: min(210px, 68vw); }
-}
-/* Keep the welcome visible while the page is parsing; start the motion when it is ready. */
-.sway-intro:not(.sway-intro--active) {
-    animation: none;
-    opacity: 1;
-    visibility: visible;
-}
-.sway-intro:not(.sway-intro--active) .sway-intro__grid {
-    opacity: .48;
-    transform: none;
-    animation: none;
-}
-.sway-intro:not(.sway-intro--active) .sway-intro__tiles {
-    display: none;
-    animation: none;
-}
-.sway-intro:not(.sway-intro--active) .sway-intro__tiles span {
-    opacity: 1;
-    animation: none;
-}
-.sway-intro:not(.sway-intro--active) .sway-intro__lockup {
-    opacity: 1;
-    transform: none;
-    animation: none;
-}
-@media (prefers-reduced-motion: reduce) {
-    .sway-intro { display: grid !important; animation: none !important; opacity: 1; visibility: visible; }
-    .sway-intro__grid { opacity: .48; transform: none; animation: none; }
-    .sway-intro__tiles { display: none !important; animation: none !important; }
-    .sway-intro__lockup { opacity: 1; transform: none; animation: none; }
-}
-
 </style>
 
 <style>
 
 /* =========================================================
-   WHY SWAYPHICS — ISOLATED FINAL STYLING
+   WHY SWAYPHICS - ISOLATED FINAL STYLING
    ========================================================= */
 
 .why-swayphics {
@@ -6752,7 +6478,7 @@ textarea:focus-visible {
 }
 
 /* =========================================================
-   SWAYPHICS — MOBILE NAVIGATION
+   SWAYPHICS - MOBILE NAVIGATION
    ========================================================= */
 
 .mobile-menu-toggle {
@@ -6994,7 +6720,7 @@ body {
 }
 
 /* =========================================================
-   HERO — FINAL STRUCTURE FIX
+   HERO - FINAL STRUCTURE FIX
    ========================================================= */
 
 .hero {
@@ -7275,7 +7001,7 @@ body {
 }
 
  /* =========================================================
-   HERO — READABILITY + CTA POLISH
+   HERO - READABILITY + CTA POLISH
    ========================================================= */
 
 /* Soft white readability layer over the hero image */
@@ -7514,7 +7240,7 @@ body {
 }   
 
 /* =========================================================
-   HERO — MOBILE HEADING ALIGNMENT
+   HERO - MOBILE HEADING ALIGNMENT
    ========================================================= */
 
 @media (max-width: 700px) {
@@ -7551,7 +7277,7 @@ body {
 }
 
     /* =========================================================
-   HERO — MOBILE BACKGROUND REDUCTION
+   HERO - MOBILE BACKGROUND REDUCTION
    ========================================================= */
 
 @media (max-width: 700px) {
@@ -7581,7 +7307,7 @@ body {
 }
 
     /* =========================================================
-   HERO — CLEAN BLUE ATMOSPHERE
+   HERO - CLEAN BLUE ATMOSPHERE
    ========================================================= */
 
 .hero {
@@ -7668,7 +7394,7 @@ body {
 }
 
     /* =========================================================
-   HERO — STRONGER SWAYPHICS VISUAL
+   HERO - STRONGER SWAYPHICS VISUAL
    ========================================================= */
 
 .hero {
@@ -7942,7 +7668,7 @@ body {
 }
 
 /* =========================================================
-   HERO — STRONGER PREMIUM ATMOSPHERE
+   HERO - STRONGER PREMIUM ATMOSPHERE
    ========================================================= */
 
 .hero {
@@ -8114,7 +7840,7 @@ body {
 }
 
 /* =========================================================
-   SWAYPHICS — FINAL CAPABILITIES STRIP
+   SWAYPHICS - FINAL CAPABILITIES STRIP
    ========================================================= */
 
 .brand-strip {
@@ -8150,7 +7876,7 @@ body {
 
 
 /* =========================================================
-   WHAT WE DO — SOFT FLOATING LABEL
+   WHAT WE DO - SOFT FLOATING LABEL
    ========================================================= */
 
 .brand-strip-label {
@@ -8456,7 +8182,7 @@ body {
 }
 
     /* =========================================================
-   PHASE 1 — RESPONSIVE PASS
+   PHASE 1 - RESPONSIVE PASS
    MOBILE HERO
    ========================================================= */
 
@@ -8614,7 +8340,7 @@ body {
 }
 
     /* =========================================================
-   PHASE 1 — RESPONSIVE PASS
+   PHASE 1 - RESPONSIVE PASS
    SERVICES / PACKAGES
    ========================================================= */
 
@@ -8675,7 +8401,7 @@ body {
 }
 
 /* =========================================================
-   PHASE 1 — RESPONSIVE PASS
+   PHASE 1 - RESPONSIVE PASS
    WORK / PORTFOLIO
    ========================================================= */
 
@@ -8761,7 +8487,7 @@ body {
 }
 
     /* =========================================================
-   PHASE 1 — RESPONSIVE PASS
+   PHASE 1 - RESPONSIVE PASS
    ABOUT
    ========================================================= */
 
@@ -8837,7 +8563,7 @@ body {
 }
 
 /* =========================================================
-   PHASE 1 — RESPONSIVE PASS
+   PHASE 1 - RESPONSIVE PASS
    CTA / ENQUIRY
    ========================================================= */
 
@@ -8974,7 +8700,7 @@ body {
 } 
 
     /* =========================================================
-   PHASE 1 — RESPONSIVE PASS
+   PHASE 1 - RESPONSIVE PASS
    FOOTER
    ========================================================= */
 
@@ -9005,7 +8731,7 @@ body {
 }
 
     /* =========================================================
-   PHASE 1 — ACCESSIBILITY
+   PHASE 1 - ACCESSIBILITY
    KEYBOARD FOCUS STATES
    ========================================================= */
 
@@ -9030,7 +8756,7 @@ textarea:focus-visible {
 }
 
     /* =========================================================
-   PHASE 1 — ACCESSIBILITY
+   PHASE 1 - ACCESSIBILITY
    REDUCED MOTION
    ========================================================= */
 
@@ -9059,9 +8785,7 @@ textarea:focus-visible {
     padding: 15px 18px;
     border-radius: 14px;
 
-    display: flex;
-    align-items: flex-start;
-    gap: 11px;
+    display: block;
 
     font-size: 14px;
     line-height: 1.5;
@@ -9071,22 +8795,6 @@ textarea:focus-visible {
     background: #FFFFFF;
     box-shadow:
         0 8px 24px rgba(0, 32, 150, 0.08);
-}
-
-.form-status-icon {
-    flex: 0 0 auto;
-
-    width: 22px;
-    height: 22px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 50%;
-
-    font-size: 12px;
-    font-weight: 700;
 }
 
 .form-status-content {
@@ -9103,10 +8811,6 @@ textarea:focus-visible {
     color: #002096;
 }
 
-.form-status.warning .form-status-icon {
-    background: rgba(0, 32, 150, 0.09);
-    color: #002096;
-}
 
 
 /* ---------------------------------------------
@@ -9118,10 +8822,6 @@ textarea:focus-visible {
     color: #8F2020;
 }
 
-.form-status.error .form-status-icon {
-    background: rgba(180, 35, 35, 0.09);
-    color: #8F2020;
-}
 
 
 /* ---------------------------------------------
@@ -9133,13 +8833,9 @@ textarea:focus-visible {
     color: #002096;
 }
 
-.form-status.success .form-status-icon {
-    background: rgba(0, 32, 150, 0.09);
-    color: #002096;
-}
 
 /* =========================================================
-   SWAYPHICS — ENQUIRY BUTTON & STATUS FINAL OVERRIDES
+   SWAYPHICS - ENQUIRY BUTTON & STATUS FINAL OVERRIDES
    ========================================================= */
 
 /* Hide the status container when it is not being used */
@@ -9216,7 +8912,7 @@ textarea:focus-visible {
 }    
 
 /* =========================================================
-   SWAYPHICS — PREMIUM CTA BUTTONS
+   SWAYPHICS - PREMIUM CTA BUTTONS
    ========================================================= */
 
 /* Send Enquiry */
@@ -9282,7 +8978,7 @@ textarea:focus-visible {
 }
 
 /* =========================================================
-   SWAYPHICS — HERO CTA
+   SWAYPHICS - HERO CTA
    ========================================================= */
 
 a.btn.btn-primary[href="#contact"] {
@@ -9317,7 +9013,7 @@ a.btn.btn-primary[href="#contact"]:hover {
 
 
     /* =========================================================
-   SWAYPHICS — WORK INTRO MOBILE SPACING
+   SWAYPHICS - WORK INTRO MOBILE SPACING
    ========================================================= */
 
 @media (max-width: 700px) {
@@ -9330,7 +9026,7 @@ a.btn.btn-primary[href="#contact"]:hover {
 }
 
     /* =========================================================
-   SWAYPHICS — ENHANCED LIQUID GLASS NAVIGATION
+   SWAYPHICS - ENHANCED LIQUID GLASS NAVIGATION
    ========================================================= */
 
 nav {
@@ -9462,7 +9158,7 @@ nav.scrolled {
 }
 
 /* =========================================================
-   SWAYPHICS — CLIENT STORIES / EDITORIAL TESTIMONIALS
+   SWAYPHICS - CLIENT STORIES / EDITORIAL TESTIMONIALS
    ========================================================= */
 
 .testimonials {
@@ -10379,7 +10075,7 @@ nav.scrolled {
 } 
 
     /* =========================================================
-   SWAYPHICS — MOBILE PORTFOLIO SLIDER
+   SWAYPHICS - MOBILE PORTFOLIO SLIDER
    ========================================================= */
 
 @media (max-width: 700px) {
@@ -10953,7 +10649,7 @@ nav.scrolled {
 }
 
 /* =========================================================
-   SWAYPHICS — HERO SYSTEM
+   SWAYPHICS - HERO SYSTEM
    A single responsive editorial composition
    ========================================================= */
 
@@ -11501,7 +11197,7 @@ nav.scrolled {
 }
 
     /* =========================================================
-   SWAYPHICS — HERO MASTER SYSTEM
+   SWAYPHICS - HERO MASTER SYSTEM
    Final visual direction
    ========================================================= */
 
@@ -11751,7 +11447,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   BRAND — LARGE ART-DIRECTION TEXT
+   BRAND - LARGE ART-DIRECTION TEXT
    ========================================================= */
 
 .hero-showcase-word {
@@ -12412,13 +12108,13 @@ nav.scrolled {
 }
 
     /* =========================================================
-   SWAYPHICS — HERO POLISH PASS
+   SWAYPHICS - HERO POLISH PASS
    Premium editorial refinement
    ========================================================= */
 
 
 /* =========================================================
-   01 — HERO FRAME
+   01 - HERO FRAME
    ========================================================= */
 
 .hero {
@@ -12446,7 +12142,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   02 — ARTWORK
+   02 - ARTWORK
    ========================================================= */
 
 .hero-showcase {
@@ -12509,7 +12205,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   03 — BLUE DUOTONE
+   03 - BLUE DUOTONE
    ========================================================= */
 
 .hero-showcase-image::before {
@@ -12546,7 +12242,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   04 — CONTROLLED READABILITY FIELD
+   04 - CONTROLLED READABILITY FIELD
    ========================================================= */
 
 .hero-showcase-image::after {
@@ -12595,7 +12291,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   05 — BACKGROUND "SWAYPHICS"
+   05 - BACKGROUND "SWAYPHICS"
    ========================================================= */
 
 .hero-background-word {
@@ -12635,7 +12331,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   06 — HERO CONTENT
+   06 - HERO CONTENT
    ========================================================= */
 
 .hero-intro {
@@ -12675,7 +12371,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   07 — EYEBROW
+   07 - EYEBROW
    ========================================================= */
 
 .hero-intro .eyebrow {
@@ -12715,7 +12411,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   08 — MAIN HEADLINE
+   08 - MAIN HEADLINE
    ========================================================= */
 
 .hero-intro h1 {
@@ -12755,7 +12451,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   09 — SUPPORTING COPY
+   09 - SUPPORTING COPY
    ========================================================= */
 
 .hero-intro p {
@@ -12783,7 +12479,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   10 — CTA
+   10 - CTA
    ========================================================= */
 
 .hero-actions {
@@ -12871,7 +12567,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   11 — BRAND DEPTH TYPOGRAPHY
+   11 - BRAND DEPTH TYPOGRAPHY
    ========================================================= */
 
 .hero-showcase-word {
@@ -12925,7 +12621,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   12 — CHESS / BRAND DEPTH EFFECT
+   12 - CHESS / BRAND DEPTH EFFECT
    Creates a stronger separation between artwork and text.
    ========================================================= */
 
@@ -12960,7 +12656,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   13 — LARGE DESKTOP
+   13 - LARGE DESKTOP
    ========================================================= */
 
 @media (min-width: 1200px) {
@@ -13007,7 +12703,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   14 — TABLET
+   14 - TABLET
    ========================================================= */
 
 @media (max-width: 1050px) {
@@ -13117,7 +12813,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   15 — MOBILE
+   15 - MOBILE
    ========================================================= */
 
 @media (max-width: 700px) {
@@ -13276,7 +12972,7 @@ nav.scrolled {
 
 
 /* =========================================================
-   16 — SMALL MOBILE
+   16 - SMALL MOBILE
    ========================================================= */
 
 @media (max-width: 430px) {
@@ -13313,7 +13009,7 @@ nav.scrolled {
 }
 
     /* =========================================================
-   SWAYPHICS — HERO SPACING + SECTION LABEL OVERRIDE
+   SWAYPHICS - HERO SPACING + SECTION LABEL OVERRIDE
    ========================================================= */
 
 
@@ -13487,7 +13183,7 @@ nav.scrolled {
 }
 
     /* =========================================================
-   SWAYPHICS — HERO CONTENT FLOW FIX
+   SWAYPHICS - HERO CONTENT FLOW FIX
    ========================================================= */
 
 .hero-intro {
@@ -13560,7 +13256,7 @@ nav.scrolled {
 }
 
     /* =========================================================
-   SWAYPHICS — HERO PILL BUTTONS
+   SWAYPHICS - HERO PILL BUTTONS
    ========================================================= */
 
 .hero-actions .btn {
@@ -13730,7 +13426,7 @@ nav.scrolled {
 }
 
     /* =========================================================
-   SWAYPHICS — HERO VIDEO → IMAGE TRANSITION
+   SWAYPHICS - HERO VIDEO → IMAGE TRANSITION
    ========================================================= */
 
 .hero-showcase-image {
@@ -13837,7 +13533,7 @@ nav.scrolled {
     }
 }
   /* =========================================================
-   SWAYPHICS — PREMIUM SOCIAL CONNECTIONS
+   SWAYPHICS - PREMIUM SOCIAL CONNECTIONS
    ========================================================= */
 
 .contact-social {
@@ -14196,7 +13892,7 @@ nav.scrolled {
 }
 
     /* =========================================================
-   SWAYPHICS — PREMIUM SCROLL REVEAL SYSTEM
+   SWAYPHICS - PREMIUM SCROLL REVEAL SYSTEM
    ========================================================= */
 
 /* Prevent a flash of hidden content before JavaScript loads */
@@ -14276,7 +13972,7 @@ html.reveal-ready .reveal-delay-4 {
 }
 
     /* =========================================================
-   SWAYPHICS — INTERACTIVE SERVICE CARDS
+   SWAYPHICS - INTERACTIVE SERVICE CARDS
    ========================================================= */
 
 .package-card,
@@ -14292,36 +13988,6 @@ html.reveal-ready .reveal-delay-4 {
 }
 
 
-/* Cursor-following glow */
-
-.package-card::after,
-.service-category::after,
-.why-card::after,
-.work-card::after {
-    content: "";
-
-    position: absolute;
-
-    inset: 0;
-
-    border-radius: inherit;
-
-    pointer-events: none;
-
-    opacity: 0;
-
-    background:
-        radial-gradient(
-            350px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-            rgba(1, 82, 244, 0.12),
-            transparent 55%
-        );
-
-    transition:
-        opacity 0.35s ease;
-}
-
-
 /* Active interaction */
 
 .package-card.card-active,
@@ -14333,12 +13999,6 @@ html.reveal-ready .reveal-delay-4 {
 }
 
 
-.package-card.card-active::after,
-.service-category.card-active::after,
-.why-card.card-active::after,
-.work-card.card-active::after {
-    opacity: 1;
-}
 
 
 /* Keep card content above the glow */
@@ -14380,7 +14040,7 @@ html.reveal-ready .reveal-delay-4 {
 
 
     /* =========================================================
-   SWAYPHICS — LAUNCH PACKAGE HEADER SPACING FIX
+   SWAYPHICS - LAUNCH PACKAGE HEADER SPACING FIX
    ========================================================= */
 
 /* Give the featured card enough room for its badge */
@@ -14472,7 +14132,7 @@ html.reveal-ready .reveal-delay-4 {
 }
 
 /* =========================================================
-   SWAYPHICS — FEATURED PACKAGE HEADER FINAL SPACING
+   SWAYPHICS - FEATURED PACKAGE HEADER FINAL SPACING
    ========================================================= */
 
 .package-featured {
@@ -14570,7 +14230,7 @@ html.reveal-ready .reveal-delay-4 {
 }
 
 /* =========================================================
-   SWAYPHICS — PREMIUM MAGNETIC BUTTONS
+   SWAYPHICS - PREMIUM MAGNETIC BUTTONS
    ========================================================= */
 
 .btn {
@@ -14615,7 +14275,7 @@ html.reveal-ready .reveal-delay-4 {
 }
 
     /* =========================================================
-   SWAYPHICS — SECTION TRANSITION SYSTEM
+   SWAYPHICS - SECTION TRANSITION SYSTEM
    ========================================================= */
 
 :root {
@@ -14702,7 +14362,7 @@ html.reveal-ready .reveal-delay-4 {
 
 
 /* =========================================================
-   WORK SECTION — FLOATING ENTRY
+   WORK SECTION - FLOATING ENTRY
    ========================================================= */
 
 #work {
@@ -14788,7 +14448,7 @@ html.reveal-ready .reveal-delay-4 {
 
 
 /* =========================================================
-   CTA ENTRY — DEEP BLUE ATMOSPHERE
+   CTA ENTRY - DEEP BLUE ATMOSPHERE
    ========================================================= */
 
 .cta {
@@ -14861,7 +14521,7 @@ html.reveal-ready .reveal-delay-4 {
 }
 
     /* =========================================================
-   SWAYPHICS — LIGHTWEIGHT 3D SPATIAL MOTIF
+   SWAYPHICS - LIGHTWEIGHT 3D SPATIAL MOTIF
    ========================================================= */
 
 .sway-spatial {
@@ -15168,7 +14828,7 @@ html.reveal-ready .reveal-delay-4 {
 
     
 /* =========================================================
-   WHY SWAYPHICS — NATURAL IMAGE BACKGROUND
+   WHY SWAYPHICS - NATURAL IMAGE BACKGROUND
    ========================================================= */
 
 .why-swayphics {
@@ -15466,7 +15126,7 @@ html.reveal-ready .reveal-delay-4 {
 }
 
     /* =========================================================
-   HERO MEDIA — MOBILE FULL-FRAME FIX
+   HERO MEDIA - MOBILE FULL-FRAME FIX
    ========================================================= */
 
 @media (max-width: 700px) {
@@ -15494,7 +15154,7 @@ html.reveal-ready .reveal-delay-4 {
 }
 
     /* =========================================================
-   MOBILE HERO — MEDIA / CONTENT SEPARATION
+   MOBILE HERO - MEDIA / CONTENT SEPARATION
    ========================================================= */
 
 @media (max-width: 700px) {
@@ -15667,7 +15327,7 @@ html.reveal-ready .reveal-delay-4 {
 }
 
     /* =========================================================
-   MOBILE LIQUID-GLASS NAV — COMPACT
+   MOBILE LIQUID-GLASS NAV - COMPACT
    ========================================================= */
 
 @media (max-width: 700px) {
@@ -15913,7 +15573,7 @@ nav.scrolled {
 }
     
   /* =========================================================
-   SWAYPHICS — HERO OPTICAL SETTLE
+   SWAYPHICS - HERO OPTICAL SETTLE
    ========================================================= */
 
 @keyframes swayHeroSettle {
@@ -15943,7 +15603,7 @@ nav.scrolled {
 } 
 
 /* =========================================================
-   SWAYPHICS — COOKIE CONSENT — LIQUID GLASS
+   SWAYPHICS - COOKIE CONSENT - LIQUID GLASS
    ========================================================= */
 
 .sway-cookie-banner {
@@ -16227,7 +15887,7 @@ nav.scrolled {
 } 
 
     /* =========================================================
-   HERO VIDEO — STACKING ORDER FIX
+   HERO VIDEO - STACKING ORDER FIX
    ========================================================= */
 
 .hero-video {
@@ -16303,7 +15963,7 @@ button.portfolio-image-wrap {
 }
 
  /* =========================================================
-   SWAYPHICS — REFINED CARD SCALE
+   SWAYPHICS - REFINED CARD SCALE
    Slightly more compact card proportions
    ========================================================= */
 
@@ -16610,7 +16270,7 @@ body {
 
 
 /* =========================================================
-   CLIENT STORIES — LIGHT BLUE GRADIENT
+   CLIENT STORIES - LIGHT BLUE GRADIENT
    ========================================================= */
 
 .testimonials {
@@ -16658,7 +16318,7 @@ body {
 }
 
         /* =========================================================
-   SWAYPHICS — GEMINI-STYLE 3D PORTFOLIO
+   SWAYPHICS - GEMINI-STYLE 3D PORTFOLIO
    ========================================================= */
 
 /*
@@ -17307,7 +16967,7 @@ body {
 
 
 /* =========================================================
-   SWAYPHICS — SOFT SECTION EDGE FADES
+   SWAYPHICS - SOFT SECTION EDGE FADES
    Smoothly morph the ending tone of the previous section into the
    natural starting tone of the current section.
    ========================================================= */
@@ -17391,7 +17051,7 @@ section {
 }
 
 /* =========================================================
-   SWAYPHICS — POLISH PASS REFINEMENTS
+   SWAYPHICS - POLISH PASS REFINEMENTS
    ========================================================= */
 
 section[id] {
@@ -17427,10 +17087,6 @@ section[id] {
 
 .innerme-card {
     min-height: 480px;
-}
-
-.innerme-orb {
-    animation: none;
 }
 
 @media (max-width: 1000px) {
@@ -17494,45 +17150,6 @@ section[id] {
 
 <body>
 
-    <div class="sway-intro" id="sway-intro" aria-hidden="true">
-        <div class="sway-intro__grid"></div>
-        <div class="sway-intro__tiles">
-            <span></span><span></span><span></span><span></span>
-        </div>
-        <div class="sway-intro__lockup">
-            <img class="sway-intro__logo" src="swayphics-logo.png" alt="" width="200" height="48" decoding="async">
-            <p class="sway-intro__welcome">
-                <strong>Welcome to Swayphics</strong>
-                <span>Let’s build something worth remembering.</span>
-            </p>
-        </div>
-    </div>
-    <script>
-    (() => {
-        const intro = document.getElementById("sway-intro");
-        if (!intro) return;
-
-        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const startIntro = () => {
-            if (!intro.isConnected) return;
-            const dismiss = () => intro.remove();
-
-            if (!reducedMotion) {
-                intro.addEventListener("animationend", event => {
-                    if (event.target === intro && event.animationName === "sway-intro-exit") dismiss();
-                });
-                intro.classList.add("sway-intro--active");
-            }
-
-            window.setTimeout(dismiss, 9500);
-        };
-
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", () => window.requestAnimationFrame(startIntro), { once: true });
-        } else {
-            window.requestAnimationFrame(startIntro);
-        }
-    })();
     </script>
 
     <nav>
@@ -17540,7 +17157,7 @@ section[id] {
     <a href="#top" class="logo">
         <img
     src="swayphics-logo.png"
-    alt="Swayphics — Empowering through design"
+    alt="Swayphics - Empowering through design"
     width="200"
     height="48"
     decoding="async"
@@ -18521,7 +18138,7 @@ section[id] {
 
 </section>
 
-        <!-- SELECTED WORK — GEMINI-STYLE 3D PORTFOLIO -->
+        <!-- SELECTED WORK - GEMINI-STYLE 3D PORTFOLIO -->
 <section class="selected-work" id="selected-work">
 
     <div class="section-edge-fade section-edge-fade--selected" aria-hidden="true"></div>
@@ -18641,7 +18258,6 @@ section[id] {
 
                 <div class="innerme-identity">
 
-                    <div class="innerme-orb" aria-hidden="true"></div>
 
                     <div class="innerme-identity-copy">
                         <span class="innerme-kicker">SWAYPHICS</span>
@@ -19111,7 +18727,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
     
 /* =========================================================
-   SWAYPHICS — SCROLL REVEAL SYSTEM
+   SWAYPHICS - SCROLL REVEAL SYSTEM
    ========================================================= */
 
 const revealSelectors = [
@@ -19356,7 +18972,7 @@ if ("IntersectionObserver" in window) {
     
     <script>
 /* =========================================================
-   SWAYPHICS — CONTACT FORM / SUPABASE
+   SWAYPHICS - CONTACT FORM / SUPABASE
    ========================================================= */
 
 const projectForm =
@@ -19366,7 +18982,7 @@ const projectForm =
     document.getElementById("form-status");
 
   /* =========================================================
-   SUPABASE — PUBLIC CLIENT
+   SUPABASE - PUBLIC CLIENT
    ========================================================= */
 
 const SUPABASE_URL =
@@ -19635,8 +19251,7 @@ async function loadTestimonials() {
                         );
 
 
-                    const stars =
-                        "★".repeat(rating);
+                    const ratingText = rating + "/5";
 
 
                     const business =
@@ -19694,9 +19309,9 @@ async function loadTestimonials() {
 
                                 <div
                                     class="testimonial-rating"
-                                    aria-label="${rating} star rating"
+                                    aria-label="${rating} out of 5 rating"
                                 >
-                                    ${stars}
+                                    ${ratingText}
                                 </div>
 
                             </div>
@@ -19761,7 +19376,7 @@ async function loadTestimonials() {
 }
 
 /* =========================================================
-   SWAYPHICS — CSS PORTFOLIO CAROUSEL DATA LOADER
+   SWAYPHICS - CSS PORTFOLIO CAROUSEL DATA LOADER
    ========================================================= */
 
 const portfolioCarouselState = {
@@ -21050,7 +20665,7 @@ if (projectForm) {
             projectForm.reset();
 
 submitButton.textContent =
-    "Enquiry Sent ✓";
+    "Enquiry Sent";
 
 
 if (formStatus) {
@@ -21059,10 +20674,6 @@ if (formStatus) {
         "form-status success";
 
     formStatus.innerHTML = `
-        <span class="form-status-icon">
-            ✓
-        </span>
-
         <span class="form-status-content">
             Your enquiry has been received. We'll be in touch soon.
         </span>
@@ -21136,10 +20747,6 @@ if (formStatus) {
             : "form-status error";
 
     formStatus.innerHTML = `
-        <span class="form-status-icon">
-            ${isRateLimit ? "!" : "×"}
-        </span>
-
         <span class="form-status-content">
             ${errorMessage}
         </span>
@@ -21566,19 +21173,7 @@ if (formStatus) {
 })();
 </script>
 
-<style id="sway-public-loading-ui">
-.sway-loading-button{display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.sway-loading-button::before{content:"";width:16px;height:16px;flex:0 0 16px;display:block;background:url("FIST.webp") center/contain no-repeat;filter:drop-shadow(0 2px 5px rgba(1,82,244,.18));clip-path:inset(100% 0 0 0);animation:sway-fist-ink-draw-public 1.5s cubic-bezier(.55,0,.18,1) infinite}
-@keyframes sway-fist-ink-draw-public{
-  0%{clip-path:inset(100% 0 0 0);opacity:0;transform:translateY(2px) scale(.98)}
-  9%{opacity:1}
-  62%{clip-path:inset(0 0 0 0);opacity:1;transform:translateY(0) scale(1)}
-  80%{clip-path:inset(0);opacity:1;transform:scale(1.02)}
-  92%{clip-path:inset(0);opacity:.45;transform:translateY(-1px) scale(1.02)}
-  100%{clip-path:inset(0);opacity:0;transform:translateY(-1px) scale(1.02)}
-}
-@media(prefers-reduced-motion:reduce){.sway-loading-button::before{animation:none;clip-path:none;opacity:1;transform:none;filter:none}}
-
+<style id="homepage-style-refinements">
 /* Refined section spacing and translucent project form */
 .section-title { margin-bottom: 42px; }
 .cta .section-label { margin-bottom: 12px; }
@@ -21622,72 +21217,6 @@ if (formStatus) {
 .package-button { margin-top: 24px; }
 
 </style>
-<script id="sway-public-loading-observer">
-(function () {
-    if (!("MutationObserver" in window)) return;
-
-    const busyPattern =
-        /^(loading|syncing|uploading|saving|sending|processing|refreshing|deleting|generating|enabling|submitting|creating)(?:\s|\.\.\.|…|$)/i;
-
-    function updateButton(button) {
-        if (!(button instanceof HTMLButtonElement)) return;
-
-        const text =
-            String(button.textContent || "").trim();
-
-        const isBusy =
-            busyPattern.test(text) &&
-            /(?:\.\.\.|…)$/.test(text);
-
-        button.classList.toggle(
-            "sway-loading-button",
-            isBusy
-        );
-    }
-
-    document
-        .querySelectorAll("button")
-        .forEach(updateButton);
-
-    const observer =
-        new MutationObserver(function (mutations) {
-            mutations.forEach(function (mutation) {
-                const button =
-                    mutation.target instanceof Element
-                        ? mutation.target.closest("button")
-                        : mutation.target.parentElement?.closest("button");
-
-                if (button) {
-                    updateButton(button);
-                }
-
-                mutation.addedNodes.forEach(function (node) {
-                    if (
-                        node.nodeType !== Node.ELEMENT_NODE
-                    ) {
-                        return;
-                    }
-
-                    if (
-                        node.matches &&
-                        node.matches("button")
-                    ) {
-                        updateButton(node);
-                    }
-
-                    node
-                        .querySelectorAll?.("button")
-                        .forEach(updateButton);
-                });
-            });
-        });
-
-    observer.observe(document.body, {
-        subtree: true,
-        childList: true,
-        characterData: true
-    });
-})();
 </script>
 
 <script>
@@ -22083,8 +21612,7 @@ if (formStatus) {
         typing.className =
             "innerme-typing";
 
-        typing.innerHTML =
-            "<span></span><span></span><span></span>";
+        typing.textContent = "InnerMe is thinking";
 
         bubble.appendChild(meta);
         bubble.appendChild(typing);

@@ -136,13 +136,6 @@
   gap: 7px;
 }
 
-.sway-journey-proofline span::before {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  content: "";
-  background: #0152f4;
-}
 
 .sway-journey-graphic {
   min-width: 0;
