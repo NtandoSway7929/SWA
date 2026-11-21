@@ -146,7 +146,8 @@ declare
     v_payment_ids uuid[] := array[]::uuid[];
     v_attempt_ids uuid[] := array[]::uuid[];
     v_refund_ids uuid[] := array[]::uuid[];
-    v_reconciliation_ids uuid[] := array[]::uuid[];
+    v_reconciliation_delete_ids uuid[] := array[]::uuid[];
+    v_reconciliation_keep_ids uuid[] := array[]::uuid[];
     v_projects_deleted integer := 0;
     v_invoices_deleted integer := 0;
     v_invoice_items_deleted integer := 0;
@@ -218,21 +219,36 @@ begin
     from public.payment_refunds r
     where r.payment_id = any(v_payment_ids);
 
+    -- Keep a reconciliation case if it also has an independent financial
+    -- anchor. Detach this client's anchors instead of deleting another
+    -- client's case history.
     select coalesce(array_agg(distinct r.id), array[]::uuid[])
-    into v_reconciliation_ids
+    into v_reconciliation_keep_ids
     from public.payment_reconciliation r
-    where r.payment_id = any(v_payment_ids)
-       or r.payment_attempt_id = any(v_attempt_ids)
-       or r.refund_id = any(v_refund_ids)
-       or exists (
-           select 1
-           from public.payment_reconciliation_actions a
-           where a.reconciliation_id = r.id
-             and (
-                 a.related_payment_id = any(v_payment_ids)
-                 or a.related_refund_id = any(v_refund_ids)
-             )
-       );
+    where (
+        r.payment_id = any(v_payment_ids)
+        or r.payment_attempt_id = any(v_attempt_ids)
+        or r.refund_id = any(v_refund_ids)
+    )
+      and (
+        (r.payment_id is not null and not r.payment_id = any(v_payment_ids))
+        or (r.payment_attempt_id is not null and not r.payment_attempt_id = any(v_attempt_ids))
+        or (r.refund_id is not null and not r.refund_id = any(v_refund_ids))
+      );
+
+    select coalesce(array_agg(distinct r.id), array[]::uuid[])
+    into v_reconciliation_delete_ids
+    from public.payment_reconciliation r
+    where (
+        r.payment_id = any(v_payment_ids)
+        or r.payment_attempt_id = any(v_attempt_ids)
+        or r.refund_id = any(v_refund_ids)
+    )
+      and not (
+        (r.payment_id is not null and not r.payment_id = any(v_payment_ids))
+        or (r.payment_attempt_id is not null and not r.payment_attempt_id = any(v_attempt_ids))
+        or (r.refund_id is not null and not r.refund_id = any(v_refund_ids))
+      );
 
     select count(*)::integer
     into v_invoice_items_deleted
@@ -263,18 +279,25 @@ begin
     where e.payment_attempt_id = any(v_attempt_ids);
     get diagnostics v_webhook_events_deleted = row_count;
 
+    update public.payment_reconciliation r
+    set payment_id = case when r.payment_id = any(v_payment_ids) then null else r.payment_id end,
+        payment_attempt_id = case when r.payment_attempt_id = any(v_attempt_ids) then null else r.payment_attempt_id end,
+        refund_id = case when r.refund_id = any(v_refund_ids) then null else r.refund_id end,
+        updated_at = now()
+    where r.id = any(v_reconciliation_keep_ids);
+
     delete from public.payment_reconciliation_evidence e
-    where e.reconciliation_id = any(v_reconciliation_ids);
+    where e.reconciliation_id = any(v_reconciliation_delete_ids);
     get diagnostics v_reconciliation_evidence_deleted = row_count;
 
     delete from public.payment_reconciliation_actions a
-    where a.reconciliation_id = any(v_reconciliation_ids)
+    where a.reconciliation_id = any(v_reconciliation_delete_ids)
        or a.related_payment_id = any(v_payment_ids)
        or a.related_refund_id = any(v_refund_ids);
     get diagnostics v_reconciliation_actions_deleted = row_count;
 
     delete from public.payment_reconciliation r
-    where r.id = any(v_reconciliation_ids);
+    where r.id = any(v_reconciliation_delete_ids);
     get diagnostics v_reconciliations_deleted = row_count;
 
     delete from public.payment_refunds r
