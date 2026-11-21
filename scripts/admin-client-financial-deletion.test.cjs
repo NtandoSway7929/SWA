@@ -59,12 +59,13 @@ for (const contract of [
   "innerme_private.client_financial_deletion_context",
   "client_financial_deletion_is_authorized",
   "alter table public.client_deletion_storage_cleanup enable row level security",
-  "grant select, update, delete on table public.client_deletion_storage_cleanup to service_role",
-  "grant execute on function public.admin_delete_client_with_financial_records(uuid) to authenticated"
+  "alter table public.client_deletion_storage_cleanup enable row level security"
 ]) {
   assert.ok(migration.toLowerCase().includes(contract.toLowerCase()),
     "migration must include security/transaction contract: " + contract);
 }
+assert.match(migration, /grant select, update, delete on table public\\.client_deletion_storage_cleanup\\s+to service_role/i);
+assert.match(migration, /grant execute on function public\\.admin_delete_client_with_financial_records\\(uuid\\)\\s+to authenticated/i);
 
 const deletionOrder = [
   "delete from public.bank_transfer_submissions",
