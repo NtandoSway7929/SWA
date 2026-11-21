@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(30);
+select extensions.plan(31);
 
 select extensions.has_table('innerme_private', 'client_financial_deletion_context',
     'transaction-scoped deletion authorisation table exists');
@@ -68,6 +68,9 @@ create temp table client_financial_deletion_test_ids (
     client_id uuid,
     invoice_id uuid,
     payment_id uuid,
+    paystack_payment_id uuid,
+    paystack_refund_id uuid,
+    paystack_event_id uuid,
     attempt_id uuid,
     refund_id uuid,
     reconciliation_id uuid,
@@ -85,6 +88,10 @@ declare
     v_project_id uuid;
     v_invoice_id uuid;
     v_payment_id uuid;
+    v_paystack_payment_id uuid;
+    v_paystack_refund_id uuid;
+    v_paystack_event_id uuid;
+    v_paystack_event_reference text;
     v_attempt_id uuid;
     v_event_id uuid;
     v_refund_id uuid;
@@ -143,6 +150,16 @@ begin
     )
     returning id into v_payment_id;
 
+    insert into public.payments (
+        client_id, project_id, invoice_id, amount, status, method,
+        provider, provider_transaction_id, currency
+    )
+    values (
+        v_client_id, v_project_id, v_invoice_id, 20, 'paid', 'Card',
+        'paystack', 'client-delete-paystack-payment-' || gen_random_uuid()::text, 'ZAR'
+    )
+    returning id into v_paystack_payment_id;
+
     insert into public.payment_attempts (
         invoice_id, client_id, provider, environment, amount_cents,
         currency, idempotency_key, status, payment_id
@@ -175,6 +192,28 @@ begin
         (select provider_event_id from public.payment_webhook_events where id = v_event_id)
     )
     returning id into v_refund_id;
+
+    v_paystack_event_reference := 'client-delete-paystack-refund-event-' || gen_random_uuid()::text;
+    insert into public.payment_webhook_events (
+        provider, environment, provider_event_id, event_type,
+        payment_attempt_id, signature_verified, processing_status
+    )
+    values (
+        'paystack', 'live', v_paystack_event_reference,
+        'refund.processed', null, true, 'received'
+    )
+    returning id into v_paystack_event_id;
+
+    insert into public.payment_refunds (
+        payment_id, provider, environment, provider_refund_id,
+        amount, currency, status, provider_event_id
+    )
+    values (
+        v_paystack_payment_id, 'paystack', 'live',
+        'client-delete-paystack-refund-' || gen_random_uuid()::text,
+        5, 'ZAR', 'pending', v_paystack_event_reference
+    )
+    returning id into v_paystack_refund_id;
 
     insert into public.payment_receipts (payment_id, receipt_number, snapshot)
     values (
@@ -243,14 +282,14 @@ begin
     if (v_result->>'client_id')::uuid is distinct from v_client_id
        or (v_result->>'invoices_deleted')::integer <> 1
        or (v_result->>'invoice_items_deleted')::integer <> 1
-       or (v_result->>'payments_deleted')::integer <> 1
+       or (v_result->>'payments_deleted')::integer <> 2
        or (v_result->>'payment_attempts_deleted')::integer <> 1
        or (v_result->>'payment_receipts_deleted')::integer <> 1
-       or (v_result->>'payment_refunds_deleted')::integer <> 1
+       or (v_result->>'payment_refunds_deleted')::integer <> 2
        or (v_result->>'payment_reconciliations_deleted')::integer <> 1
        or (v_result->>'payment_reconciliation_actions_deleted')::integer <> 1
        or (v_result->>'payment_reconciliation_evidence_deleted')::integer <> 1
-       or (v_result->>'payment_webhook_events_deleted')::integer <> 1
+       or (v_result->>'payment_webhook_events_deleted')::integer <> 2
        or (v_result->>'bank_transfer_submissions_deleted')::integer <> 1
        or (v_result->>'payment_proof_files_queued_for_deletion')::integer <> 1 then
         raise exception 'Unexpected deletion counts: %', v_result;
@@ -266,12 +305,14 @@ begin
     end;
 
     insert into client_financial_deletion_test_ids (
-        client_id, invoice_id, payment_id, attempt_id, refund_id,
+        client_id, invoice_id, payment_id, paystack_payment_id,
+        paystack_refund_id, paystack_event_id, attempt_id, refund_id,
         reconciliation_id, bank_submission_id, proof_path,
         keep_client_id, keep_invoice_id, unauthorised_client_id
     )
     values (
-        v_client_id, v_invoice_id, v_payment_id, v_attempt_id, v_refund_id,
+        v_client_id, v_invoice_id, v_payment_id, v_paystack_payment_id,
+        v_paystack_refund_id, v_paystack_event_id, v_attempt_id, v_refund_id,
         v_reconciliation_id, v_submission_id, v_proof_path,
         v_keep_client_id, v_keep_invoice_id, v_unauthorised_client_id
     );
@@ -291,7 +332,13 @@ select extensions.ok(
     'all linked invoice items are deleted'
 );
 select extensions.ok(
-    not exists (select 1 from public.payments where id = (select payment_id from client_financial_deletion_test_ids)),
+    not exists (
+        select 1 from public.payments
+        where id in (
+            (select payment_id from client_financial_deletion_test_ids),
+            (select paystack_payment_id from client_financial_deletion_test_ids)
+        )
+    ),
     'all linked payments are deleted'
 );
 select extensions.ok(
@@ -303,11 +350,28 @@ select extensions.ok(
     'all linked issued receipt snapshots are deleted'
 );
 select extensions.ok(
-    not exists (select 1 from public.payment_refunds where id = (select refund_id from client_financial_deletion_test_ids)),
+    not exists (
+        select 1 from public.payment_webhook_events
+        where id = (select paystack_event_id from client_financial_deletion_test_ids)
+    ),
+    'Paystack refund webhook linked by provider event reference is deleted even without an attempt foreign key'
+);
+select extensions.ok(
+    not exists (
+        select 1 from public.payment_refunds
+        where id in (
+            (select refund_id from client_financial_deletion_test_ids),
+            (select paystack_refund_id from client_financial_deletion_test_ids)
+        )
+    ),
     'all linked refunds are deleted'
 );
 select extensions.ok(
-    not exists (select 1 from public.payment_webhook_events where payment_attempt_id = (select attempt_id from client_financial_deletion_test_ids)),
+    not exists (
+        select 1 from public.payment_webhook_events
+        where payment_attempt_id = (select attempt_id from client_financial_deletion_test_ids)
+           or id = (select paystack_event_id from client_financial_deletion_test_ids)
+    ),
     'all linked provider webhook events are deleted'
 );
 select extensions.ok(
