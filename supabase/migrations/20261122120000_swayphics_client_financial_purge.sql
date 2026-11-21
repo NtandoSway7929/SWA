@@ -118,9 +118,15 @@ begin
         select 1
         from public.payment_attempts pa
         where pa.client_id = p_client_id
-          and pa.status in ('created', 'pending')
+          and pa.status in ('created', 'pending', 'requires_review')
+    ) or exists (
+        select 1
+        from public.payment_webhook_events pwe
+        join public.payment_attempts pa on pa.id = pwe.payment_attempt_id
+        where pa.client_id = p_client_id
+          and pwe.processing_status in ('received', 'processing', 'failed_retryable', 'requires_review')
     ) then
-        raise exception 'This client has an active payment checkout. Allow the checkout to expire or resolve it before permanently deleting the client.'
+        raise exception 'This client has an active checkout or unresolved provider event. Resolve it before permanently deleting the client.'
             using errcode = '55000';
     end if;
 
