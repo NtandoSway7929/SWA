@@ -312,4 +312,15 @@ revoke all on function public.delete_swayphics_client(uuid) from public, anon;
 grant execute on function public.delete_swayphics_client(uuid) to authenticated;
 revoke all on function public.prevent_yoco_reconciliation_history_mutation() from public, anon, authenticated;
 
+-- The dashboard removes proof objects through the Storage API after the database purge.
+drop policy if exists "Swayphics owners can delete payment proof files" on storage.objects;
+create policy "Swayphics owners can delete payment proof files"
+on storage.objects
+for delete
+to authenticated
+using (
+    bucket_id = 'swayphics-payment-proofs'
+    and (select public.is_swayphics_owner())
+);
+
 commit;
