@@ -4,6 +4,18 @@
 
 begin;
 
+-- Proof uploads are private financial evidence. Permit only active Swayphics
+-- administrators to remove objects from this dedicated bucket.
+drop policy if exists "Swayphics admins can delete payment proof files" on storage.objects;
+create policy "Swayphics admins can delete payment proof files"
+    on storage.objects
+    for delete
+    to authenticated
+    using (
+        bucket_id = 'swayphics-payment-proofs'
+        and public.is_swayphics_admin()
+    );
+
 create or replace function innerme_private.guard_yoco_financial_ledger()
 returns trigger
 language plpgsql
