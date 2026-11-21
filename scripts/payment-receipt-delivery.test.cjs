@@ -5,7 +5,11 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const migration = read("supabase/migrations/202611210001_payment_receipt_email_delivery.sql");
+const manualMigration = read("supabase/migrations/202611210002_admin_manual_payment_recording.sql");
+const manualIndexes = read("supabase/migrations/202611220001_manual_payment_request_indexes.sql");
 const delivery = read("supabase/functions/deliver-payment-receipt/index.ts");
+const manualFunction = read("supabase/functions/admin-manual-payment/index.ts");
+const manualUi = read("admin-dashboard/admin-manual-payments.js");
 const eft = read("supabase/functions/bank-transfer/index.ts");
 const paystack = read("supabase/functions/paystack-payment-webhook/index.ts");
 const dashboard = read("admin-dashboard/payment-receipts.js");
@@ -35,6 +39,30 @@ assert.match(delivery, /status: "failed"/);
 assert.match(delivery, /serviceKey && apiKey === serviceKey/);
 assert.match(delivery, /escapeHtml\(greeting\)/);
 
+assert.match(manualMigration, /create table if not exists public\.manual_payment_record_requests/);
+assert.match(manualMigration, /for update/);
+assert.match(manualMigration, /active = true/);
+assert.match(manualMigration, /v_amount > v_outstanding/);
+assert.match(manualMigration, /insert into public\.payments/);
+assert.match(manualMigration, /insert into public\.payment_receipts/);
+assert.match(manualMigration, /on conflict \(idempotency_key\) do nothing/);
+assert.match(manualMigration, /revoke all on function public\.admin_record_manual_payment[\s\S]*?from public, anon, authenticated/);
+assert.match(manualIndexes, /manual_payment_record_requests_invoice_idx/);
+assert.match(manualIndexes, /manual_payment_record_requests_recorded_by_idx/);
+
+assert.match(manualFunction, /auth\.getUser\(token\)/);
+assert.match(manualFunction, /rpc\("is_swayphics_admin"\)/);
+assert.match(manualFunction, /rpc\("admin_record_manual_payment"/);
+assert.match(manualFunction, /\["EFT", "Cash", "Other"\]/);
+assert.match(manualFunction, /idempotency_key: requestKey/);
+assert.match(manualFunction, /dispatchReceipt\(String\(result\.payment_id\), admin\)/);
+assert.match(manualUi, /I have independently verified that the funds were received and cleared/);
+assert.match(manualUi, /amount > Number\(row\.amount_outstanding\)/);
+assert.match(manualUi, /admin-manual-payment/);
+assert.match(manualUi, /pendingKey/);
+assert.match(html, /admin-manual-payments\.js/);
+assert.match(config, /\[functions\.admin-manual-payment\][\s\S]*?verify_jwt = true/);
+
 assert.match(eft, /dispatchPaymentReceipt\(paymentId, deps\.logError\)/);
 assert.match(paystack, /dispatchPaymentReceipt\(settledPaymentId, deps\.logError\)/);
 assert.match(dashboard, /deliver-payment-receipt/);
@@ -42,4 +70,4 @@ assert.match(dashboard, /Retry email/);
 assert.match(html, /payment-receipts\.js/);
 assert.match(config, /\[functions\.deliver-payment-receipt\][\s\S]*?verify_jwt = false/);
 
-console.log("Payment receipt delivery source checks passed.");
+console.log("Payment receipt delivery and manual payment recording source checks passed.");
