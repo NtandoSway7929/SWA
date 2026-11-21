@@ -60,6 +60,7 @@ assert.match(manualUi, /I have independently verified that the funds were receiv
 assert.match(manualUi, /amount > Number\(row\.amount_outstanding\)/);
 assert.match(manualUi, /admin-manual-payment/);
 assert.match(manualUi, /pendingKey/);
+assert.match(manualUi, /timeZone: "Africa\\/Johannesburg"/);
 assert.match(html, /admin-manual-payments\.js/);
 assert.match(config, /\[functions\.admin-manual-payment\][\s\S]*?verify_jwt = true/);
 
