@@ -185,6 +185,9 @@ async function sendReceipt(admin: any, paymentId: string) {
     .or("status.in.(pending,failed),and(status.eq.sending,updated_at.lt." + staleBefore + ")")
     .select("receipt_id,attempt_count").maybeSingle();
   if (claimError) return json({ ok: false, error: "Receipt delivery could not be claimed." }, 503);
+  await admin.from("payment_receipt_delivery_attempts").insert({
+    receipt_id: receipt.id, status: "sending",
+  });
   if (!claim) {
     const { data: current } = await admin.from("payment_receipt_deliveries")
       .select("status,provider_message_id").eq("receipt_id", receipt.id).maybeSingle();
@@ -223,7 +226,11 @@ async function sendReceipt(admin: any, paymentId: string) {
     const from = Deno.env.get("RESEND_FROM_EMAIL") || "Swayphics <info@swayphics.co.za>";
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: "Bearer " + resendKey, "Content-Type": "application/json" },
+      headers: {
+        Authorization: "Bearer " + resendKey,
+        "Content-Type": "application/json",
+        "Idempotency-Key": "payment-receipt-" + receipt.id,
+      },
       body: JSON.stringify({
         from, to: [recipient], subject: "Payment receipt " + receipt.receipt_number + " from Swayphics",
         html, attachments: [{ filename: receipt.receipt_number + ".pdf", content: bytesToBase64(pdf) }],
