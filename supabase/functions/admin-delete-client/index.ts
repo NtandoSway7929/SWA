@@ -32,7 +32,8 @@ function createServiceClient() {
 function createUserClient(token: string) {
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_ANON_KEY") ||
-    Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+    Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ||
+    (() => { try { return JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}").default || ""; } catch { return ""; } })();
   if (!url || !key) throw new Error("Server configuration is unavailable.");
   return createClient(url, key, {
     global: { headers: { Authorization: "Bearer " + token } },
@@ -85,11 +86,13 @@ async function processPendingProofCleanup(admin: any) {
     const { error: storageError } = await admin.storage.from(bucket).remove(paths);
 
     if (storageError) {
-      await admin.from("client_deletion_storage_cleanup")
-        .update({
-          attempts: items.map((item) => Number(item.attempts || 0) + 1),
-          last_error: String(storageError.message || "Storage removal failed.").slice(0, 500),
-        }).in("id", ids);
+      await Promise.all(items.map((item) =>
+        admin.from("client_deletion_storage_cleanup")
+          .update({
+            attempts: Number(item.attempts || 0) + 1,
+            last_error: String(storageError.message || "Storage removal failed.").slice(0, 500),
+          }).eq("id", item.id)
+      ));
       pending += items.length;
       continue;
     }
@@ -100,11 +103,13 @@ async function processPendingProofCleanup(admin: any) {
       .in("id", ids);
 
     if (queueError) {
-      await admin.from("client_deletion_storage_cleanup")
-        .update({
-          attempts: items.map((item) => Number(item.attempts || 0) + 1),
-          last_error: "Proof files were removed, but cleanup queue acknowledgement failed.",
-        }).in("id", ids);
+      await Promise.all(items.map((item) =>
+        admin.from("client_deletion_storage_cleanup")
+          .update({
+            attempts: Number(item.attempts || 0) + 1,
+            last_error: "Proof files were removed, but cleanup queue acknowledgement failed.",
+          }).eq("id", item.id)
+      ));
       pending += items.length;
       continue;
     }
