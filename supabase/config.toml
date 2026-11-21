@@ -52,3 +52,7 @@ verify_jwt = false
 # Receipt delivery accepts administrator JWTs and internal calls authenticated with the project secret key.
 [functions.deliver-payment-receipt]
 verify_jwt = false
+
+# Manual offline payment entry authenticates administrator JWTs in the function.
+[functions.admin-manual-payment]
+verify_jwt = true
