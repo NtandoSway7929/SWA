@@ -172,14 +172,19 @@
   }
 
   function initJourney(root) {
+    if (!root || root.dataset.swayJourneyReady === "true") return;
+
     var panels = Array.from(root.querySelectorAll("[data-sway-journey-panel]"));
     var stepButtons = Array.from(root.querySelectorAll("[data-sway-journey-step]"));
+    var mobileSegments = Array.from(root.querySelectorAll("[data-sway-journey-seg]"));
+    var mobileLabel = root.querySelector("[data-sway-journey-mobile-label]");
     var status = root.querySelector("[data-sway-journey-status]");
     var toggle = root.querySelector("[data-sway-journey-toggle]");
     var previous = root.querySelector("[data-sway-journey-previous]");
     var next = root.querySelector("[data-sway-journey-next]");
 
     if (!panels.length) return;
+    root.dataset.swayJourneyReady = "true";
 
     var current = 0;
     var inView = false;
@@ -187,7 +192,7 @@
     var hoverPaused = false;
     var focusPaused = false;
     var timer = null;
-    var intervalMs = 4800;
+    var intervalMs = 6500;
 
     function stopTimer() {
       if (timer !== null) {
@@ -229,8 +234,10 @@
       }
     }
 
-    function setStep(index) {
+    function setStep(index, options) {
       current = (index + panels.length) % panels.length;
+      stopTimer();
+      root.setAttribute("data-stage", String(current));
 
       panels.forEach(function (panel, panelIndex) {
         var active = panelIndex === current;
@@ -243,12 +250,24 @@
       stepButtons.forEach(function (button, buttonIndex) {
         var active = buttonIndex === current;
         button.classList.toggle("is-current", active);
+        button.setAttribute("aria-selected", active ? "true" : "false");
+        button.setAttribute("tabindex", active ? "0" : "-1");
         if (active) button.setAttribute("aria-current", "step");
         else button.removeAttribute("aria-current");
       });
 
+      mobileSegments.forEach(function (seg, segIndex) {
+        seg.classList.toggle("is-current", segIndex === current);
+      });
+
+      var title = panels[current].getAttribute("data-step-title") || "Journey stage";
+
+      if (mobileLabel) {
+        mobileLabel.textContent =
+          "Stage " + (current + 1) + " of " + panels.length + " · " + title;
+      }
+
       if (status) {
-        var title = panels[current].getAttribute("data-step-title") || "Journey stage";
         status.textContent =
           String(current + 1).padStart(2, "0") +
           " / " +
@@ -257,12 +276,39 @@
           title;
       }
 
+      if (options && options.focusTab && stepButtons[current]) {
+        stepButtons[current].focus();
+      }
+
       refreshPlayback();
     }
 
     stepButtons.forEach(function (button) {
       button.addEventListener("click", function () {
         var step = Number(button.getAttribute("data-sway-journey-step"));
+        if (Number.isInteger(step)) setStep(step);
+      });
+
+      button.addEventListener("keydown", function (event) {
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          setStep(current + 1, { focusTab: true });
+        } else if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          setStep(current - 1, { focusTab: true });
+        } else if (event.key === "Home") {
+          event.preventDefault();
+          setStep(0, { focusTab: true });
+        } else if (event.key === "End") {
+          event.preventDefault();
+          setStep(panels.length - 1, { focusTab: true });
+        }
+      });
+    });
+
+    mobileSegments.forEach(function (seg) {
+      seg.addEventListener("click", function () {
+        var step = Number(seg.getAttribute("data-sway-journey-seg"));
         if (Number.isInteger(step)) setStep(step);
       });
     });
