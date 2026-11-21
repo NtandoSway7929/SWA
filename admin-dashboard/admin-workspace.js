@@ -24852,9 +24852,39 @@ function simpleBars(items, color) {
             return;
         }
 
+        if (type === "clients") {
+            const clientInvoices =
+                state.invoices.filter(function (invoice) {
+                    return String(invoice.client_id || "") === String(id);
+                });
+            const clientPayments =
+                (state.payments || []).filter(function (payment) {
+                    return String(payment.client_id || "") === String(id);
+                });
+
+            if (clientInvoices.length > 0 || clientPayments.length > 0) {
+                const invoiceCount = clientInvoices.length;
+                const paymentCount = clientPayments.length;
+                const details = [];
+                if (invoiceCount) {
+                    details.push(invoiceCount + (invoiceCount === 1 ? " linked invoice" : " linked invoices"));
+                }
+                if (paymentCount) {
+                    details.push(paymentCount + (paymentCount === 1 ? " payment record" : " payment records"));
+                }
+
+                swayAlert(
+                    "This client cannot be permanently deleted because " +
+                    details.join(" and ") +
+                    " still exist. Resolve or retain the financial records first, then try again. You can archive the client in the meantime."
+                );
+                return;
+            }
+        }
+
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client? This removes the client and linked projects, tasks, follow-ups, payments, communication logs and invoices. Quotes are retained without the client link. This cannot be undone."
+                ? "Permanently delete this client? Related operational records may also be removed according to their database relationships. Quotes are retained without the client link. This cannot be undone."
                 : "Delete this " +
                   config.title.toLowerCase() +
                   "?";
@@ -24863,37 +24893,6 @@ function simpleBars(items, color) {
             !(await swayConfirm(confirmMessage))
         ) {
             return;
-        }
-
-        if (type === "clients") {
-            const clientInvoices =
-                state.invoices.filter(function (invoice) {
-                    return invoice.client_id === id;
-                });
-
-            for (const invoice of clientInvoices) {
-                const deletedInvoices =
-                    await api(
-                        "/rest/v1/invoices?id=eq." +
-                        encodeURIComponent(invoice.id),
-                        {
-                            method: "DELETE",
-                            headers: headers({
-                                "Prefer":
-                                    "return=representation"
-                            })
-                        }
-                    );
-
-                if (
-                    Array.isArray(deletedInvoices) &&
-                    deletedInvoices.length === 0
-                ) {
-                    throw new Error(
-                        "The invoice could not be deleted. Your current Supabase permissions may not allow invoice deletion."
-                    );
-                }
-            }
         }
 
         const deletedRecords =
