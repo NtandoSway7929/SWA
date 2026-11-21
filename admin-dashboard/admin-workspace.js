@@ -24852,9 +24852,34 @@ function simpleBars(items, color) {
             return;
         }
 
+        if (type === "clients") {
+            const clientInvoices =
+                state.invoices.filter(function (invoice) {
+                    return String(invoice.client_id || "") === String(id);
+                });
+            const clientPayments =
+                state.payments.filter(function (payment) {
+                    return String(payment.client_id || "") === String(id);
+                });
+
+            if (clientInvoices.length) {
+                swayAlert(
+                    "This client still has invoice records. Delete eligible draft or archived invoices individually first. Sent, paid, overdue and payment-linked financial records must be retained; archive the client if you need to preserve that history."
+                );
+                return;
+            }
+
+            if (clientPayments.length) {
+                swayAlert(
+                    "This client has payment records. They must be retained for financial history, so the client cannot be permanently deleted. Archive the client instead."
+                );
+                return;
+            }
+        }
+
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client? This removes the client and linked projects, tasks, follow-ups, payments, communication logs and invoices. Quotes are retained without the client link. This cannot be undone."
+                ? "Permanently delete this client? Linked projects, tasks, follow-ups, communication logs and client-portal records will be removed according to their database relationships. Quotes will be retained with the client link cleared. Financial records must be removed or retained separately first. This cannot be undone."
                 : "Delete this " +
                   config.title.toLowerCase() +
                   "?";
@@ -24863,37 +24888,6 @@ function simpleBars(items, color) {
             !(await swayConfirm(confirmMessage))
         ) {
             return;
-        }
-
-        if (type === "clients") {
-            const clientInvoices =
-                state.invoices.filter(function (invoice) {
-                    return invoice.client_id === id;
-                });
-
-            for (const invoice of clientInvoices) {
-                const deletedInvoices =
-                    await api(
-                        "/rest/v1/invoices?id=eq." +
-                        encodeURIComponent(invoice.id),
-                        {
-                            method: "DELETE",
-                            headers: headers({
-                                "Prefer":
-                                    "return=representation"
-                            })
-                        }
-                    );
-
-                if (
-                    Array.isArray(deletedInvoices) &&
-                    deletedInvoices.length === 0
-                ) {
-                    throw new Error(
-                        "The invoice could not be deleted. Your current Supabase permissions may not allow invoice deletion."
-                    );
-                }
-            }
         }
 
         const deletedRecords =
@@ -29031,6 +29025,22 @@ function simpleBars(items, color) {
                                     return;
                                 }
 
+                                const invoicePayments =
+                                    state.payments.filter(function (payment) {
+                                        return String(payment.invoice_id || "") === String(id);
+                                    });
+                                const invoiceAttempts =
+                                    state.paymentAttempts.filter(function (attempt) {
+                                        return String(attempt.invoice_id || "") === String(id);
+                                    });
+
+                                if (invoicePayments.length || invoiceAttempts.length) {
+                                    swayAlert(
+                                        "This invoice has payment or payment-attempt records. They must be retained for financial history, so the invoice cannot be permanently deleted."
+                                    );
+                                    return;
+                                }
+
                                 if (
                                     invoice.status !== "draft" &&
                                     !invoice.archived
@@ -29050,17 +29060,8 @@ function simpleBars(items, color) {
                                     return;
                                 }
 
-                                await api(
-                                    "/rest/v1/invoice_items?invoice_id=eq." +
-                                    encodeURIComponent(id),
-                                    {
-                                        method: "DELETE",
-                                        headers: headers({
-                                            "Prefer":
-                                                "return=representation"
-                                        })
-                                    }
-                                );
+                                // invoice_items use ON DELETE CASCADE. Delete the invoice first so a
+                                // restrictive financial FK cannot leave an empty invoice behind.
 
                                 const deletedInvoices =
                                     await api(
