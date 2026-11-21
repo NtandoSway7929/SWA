@@ -48,6 +48,7 @@ test("the homepage contains no em-dash characters", () => {
 
 test("text feedback and accessible ratings remain after icon removal", () => {
   assert.ok(home.includes("Your enquiry has been received"));
-  assert.ok(home.includes('aria-label="' + "$" + "{rating} out of 5 rating"'));
+  const accessibleRating = "aria-label=" + '"' + "$" + "{rating} out of 5 rating" + '"' ;
+  assert.ok(home.includes(accessibleRating));
   assert.ok(home.includes(".form-status.success"));
 });
