@@ -1762,9 +1762,11 @@ body.sp-page {
 
 
 /* =========================================================
-   SERVICE PAGE CTA CONTRAST V2
-   Force readable text on every filled-blue service CTA.
+   SERVICE PAGE BUTTON CONTRAST V3
+   Explicit, high-contrast states for all service-page CTAs.
    ========================================================= */
+
+/* Primary filled-blue buttons: white text in every state. */
 .sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light),
 .sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):link,
 .sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):visited,
@@ -1775,15 +1777,25 @@ body.sp-page {
 .sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light)::before,
 .sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light)::after,
 .sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light) *::before,
-.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light) *::after,
-.sp-page .sway-cookie-accept,
-.sp-page .sway-cookie-accept * {
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light) *::after {
+    background-color: #0152F4 !important;
     color: #FFFFFF !important;
     -webkit-text-fill-color: #FFFFFF !important;
     opacity: 1 !important;
+    filter: none !important;
+    text-shadow: none !important;
 }
 
-/* The white price-panel CTA intentionally keeps navy text. */
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):hover,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):focus-visible,
+.sp-page a.sp-button:not(.sp-button--outline):not(.sp-button--light):active {
+    background-color: #0031C5 !important;
+    border-color: #0031C5 !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* White pricing CTA: navy text on white in every state. */
 .sp-page a.sp-button--light,
 .sp-page a.sp-button--light:link,
 .sp-page a.sp-button--light:visited,
@@ -1793,27 +1805,34 @@ body.sp-page {
 .sp-page a.sp-button--light *,
 .sp-page a.sp-button--light *::before,
 .sp-page a.sp-button--light *::after {
+    background-color: #FFFFFF !important;
     color: #002096 !important;
     -webkit-text-fill-color: #002096 !important;
     opacity: 1 !important;
+    filter: none !important;
+    text-shadow: none !important;
 }
 
-/* The secondary outline button is dark on light, white on charcoal hover. */
+.sp-page a.sp-button--light:hover,
+.sp-page a.sp-button--light:focus-visible,
+.sp-page a.sp-button--light:active {
+    background-color: #EEF5FF !important;
+    border-color: #FFFFFF !important;
+}
+
+/* Outline CTA: charcoal text on white; white text on charcoal hover. */
 .sp-page a.sp-button--outline,
 .sp-page a.sp-button--outline:link,
 .sp-page a.sp-button--outline:visited,
 .sp-page a.sp-button--outline *,
 .sp-page a.sp-button--outline *::before,
 .sp-page a.sp-button--outline *::after {
+    background-color: #FFFFFF !important;
     color: #343A40 !important;
     -webkit-text-fill-color: #343A40 !important;
-}
-
-.sp-page a.sp-button--outline:hover,
-.sp-page a.sp-button--outline:focus-visible,
-.sp-page a.sp-button--outline:active {
-    background: #343A40 !important;
-    border-color: #343A40 !important;
+    opacity: 1 !important;
+    filter: none !important;
+    text-shadow: none !important;
 }
 
 .sp-page a.sp-button--outline:hover,
@@ -1821,13 +1840,22 @@ body.sp-page {
 .sp-page a.sp-button--outline:active,
 .sp-page a.sp-button--outline:hover *,
 .sp-page a.sp-button--outline:focus-visible *,
-.sp-page a.sp-button--outline:active *,
-.sp-page a.sp-button--outline:hover *::before,
-.sp-page a.sp-button--outline:focus-visible *::before,
-.sp-page a.sp-button--outline:active *::before,
-.sp-page a.sp-button--outline:hover *::after,
-.sp-page a.sp-button--outline:focus-visible *::after,
-.sp-page a.sp-button--outline:active *::after {
+.sp-page a.sp-button--outline:active * {
+    background-color: #343A40 !important;
+    border-color: #343A40 !important;
     color: #FFFFFF !important;
     -webkit-text-fill-color: #FFFFFF !important;
+}
+
+.sp-page a.sp-button:focus-visible {
+    outline: 3px solid rgba(1, 82, 244, .42) !important;
+    outline-offset: 3px !important;
+}
+
+@media (max-width: 700px) {
+    .sp-page .sp-hero-actions > a.sp-button,
+    .sp-page .sp-price-action > a.sp-button {
+        width: 100%;
+        min-height: 52px;
+    }
 }
