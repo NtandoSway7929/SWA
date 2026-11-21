@@ -136,15 +136,20 @@ for (const view of ["tasks", "followups", "communications"]) {
 const clientDeleteHandler = section(
     workspace, "    async function removeRecord(type, id)", "record deletion handler"
 );
-assert.match(clientDeleteHandler, /state\.invoices\.filter/);
-assert.match(clientDeleteHandler, /state\.payments\.filter/);
-assert.match(clientDeleteHandler, /clientInvoices\.length/);
-assert.match(clientDeleteHandler, /clientPayments\.length/);
-assert.match(clientDeleteHandler, /archive the client/i);
-assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\)/,
-    "client deletion must not cascade-delete invoice history");
-assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHandler.indexOf("swayConfirm(confirmMessage)"),
-    "financial-history checks must run before asking to confirm client deletion");
+assert.match(clientDeleteHandler, /callClientDeletionFunction/);
+assert.match(clientDeleteHandler, /type === "clients"/);
+assert.doesNotMatch(clientDeleteHandler, /clientInvoices|clientPayments|archive the client/i,
+    "client deletion must no longer block clients with financial history");
+assert.ok(workspace.includes("async function callClientDeletionFunction(payload)"),
+    "client deletion must use the authenticated server-side deletion endpoint");
+assert.ok(workspace.includes("/functions/v1/admin-delete-client"),
+    "client deletion must use the authenticated server-side endpoint");
+assert.ok(workspace.includes('action: "cleanup_pending"'),
+    "pending bank-transfer proof files must be retried on dashboard startup");
+assert.ok(workspace.includes("Permanently delete this client and ALL linked financial records?"),
+    "the confirmation must disclose the complete destructive scope");
+assert.ok(clientDeleteHandler.indexOf("callClientDeletionFunction") < clientDeleteHandler.indexOf("await logActivity("),
+    "the client must be deleted successfully before recording the activity log");
 
 assert.ok(workspace.includes("Archive this invoice first. Sent, paid and overdue invoice records should be retained"),
     "issued, paid and overdue invoices must be protected from permanent deletion");
@@ -188,7 +193,7 @@ assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-record-card/);
 assert.match(css, /@media \(max-width: 620px\)/);
 assert.match(css, /prefers-reduced-motion/);
 
-assert.match(html, /admin-workspace\.js\?v=20261121-safe-record-deletion-1/,
+assert.match(html, /admin-workspace\.js\?v=20261122-client-financial-deletion-1/,
     "the communication viewer workspace script must use a refreshed cache key");
 
 console.log("Admin record-card contract tests passed for 15 dashboard views and communication viewing.");

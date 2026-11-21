@@ -24829,20 +24829,43 @@ function simpleBars(items, color) {
         renderView();
     }
 
+    async function callClientDeletionFunction(payload) {
+        const response = await fetch(
+            SUPABASE_URL + "/functions/v1/admin-delete-client",
+            {
+                method: "POST",
+                headers: headers(),
+                body: JSON.stringify(payload),
+                cache: "no-store"
+            }
+        );
+
+        let result = null;
+        try {
+            result = await response.json();
+        } catch (error) {
+            result = null;
+        }
+
+        if (!response.ok || !result || result.ok !== true) {
+            throw new Error(
+                result && result.error
+                    ? result.error
+                    : "The client deletion service is unavailable. Please try again."
+            );
+        }
+
+        return result;
+    }
+
     async function removeRecord(type, id) {
         const config = configs[type];
 
         if (!config) return;
 
-        if (
-            type === "team"
-        ) {
-            if (
-                state.currentAdmin.role !== "owner"
-            ) {
-                swayAlert(
-                    "Only the owner can manage team access."
-                );
+        if (type === "team") {
+            if (state.currentAdmin.role !== "owner") {
+                swayAlert("Only the owner can manage team access.");
                 return;
             }
 
@@ -24852,46 +24875,42 @@ function simpleBars(items, color) {
             return;
         }
 
-        if (type === "clients") {
-            const clientInvoices =
-                state.invoices.filter(function (invoice) {
-                    return String(invoice.client_id || "") === String(id);
-                });
-            const clientPayments =
-                state.payments.filter(function (payment) {
-                    return String(payment.client_id || "") === String(id);
-                });
-
-            if (clientInvoices.length) {
-                swayAlert(
-                    "This client still has invoice records. Delete eligible draft or archived invoices individually first. Sent, paid, overdue and payment-linked financial records must be retained; archive the client if you need to preserve that history."
-                );
-                return;
-            }
-
-            if (clientPayments.length) {
-                swayAlert(
-                    "This client has payment records. They must be retained for financial history, so the client cannot be permanently deleted. Archive the client instead."
-                );
-                return;
-            }
-        }
-
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client? Linked projects, tasks, follow-ups, communication logs and client-portal records will be removed according to their database relationships. Quotes will be retained with the client link cleared. Financial records must be removed or retained separately first. This cannot be undone."
-                : "Delete this " +
-                  config.title.toLowerCase() +
-                  "?";
+                ? "Permanently delete this client and ALL linked financial records? This includes every invoice, invoice item, payment, payment attempt, receipt, refund, reconciliation record, webhook event and bank-transfer submission. Linked bank-transfer proof files will also be queued for secure deletion. This cannot be undone."
+                : "Delete this " + config.title.toLowerCase() + "?";
 
-        if (
-            !(await swayConfirm(confirmMessage))
-        ) {
+        if (!(await swayConfirm(confirmMessage))) {
             return;
         }
 
-        const deletedRecords =
-            await api(
+        let cleanupWarning = "";
+
+        if (type === "clients") {
+            let deletionResult;
+            try {
+                deletionResult = await callClientDeletionFunction({
+                    client_id: id
+                });
+            } catch (error) {
+                swayAlert(
+                    error.message ||
+                    "The client and linked financial records could not be deleted."
+                );
+                return;
+            }
+
+            const cleanup = deletionResult.storage_cleanup || {};
+            if (Number(cleanup.pending || 0) > 0 || cleanup.error === true) {
+                cleanupWarning =
+                    Number(cleanup.pending || 0) > 0
+                        ? "The client and linked financial records were deleted. " +
+                          Number(cleanup.pending) +
+                          " private bank-transfer proof file(s) could not yet be removed. Cleanup will be retried automatically."
+                        : "The client and linked financial records were deleted. Secure proof-file cleanup could not be completed yet and will be retried automatically.";
+            }
+        } else {
+            const deletedRecords = await api(
                 "/rest/v1/" +
                 config.table +
                 "?id=eq." +
@@ -24899,31 +24918,45 @@ function simpleBars(items, color) {
                 {
                     method: "DELETE",
                     headers: headers({
-                        "Prefer":
-                            "return=representation"
+                        "Prefer": "return=representation"
                     })
                 }
             );
 
-        if (
-            Array.isArray(deletedRecords) &&
-            deletedRecords.length === 0
-        ) {
-            throw new Error(
-                "The record was not deleted. Supabase returned no deleted rows, which usually means the current database permissions or RLS policy is blocking this action."
-            );
+            if (
+                Array.isArray(deletedRecords) &&
+                deletedRecords.length === 0
+            ) {
+                throw new Error(
+                    "The record was not deleted. Supabase returned no deleted rows, which usually means the current database permissions or RLS policy is blocking this action."
+                );
+            }
         }
 
         await logActivity(
-            "Deleted " +
-            config.title.toLowerCase(),
+            "Deleted " + config.title.toLowerCase(),
             config.table,
             id
         );
 
-        await refreshData();
-        renderShell();
-        renderView();
+        try {
+            await refreshData();
+            renderShell();
+            renderView();
+        } catch (refreshError) {
+            console.warn(
+                "The record deletion succeeded, but the dashboard refresh failed.",
+                refreshError
+            );
+        }
+
+        if (cleanupWarning) {
+            swayAlert(cleanupWarning);
+        } else if (type === "clients") {
+            swayAlert(
+                "The client and all linked financial records were permanently deleted."
+            );
+        }
     }
 
     async function completeTask(id) {
@@ -31117,6 +31150,15 @@ function simpleBars(items, color) {
             );
             setupGlobalSearch();
             setupRealtime();
+
+            callClientDeletionFunction({
+                action: "cleanup_pending"
+            }).catch(function (cleanupError) {
+                console.warn(
+                    "Pending client financial proof-file cleanup will be retried later.",
+                    cleanupError
+                );
+            });
 
             publishAuthorizedSwayphicsAdminWelcome(welcomeMarker);
 
