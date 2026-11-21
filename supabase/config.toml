@@ -48,3 +48,7 @@ verify_jwt = false
 # Manual bank-transfer submissions use private portal tokens or admin JWTs in the handler.
 [functions.bank-transfer]
 verify_jwt = false
+
+# Receipt delivery accepts administrator JWTs and internal calls authenticated with the project secret key.
+[functions.deliver-payment-receipt]
+verify_jwt = false
