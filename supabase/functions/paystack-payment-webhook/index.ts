@@ -630,7 +630,7 @@ async function dispatchPaymentReceipt(paymentId: string, logError: (...values: u
     return;
   }
   try {
-    const response = await fetch(url.replace(/\\/$/, "") + "/functions/v1/deliver-payment-receipt", {
+    const response = await fetch((url.endsWith("/") ? url.slice(0, -1) : url) + "/functions/v1/deliver-payment-receipt", {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": key },
       body: JSON.stringify({ action: "send", payment_id: paymentId }),
