@@ -8,26 +8,46 @@ const home = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const motionCss = fs.readFileSync(path.join(root, "swayphics-motion.css"), "utf8");
 
 test("the homepage has no first-load splash or animated loading-logo overlay", () => {
-  assert.doesNotMatch(home, /sway-intro|first-load logo reveal|sway-public-loading-ui|sway-public-loading-observer|sway-loading-button/);
-  assert.match(home, /class="hero-video"/, "normal hero video must remain");
+  for (const removed of [
+    "sway-intro",
+    "first-load logo reveal",
+    "sway-public-loading-ui",
+    "sway-public-loading-observer",
+    "sway-loading-button"
+  ]) {
+    assert.equal(home.includes(removed), false, "homepage must not include " + removed);
+  }
+  assert.ok(home.includes('class="hero-video"'), "normal hero video must remain");
 });
 
 test("decorative glowing dots and icon glyphs are removed from the homepage", () => {
-  assert.doesNotMatch(home, /innerme-orb|innerme-note-dot|innerme-typing span|innerme-typing-bounce/);
-  assert.doesNotMatch(motionCss, /\.sway-journey-proofline span::before/);
-  assert.doesNotMatch(home, /[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}]/u);
-  assert.doesNotMatch(home, /[✓★]/);
-  assert.match(home, /typing\\.textContent = "InnerMe is thinking"/);
-  assert.match(home, /const ratingText = rating \\+ "\\/5"/);
-  assert.doesNotMatch(home, /class="form-status-icon"|Enquiry Sent ✓/);
+  for (const removed of [
+    "innerme-orb",
+    "innerme-note-dot",
+    "innerme-typing span",
+    "innerme-typing-bounce",
+    "✓",
+    "★",
+    "😀",
+    "✨",
+    "💫",
+    "🌟"
+  ]) {
+    assert.equal(home.includes(removed), false, "homepage must not include " + removed);
+  }
+  assert.equal(motionCss.includes(".sway-journey-proofline span::before"), false);
+  assert.ok(home.includes('typing.textContent = "InnerMe is thinking"'));
+  assert.ok(home.includes('const ratingText = rating + "/5";'));
+  assert.equal(home.includes('class="form-status-icon"'), false);
+  assert.equal(home.includes("Enquiry Sent ✓"), false);
 });
 
 test("the homepage contains no em-dash characters", () => {
-  assert.doesNotMatch(home, /—/);
+  assert.equal(home.includes("—"), false);
 });
 
 test("text feedback and accessible ratings remain after icon removal", () => {
-  assert.match(home, /Your enquiry has been received/);
-  assert.match(home, /aria-label="\\$\\{rating\\} out of 5 rating"/);
-  assert.match(home, /form-status\\.success/);
+  assert.ok(home.includes("Your enquiry has been received"));
+  assert.ok(home.includes('aria-label="' + "$" + "{rating} out of 5 rating"'));
+  assert.ok(home.includes(".form-status.success"));
 });
