@@ -24829,6 +24829,35 @@ function simpleBars(items, color) {
         renderView();
     }
 
+    async function callClientDeletionFunction(payload) {
+        const response = await fetch(
+            SUPABASE_URL + "/functions/v1/admin-delete-client",
+            {
+                method: "POST",
+                headers: headers(),
+                body: JSON.stringify(payload),
+                cache: "no-store"
+            }
+        );
+
+        let result = null;
+        try {
+            result = await response.json();
+        } catch (error) {
+            result = null;
+        }
+
+        if (!response.ok || !result || result.ok !== true) {
+            throw new Error(
+                result && result.error
+                    ? result.error
+                    : "The client deletion service is unavailable. Please try again."
+            );
+        }
+
+        return result;
+    }
+
     async function removeRecord(type, id) {
         const config = configs[type];
 
@@ -24852,34 +24881,9 @@ function simpleBars(items, color) {
             return;
         }
 
-        if (type === "clients") {
-            const clientInvoices =
-                state.invoices.filter(function (invoice) {
-                    return String(invoice.client_id || "") === String(id);
-                });
-            const clientPayments =
-                state.payments.filter(function (payment) {
-                    return String(payment.client_id || "") === String(id);
-                });
-
-            if (clientInvoices.length) {
-                swayAlert(
-                    "This client still has invoice records. Delete eligible draft or archived invoices individually first. Sent, paid, overdue and payment-linked financial records must be retained; archive the client if you need to preserve that history."
-                );
-                return;
-            }
-
-            if (clientPayments.length) {
-                swayAlert(
-                    "This client has payment records. They must be retained for financial history, so the client cannot be permanently deleted. Archive the client instead."
-                );
-                return;
-            }
-        }
-
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client? Linked projects, tasks, follow-ups, communication logs and client-portal records will be removed according to their database relationships. Quotes will be retained with the client link cleared. Financial records must be removed or retained separately first. This cannot be undone."
+                ? "Permanently delete this client and ALL linked financial records? This includes every invoice, invoice item, payment, payment attempt, receipt, refund, reconciliation record, webhook event and bank-transfer submission. Linked bank-transfer proof files will also be removed. This cannot be undone."
                 : "Delete this " +
                   config.title.toLowerCase() +
                   "?";
@@ -24887,6 +24891,57 @@ function simpleBars(items, color) {
         if (
             !(await swayConfirm(confirmMessage))
         ) {
+            return;
+        }
+
+        if (type === "clients") {
+            let deletionResult;
+            try {
+                deletionResult = await callClientDeletionFunction({
+                    client_id: id
+                });
+            } catch (error) {
+                swayAlert(
+                    error.message ||
+                    "The client and linked financial records could not be deleted."
+                );
+                return;
+            }
+
+            await logActivity(
+                "Permanently deleted client and linked financial records",
+                "clients",
+                id
+            );
+
+            try {
+                await refreshData();
+                renderShell();
+                renderView();
+            } catch (refreshError) {
+                console.warn(
+                    "Client deletion succeeded, but the dashboard refresh failed.",
+                    refreshError
+                );
+            }
+
+            const pendingFiles =
+                Number(
+                    deletionResult.storage_cleanup &&
+                    deletionResult.storage_cleanup.pending || 0
+                );
+
+            if (pendingFiles > 0) {
+                swayAlert(
+                    "The client and linked financial records were deleted. Removal of " +
+                    pendingFiles +
+                    " bank-transfer proof file(s) is pending and will be retried automatically the next time an administrator opens the dashboard."
+                );
+            } else {
+                swayAlert(
+                    "The client and all linked financial records were permanently deleted."
+                );
+            }
             return;
         }
 
@@ -31117,6 +31172,15 @@ function simpleBars(items, color) {
             );
             setupGlobalSearch();
             setupRealtime();
+
+            callClientDeletionFunction({
+                action: "cleanup_pending"
+            }).catch(function (cleanupError) {
+                console.warn(
+                    "Pending client financial proof-file cleanup will be retried later.",
+                    cleanupError
+                );
+            });
 
             publishAuthorizedSwayphicsAdminWelcome(welcomeMarker);
 
