@@ -12,6 +12,7 @@ const motionJs = fs.readFileSync(path.join(root, "swayphics-motion.js"), "utf8")
 
 const motionPages = [
   "index.html",
+  "card/index.html",
   "admin-dashboard/index.html",
   "client-portal/index.html",
   "testimonial.html",
@@ -49,7 +50,7 @@ test("the shared motion engine supports dynamic content and reduced motion", () 
 });
 
 test("legal pages do not load the shared motion layer", () => {
-  for (const relativePath of ["privacy-policy/index.html", "paia-manual/index.html"]) {
+  for (const relativePath of ["privacy-policy/index.html", "cookie-policy/index.html", "terms-and-conditions/index.html", "paia-manual/index.html"]) {
     const html = fs.readFileSync(path.join(root, relativePath), "utf8");
     assert.doesNotMatch(html, /swayphics-motion\.(?:css|js)/, relativePath + " must remain outside the motion rollout");
   }
