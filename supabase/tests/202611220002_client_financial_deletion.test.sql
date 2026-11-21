@@ -67,6 +67,7 @@ select extensions.has_trigger('public', 'payment_reconciliation_evidence',
 create temp table client_financial_deletion_test_ids (
     client_id uuid,
     invoice_id uuid,
+    paystack_invoice_id uuid,
     payment_id uuid,
     paystack_payment_id uuid,
     paystack_refund_id uuid,
@@ -92,6 +93,7 @@ declare
     v_client_id uuid;
     v_project_id uuid;
     v_invoice_id uuid;
+    v_paystack_invoice_id uuid;
     v_payment_id uuid;
     v_paystack_payment_id uuid;
     v_paystack_refund_id uuid;
@@ -160,12 +162,19 @@ begin
     )
     returning id into v_payment_id;
 
+    insert into public.invoices (
+        client_id, status, currency, subtotal, total,
+        amount_paid, amount_outstanding
+    )
+    values (v_client_id, 'sent', 'ZAR', 20, 20, 0, 20)
+    returning id into v_paystack_invoice_id;
+
     insert into public.payments (
-        client_id, amount, status, method,
+        client_id, invoice_id, amount, status, method,
         provider, provider_transaction_id, currency
     )
     values (
-        v_client_id, 20, 'paid', 'Card',
+        v_client_id, v_paystack_invoice_id, 20, 'paid', 'Card',
         'paystack', 'client-delete-paystack-payment-' || gen_random_uuid()::text, 'ZAR'
     )
     returning id into v_paystack_payment_id;
@@ -343,7 +352,7 @@ begin
     v_result := public.admin_delete_client_with_financial_records(v_client_id);
 
     if (v_result->>'client_id')::uuid is distinct from v_client_id
-       or (v_result->>'invoices_deleted')::integer <> 1
+       or (v_result->>'invoices_deleted')::integer <> 2
        or (v_result->>'invoice_items_deleted')::integer <> 1
        or (v_result->>'payments_deleted')::integer <> 2
        or (v_result->>'payment_attempts_deleted')::integer <> 1
@@ -368,7 +377,7 @@ begin
     end;
 
     insert into client_financial_deletion_test_ids (
-        client_id, invoice_id, payment_id, paystack_payment_id,
+        client_id, invoice_id, paystack_invoice_id, payment_id, paystack_payment_id,
         paystack_refund_id, paystack_event_id, attempt_id, refund_id,
         reconciliation_id, bank_submission_id, proof_path,
         keep_client_id, keep_invoice_id, keep_payment_id, keep_attempt_id,
@@ -376,7 +385,7 @@ begin
         unauthorised_client_id
     )
     values (
-        v_client_id, v_invoice_id, v_payment_id, v_paystack_payment_id,
+        v_client_id, v_invoice_id, v_paystack_invoice_id, v_payment_id, v_paystack_payment_id,
         v_paystack_refund_id, v_paystack_event_id, v_attempt_id, v_refund_id,
         v_reconciliation_id, v_submission_id, v_proof_path,
         v_keep_client_id, v_keep_invoice_id, v_keep_payment_id, v_keep_attempt_id,
