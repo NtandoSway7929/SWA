@@ -29029,10 +29029,14 @@ function simpleBars(items, color) {
                                     state.payments.filter(function (payment) {
                                         return String(payment.invoice_id || "") === String(id);
                                     });
+                                const invoiceAttempts =
+                                    state.paymentAttempts.filter(function (attempt) {
+                                        return String(attempt.invoice_id || "") === String(id);
+                                    });
 
-                                if (invoicePayments.length) {
+                                if (invoicePayments.length || invoiceAttempts.length) {
                                     swayAlert(
-                                        "This invoice has payment records. They must be retained for financial history, so the invoice cannot be permanently deleted."
+                                        "This invoice has payment or payment-attempt records. They must be retained for financial history, so the invoice cannot be permanently deleted."
                                     );
                                     return;
                                 }
