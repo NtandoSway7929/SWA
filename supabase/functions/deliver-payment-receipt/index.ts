@@ -185,15 +185,15 @@ async function sendReceipt(admin: any, paymentId: string) {
     .or("status.in.(pending,failed),and(status.eq.sending,updated_at.lt." + staleBefore + ")")
     .select("receipt_id,attempt_count").maybeSingle();
   if (claimError) return json({ ok: false, error: "Receipt delivery could not be claimed." }, 503);
-  await admin.from("payment_receipt_delivery_attempts").insert({
-    receipt_id: receipt.id, status: "sending",
-  });
   if (!claim) {
     const { data: current } = await admin.from("payment_receipt_deliveries")
       .select("status,provider_message_id").eq("receipt_id", receipt.id).maybeSingle();
     if (current?.status === "sent") return json({ ok: true, already_sent: true, receipt_number: receipt.receipt_number });
     return json({ ok: false, error: "This receipt is already being processed. Try again shortly." }, 409);
   }
+  await admin.from("payment_receipt_delivery_attempts").insert({
+    receipt_id: receipt.id, status: "sending",
+  });
 
   const { data: client, error: clientError } = await admin.from("clients")
     .select("business_name,contact_name,email").eq("id", payment.client_id).maybeSingle();
