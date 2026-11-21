@@ -288,18 +288,24 @@ end;
 $function$;
 
 -- Keep the privileged implementation outside PostgREST's exposed public schema.
-revoke all on function innerme_private.delete_swayphics_client(uuid) from public, anon;
-grant usage on schema innerme_private to authenticated;
-grant execute on function innerme_private.delete_swayphics_client(uuid) to authenticated;
+revoke all on function innerme_private.delete_swayphics_client(uuid) from public, anon, authenticated;
 
--- Public API wrapper runs as the caller; the private function performs its own owner check.
+-- Public API wrapper is owner-checked and is the only callable entry point.
+-- The private implementation remains inaccessible to ordinary authenticated callers.
 create or replace function public.delete_swayphics_client(p_client_id uuid)
 returns jsonb
-language sql
-security invoker
+language plpgsql
+security definer
 set search_path = ''
 as $function$
-    select innerme_private.delete_swayphics_client(p_client_id);
+begin
+    if auth.uid() is null or not public.is_swayphics_owner() then
+        raise exception 'Only an active Swayphics owner can permanently delete a client and financial history.'
+            using errcode = '42501';
+    end if;
+
+    return innerme_private.delete_swayphics_client(p_client_id);
+end;
 $function$;
 
 revoke all on function public.delete_swayphics_client(uuid) from public, anon;
