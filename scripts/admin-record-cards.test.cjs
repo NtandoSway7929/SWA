@@ -44,7 +44,8 @@ const cards = {
     invoices: [
         "data-admin-table-row=\"invoices\"", "data-invoice-action=\"pdf\"",
         'data-invoice-action=\"send\"', 'data-invoice-action=\"archive\"',
-        'data-invoice-action=\"restore\"'
+        'data-invoice-action=\"restore\"',
+        'data-invoice-action=\"delete\"'
     ],
     services: ['data-edit=\"services\"', 'data-delete=\"services\"'],
     payments: ['data-edit=\"payments\"', 'data-delete=\"payments\"'],
