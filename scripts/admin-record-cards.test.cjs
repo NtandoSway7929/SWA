@@ -144,6 +144,9 @@ assert.match(clientDeleteHandler, /This does not cancel or reverse transactions 
 assert.doesNotMatch(clientDeleteHandler, /state\.invoices\.filter|state\.payments\.filter/,
     "client deletion must use the atomic database purge RPC instead of incomplete client-side cascades");
 assert.match(deletionMigration, /public\.delete_swayphics_client/);
+assert.match(deletionMigration, /innerme_private\.delete_swayphics_client/);
+assert.match(deletionMigration, /security invoker/);
+assert.match(deletionMigration, /grant usage on schema innerme_private to authenticated/);
 assert.match(deletionMigration, /public\.is_swayphics_owner\(\)/);
 assert.match(deletionMigration, /app\.client_financial_purge/);
 assert.match(deletionMigration, /payment_reconciliation_actions/);
