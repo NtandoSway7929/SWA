@@ -156,6 +156,10 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "A valid request body is required." }, 400);
     }
 
+    if (body.action && body.action !== "cleanup_pending") {
+      return json({ ok: false, error: "Unsupported client deletion action." }, 400);
+    }
+
     let deleted: any = null;
 
     if (body.action !== "cleanup_pending") {
