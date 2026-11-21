@@ -24863,15 +24863,9 @@ function simpleBars(items, color) {
 
         if (!config) return;
 
-        if (
-            type === "team"
-        ) {
-            if (
-                state.currentAdmin.role !== "owner"
-            ) {
-                swayAlert(
-                    "Only the owner can manage team access."
-                );
+        if (type === "team") {
+            if (state.currentAdmin.role !== "owner") {
+                swayAlert("Only the owner can manage team access.");
                 return;
             }
 
@@ -24883,70 +24877,31 @@ function simpleBars(items, color) {
 
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client and ALL linked financial records? This includes every invoice, invoice item, payment, payment attempt, receipt, refund, reconciliation record, webhook event and bank-transfer submission. Linked bank-transfer proof files will also be removed. This cannot be undone."
-                : "Delete this " +
-                  config.title.toLowerCase() +
-                  "?";
+                ? "Permanently delete this client and ALL linked records? This includes invoices and invoice items, payments, payment attempts, receipts, refunds, reconciliation cases and evidence, webhook events, bank-transfer submissions, projects, tasks, follow-ups, communication logs and client-portal records. Quotes will be retained with the client link cleared. This cannot be undone."
+                : "Delete this " + config.title.toLowerCase() + "?";
 
-        if (
-            !(await swayConfirm(confirmMessage))
-        ) {
+        if (!(await swayConfirm(confirmMessage))) {
             return;
         }
 
         if (type === "clients") {
-            let deletionResult;
-            try {
-                deletionResult = await callClientDeletionFunction({
-                    client_id: id
-                });
-            } catch (error) {
-                swayAlert(
-                    error.message ||
-                    "The client and linked financial records could not be deleted."
-                );
-                return;
-            }
-
-            await logActivity(
-                "Permanently deleted client and linked financial records",
-                "clients",
-                id
+            const purgeResult = await api(
+                "/rest/v1/rpc/admin_delete_client_financial_bundle",
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        p_client_id: id
+                    })
+                }
             );
 
-            try {
-                await refreshData();
-                renderShell();
-                renderView();
-            } catch (refreshError) {
-                console.warn(
-                    "Client deletion succeeded, but the dashboard refresh failed.",
-                    refreshError
+            if (!purgeResult || purgeResult.ok !== true) {
+                throw new Error(
+                    "The client and linked financial records were not deleted. Supabase did not confirm completion."
                 );
             }
-
-            const pendingFiles =
-                Number(
-                    deletionResult.storage_cleanup &&
-                    deletionResult.storage_cleanup.pending || 0
-                );
-
-            if (pendingFiles > 0) {
-                swayAlert(
-                    "The client and linked financial records were deleted. Removal of " +
-                    pendingFiles +
-                    " bank-transfer proof file(s) is pending and will be retried automatically the next time an administrator opens the dashboard."
-                );
-            } else {
-                swayAlert(
-                    "The client and all linked financial records were permanently deleted."
-                );
-            }
-            return;
-        }
-
-        const deletedRecords =
-            await api(
+        } else {
+            const deletedRecords = await api(
                 "/rest/v1/" +
                 config.table +
                 "?id=eq." +
@@ -24954,24 +24909,23 @@ function simpleBars(items, color) {
                 {
                     method: "DELETE",
                     headers: headers({
-                        "Prefer":
-                            "return=representation"
+                        "Prefer": "return=representation"
                     })
                 }
             );
 
-        if (
-            Array.isArray(deletedRecords) &&
-            deletedRecords.length === 0
-        ) {
-            throw new Error(
-                "The record was not deleted. Supabase returned no deleted rows, which usually means the current database permissions or RLS policy is blocking this action."
-            );
+            if (
+                Array.isArray(deletedRecords) &&
+                deletedRecords.length === 0
+            ) {
+                throw new Error(
+                    "The record was not deleted. Supabase returned no deleted rows, which usually means the current database permissions or RLS policy is blocking this action."
+                );
+            }
         }
 
         await logActivity(
-            "Deleted " +
-            config.title.toLowerCase(),
+            "Deleted " + config.title.toLowerCase(),
             config.table,
             id
         );
