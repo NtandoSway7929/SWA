@@ -24877,7 +24877,7 @@ function simpleBars(items, color) {
 
         const confirmMessage =
             type === "clients"
-                ? "Permanently delete this client and ALL linked financial records? This includes every invoice, invoice item, payment, payment attempt, receipt, refund, reconciliation record, webhook event and bank-transfer submission. Linked bank-transfer proof files and related client records will also be removed. This cannot be undone."
+                ? "Permanently delete this client and ALL linked financial records? This includes every invoice, invoice item, payment, payment attempt, receipt, refund, reconciliation record, webhook event and bank-transfer submission. Linked bank-transfer proof files will also be queued for secure deletion. This cannot be undone."
                 : "Delete this " + config.title.toLowerCase() + "?";
 
         if (!(await swayConfirm(confirmMessage))) {
