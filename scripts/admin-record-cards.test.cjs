@@ -151,7 +151,7 @@ assert.match(deletionMigration, /payment_reconciliation_evidence/);
 assert.match(deletionMigration, /payment_webhook_events/);
 assert.match(deletionMigration, /bank_transfer_submissions/);
 assert.match(deletionMigration, /invoice_items/);
-assert.match(deletionMigration, /status in \('created', 'pending'\)/);
+assert.match(deletionMigration, /status in \('created', 'pending', 'requires_review'\)/);
 assert.match(deletionMigration, /grant execute on function public\.delete_swayphics_client\(uuid\) to authenticated/);
 
 assert.ok(workspace.includes("Archive this invoice first. Sent, paid and overdue invoice records should be retained"),
