@@ -26,6 +26,10 @@ assert.match(migration, /alter table public\.payment_receipt_delivery_attempts e
 assert.match(migration, /values \('swayphics-payment-receipts'.*false/s);
 assert.match(migration, /after insert on public\.payment_receipts/);
 assert.match(migration, /insert into public\.payment_receipt_deliveries[\s\S]*?on conflict \(receipt_id\) do nothing/);
+assert.match(trackingMigration, /attempt_count = d\.attempt_count \+ 1/);
+assert.match(trackingMigration, /create or replace function public\.claim_payment_receipt_delivery/);
+assert.match(trackingMigration, /payment_receipt_provider_events/);
+assert.match(trackingMigration, /enable row level security/);
 
 assert.match(delivery, /admin_users/);
 assert.match(delivery, /payment\.status !== "paid"/);
@@ -36,7 +40,9 @@ assert.match(delivery, /if \(!rows\?\.length\) return json\(\{ ok: true, receipt
 assert.match(delivery, /application\/pdf/);
 assert.match(delivery, /attachments: \[\{ filename:/);
 assert.match(delivery, /https:\/\/api\.resend\.com\/emails/);
-assert.match(delivery, /Idempotency-Key/);\nassert.match(delivery, /claim_payment_receipt_delivery/);\nassert.match(delivery, /name: "receipt_id", value: receipt.id/);
+assert.match(delivery, /Idempotency-Key/);
+assert.match(delivery, /claim_payment_receipt_delivery/);
+assert.match(delivery, /name: "receipt_id", value: receipt.id/);
 assert.match(delivery, /status: "sending"/);
 assert.match(delivery, /status: "sent"/);
 assert.match(delivery, /status: "failed"/);
@@ -78,7 +84,14 @@ assert.match(eft, /dispatchPaymentReceipt\(paymentId, deps\.logError\)/);
 assert.match(paystack, /dispatchPaymentReceipt\(settledPaymentId, deps\.logError\)/);
 assert.match(dashboard, /deliver-payment-receipt/);
 assert.match(dashboard, /Retry email/);
-assert.match(dashboard, /Email accepted by the provider for receipt/);\nassert.match(dashboard, /Delivered to recipient mail server/);\nassert.match(dashboard, /provider_delivery_status/);\nassert.match(resendWebhook, /svix-signature/);\nassert.match(resendWebhook, /RESEND_WEBHOOK_SECRET/);\nassert.match(resendWebhook, /email\\.delivered/);\nassert.match(resendWebhook, /payment_receipt_provider_events/);\nassert.match(config, /\\[functions\\.resend-receipt-webhook\\][\\s\\S]*?verify_jwt = false/);
+assert.match(dashboard, /Email accepted by the provider for receipt/);
+assert.match(dashboard, /Delivered to recipient mail server/);
+assert.match(dashboard, /provider_delivery_status/);
+assert.match(resendWebhook, /svix-signature/);
+assert.match(resendWebhook, /RESEND_WEBHOOK_SECRET/);
+assert.match(resendWebhook, /email\\.delivered/);
+assert.match(resendWebhook, /payment_receipt_provider_events/);
+assert.match(config, /\\[functions\\.resend-receipt-webhook\\][\\s\\S]*?verify_jwt = false/);
 assert.match(html, /payment-receipts\.js/);
 assert.match(config, /\[functions\.deliver-payment-receipt\][\s\S]*?verify_jwt = false/);
 assert.match(config, /\[functions\.paystack-payment-webhook\][\s\S]*?verify_jwt = false/);
