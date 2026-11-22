@@ -96,6 +96,39 @@
   async function handleClick(event) {
     if (event.target.closest("[data-pr-close]")) { root.setAttribute("data-open","false"); return; }
     if (event.target.closest("[data-pr-open]")) { root.setAttribute("data-open","true"); load(); return; }
+
+    var test = event.target.closest("[data-pr-test]");
+    if (test) {
+      if (busy || testSubmitted || test.disabled) return;
+      var confirmed = window.confirm(
+        "Send one TEST email to swayphics@gmail.com?\n\n" +
+        "It contains a PDF clearly marked TEST ONLY. No payment or client records will be created or changed."
+      );
+      if (!confirmed) return;
+      busy = true;
+      test.disabled = true;
+      test.textContent = "Sending test…";
+      try {
+        status("Sending the controlled production test email to swayphics@gmail.com…",false);
+        var testResult = await request({action:"test"});
+        testSubmitted = true;
+        test.textContent = "Test submitted";
+        status(
+          "Resend accepted the test email for swayphics@gmail.com. Message ID: " +
+          (testResult.provider_message_id || "not supplied") +
+          ". Check the inbox and confirm the TEST ONLY PDF is attached.",
+          false
+        );
+      } catch (error) {
+        test.disabled = false;
+        test.textContent = "Send test email";
+        status(error.message || "The production test email could not be sent.",true);
+      } finally {
+        busy = false;
+      }
+      return;
+    }
+
     var send = event.target.closest("[data-pr-send]");
     if (!send || busy) return;
     busy = true;
@@ -121,7 +154,11 @@
       #sway-payment-receipts .pr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
       #sway-payment-receipts h2{font-size:18px;margin:0 0 5px;color:#081533}
       #sway-payment-receipts p{font-size:12px;line-height:1.55;color:#66717B}
-      #sway-payment-receipts .pr-close{border:0;background:transparent;font-size:22px;color:#56616B;cursor:pointer}
+      #sway-payment-receipts .pr-head-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+      #sway-payment-receipts .pr-close{width:32px;height:32px;border:0;border-radius:9px;background:#F1F4F8;font-size:20px;color:#56616B;cursor:pointer}
+      #sway-payment-receipts .pr-test{min-height:34px;padding:0 11px;border:1px solid #DCE5F2;border-radius:9px;background:#F4F7FC;color:#002096;font-size:10px;font-weight:800;cursor:pointer}
+      #sway-payment-receipts .pr-test:disabled{opacity:.65;cursor:default}
+      #sway-payment-receipts .pr-test-note{margin:-7px 0 14px;padding:9px 11px;border-radius:10px;background:#F5F8FF;color:#56627B;font-size:10px;line-height:1.5}
       #sway-payment-receipts .pr-list{display:grid;gap:10px}
       #sway-payment-receipts .pr-item{display:grid;gap:9px;padding:14px;border:1px solid #e5e9ed;border-radius:15px;background:#FAFBFC}
       #sway-payment-receipts .pr-item-head{display:flex;justify-content:space-between;gap:12px}
@@ -151,7 +188,8 @@
     root.id = "sway-payment-receipts";
     root.setAttribute("data-open","false");
     root.innerHTML = '<button type="button" class="pr-launch" data-pr-open>Payment receipts <span class="pr-count" data-pr-count>0</span></button>' +
-      '<section class="pr-panel" aria-label="Payment receipt delivery"><div class="pr-head"><div><h2>Payment receipts</h2><p>Issued receipts are emailed after verified payments. Failed deliveries can be retried here.</p></div><button type="button" class="pr-close" data-pr-close aria-label="Close">×</button></div>' +
+      '<section class="pr-panel" aria-label="Payment receipt delivery"><div class="pr-head"><div><h2>Payment receipts</h2><p>Issued receipts are emailed after verified payments. Failed deliveries can be retried here.</p></div><div class="pr-head-actions"><button type="button" class="pr-test" data-pr-test>Send test email</button><button type="button" class="pr-close" data-pr-close aria-label="Close">×</button></div></div>' +
+      '<p class="pr-test-note">Admin-only test: sends one clearly marked TEST ONLY email and PDF to swayphics@gmail.com. It does not create or change payment records.</p>' +
       '<div class="pr-list" data-pr-list><div class="pr-empty">Open the panel to load receipts.</div></div><p data-pr-status role="status" aria-live="polite"></p></section>';
     document.body.appendChild(root);
     root.addEventListener("click",handleClick);
