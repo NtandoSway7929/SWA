@@ -129,7 +129,8 @@ async function listReceipts(admin: any) {
     .select("id,payment_id,receipt_number,issued_at,snapshot")
     .order("issued_at", { ascending: false }).limit(100);
   if (error) return json({ ok: false, error: "Receipts could not be loaded." }, 503);
-  const paymentIds = [...new Set((rows || []).map((row: any) => row.payment_id))];
+  if (!rows?.length) return json({ ok: true, receipts: [] });
+  const paymentIds = [...new Set(rows.map((row: any) => row.payment_id))];
   const { data: deliveries, error: deliveryError } = await admin.from("payment_receipt_deliveries")
     .select("receipt_id,status,recipient_email,provider_message_id,pdf_storage_path,attempt_count,last_attempt_at,sent_at,last_error")
     .in("receipt_id", rows?.map((row: any) => row.id) || []);
