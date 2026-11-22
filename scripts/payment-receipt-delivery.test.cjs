@@ -29,6 +29,7 @@ assert.match(delivery, /payment\.status !== "paid"/);
 assert.match(delivery, /from\("payment_receipts"\)/);
 assert.match(delivery, /from\("payment_receipt_deliveries"\)/);
 assert.match(delivery, /from\("payment_receipt_delivery_attempts"\)/);
+assert.match(delivery, /if \(!rows\?\.length\) return json\(\{ ok: true, receipts: \[\] \}\)/);
 assert.match(delivery, /application\/pdf/);
 assert.match(delivery, /attachments: \[\{ filename:/);
 assert.match(delivery, /https:\/\/api\.resend\.com\/emails/);
@@ -68,6 +69,7 @@ assert.match(eft, /dispatchPaymentReceipt\(paymentId, deps\.logError\)/);
 assert.match(paystack, /dispatchPaymentReceipt\(settledPaymentId, deps\.logError\)/);
 assert.match(dashboard, /deliver-payment-receipt/);
 assert.match(dashboard, /Retry email/);
+assert.match(dashboard, /Email accepted by the provider for receipt/);
 assert.match(html, /payment-receipts\.js/);
 assert.match(config, /\[functions\.deliver-payment-receipt\][\s\S]*?verify_jwt = false/);
 
