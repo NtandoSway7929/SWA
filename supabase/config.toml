@@ -36,6 +36,10 @@ verify_jwt = false
 [functions.create-payment-checkout]
 verify_jwt = false
 
+# Paystack authenticates provider callbacks using its signed webhook payload.
+[functions.paystack-payment-webhook]
+verify_jwt = false
+
 [functions.yoco-payment-webhook]
 verify_jwt = false
 
