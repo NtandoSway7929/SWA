@@ -60,3 +60,7 @@ verify_jwt = false
 # Manual offline payment entry authenticates administrator JWTs in the function.
 [functions.admin-manual-payment]
 verify_jwt = true
+
+# Resend delivery callbacks are authenticated using the Svix signing secret in the handler.
+[functions.resend-receipt-webhook]
+verify_jwt = false
