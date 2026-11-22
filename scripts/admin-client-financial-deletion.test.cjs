@@ -11,7 +11,7 @@ const workspace = read("admin-dashboard/admin-workspace.js");
 const dashboard = read("admin-dashboard/index.html");
 const edge = read("supabase/functions/admin-delete-client/index.ts");
 const config = read("supabase/config.toml");
-const migration = read("supabase/migrations/202611220001_client_financial_deletion.sql");
+const migration = read("supabase/migrations/20261122020000_client_financial_deletion.sql");
 const sqlTest = read("supabase/tests/202611220002_client_financial_deletion.test.sql");
 
 const clientDelete = workspace.slice(
