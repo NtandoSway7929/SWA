@@ -21,6 +21,7 @@ create index if not exists payment_receipt_provider_events_receipt_idx
 alter table public.payment_receipt_provider_events enable row level security;
 revoke all on public.payment_receipt_provider_events from public, anon, authenticated;
 grant all on public.payment_receipt_provider_events to service_role;
+grant all on public.payment_receipt_provider_events to service_role;
 
 create or replace function public.claim_payment_receipt_delivery(
   p_receipt_id uuid,
