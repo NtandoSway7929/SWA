@@ -103,7 +103,7 @@
     try {
       status("Generating PDF and sending receipt…",false);
       var result = await request({action:"send",payment_id:send.dataset.prSend});
-      status("Receipt " + result.receipt_number + " emailed to " + result.recipient + ".",false);
+      status("Email accepted by the provider for receipt " + result.receipt_number + " (" + result.recipient + ").",false);
       await load();
     } catch (error) {
       status(error.message || "Receipt email could not be sent.",true);
