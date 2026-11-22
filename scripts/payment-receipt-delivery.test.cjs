@@ -72,5 +72,6 @@ assert.match(dashboard, /Retry email/);
 assert.match(dashboard, /Email accepted by the provider for receipt/);
 assert.match(html, /payment-receipts\.js/);
 assert.match(config, /\[functions\.deliver-payment-receipt\][\s\S]*?verify_jwt = false/);
+assert.match(config, /\[functions\.paystack-payment-webhook\][\s\S]*?verify_jwt = false/);
 
 console.log("Payment receipt delivery and manual payment recording source checks passed.");
