@@ -7,6 +7,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const migration = read("supabase/migrations/202611210001_payment_receipt_email_delivery.sql");
 const manualMigration = read("supabase/migrations/202611210002_admin_manual_payment_recording.sql");
 const manualIndexes = read("supabase/migrations/202611220001_manual_payment_request_indexes.sql");
+const clientSnapshotMigration = read("supabase/migrations/202611220002_payment_receipt_client_snapshot.sql");
 const delivery = read("supabase/functions/deliver-payment-receipt/index.ts");
 const manualFunction = read("supabase/functions/admin-manual-payment/index.ts");
 const manualUi = read("admin-dashboard/admin-manual-payments.js");
@@ -39,6 +40,8 @@ assert.match(delivery, /status: "sent"/);
 assert.match(delivery, /status: "failed"/);
 assert.match(delivery, /serviceKey && apiKey === serviceKey/);
 assert.match(delivery, /escapeHtml\(greeting\)/);
+assert.match(delivery, /receiptClientDetails\(snapshot, client\)/);
+assert.match(delivery, /receiptClientDetails\(receipt\.snapshot \|\| \{\}, client\)/);
 
 assert.match(manualMigration, /create table if not exists public\.manual_payment_record_requests/);
 assert.match(manualMigration, /for update/);
@@ -50,6 +53,10 @@ assert.match(manualMigration, /on conflict \(idempotency_key\) do nothing/);
 assert.match(manualMigration, /revoke all on function public\.admin_record_manual_payment[\s\S]*?from public, anon, authenticated/);
 assert.match(manualIndexes, /manual_payment_record_requests_invoice_idx/);
 assert.match(manualIndexes, /manual_payment_record_requests_recorded_by_idx/);
+assert.match(clientSnapshotMigration, /before insert on public\.payment_receipts/i);
+assert.match(clientSnapshotMigration, /client_business_name/);
+assert.match(clientSnapshotMigration, /client_contact_name/);
+assert.match(clientSnapshotMigration, /client_email/);
 
 assert.match(manualFunction, /auth\.getUser\(token\)/);
 assert.match(manualFunction, /rpc\("is_swayphics_admin"\)/);
