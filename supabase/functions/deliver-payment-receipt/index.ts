@@ -39,6 +39,15 @@ function bytesToBase64(bytes: Uint8Array) {
   return btoa(binary);
 }
 
+function receiptClientDetails(snapshot: any, client: any) {
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(snapshot || {}, key);
+  return {
+    business_name: has("client_business_name") ? snapshot.client_business_name : client.business_name,
+    contact_name: has("client_contact_name") ? snapshot.client_contact_name : client.contact_name,
+    email: has("client_email") ? snapshot.client_email : client.email,
+  };
+}
+
 function createAdmin() {
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -78,6 +87,7 @@ async function buildReceiptPdf(receipt: any, payment: any, client: any, invoice:
   const left = 52;
   const right = 543;
   const snapshot = receipt.snapshot || {};
+  const receiptClient = receiptClientDetails(snapshot, client);
   const currency = String(payment.currency || snapshot.currency || "ZAR").toUpperCase();
   const amount = Number(snapshot.amount ?? payment.amount ?? 0);
   const dateValue = snapshot.payment_date || payment.paid_at || receipt.issued_at;
@@ -92,9 +102,9 @@ async function buildReceiptPdf(receipt: any, payment: any, client: any, invoice:
   page.drawLine({ start: { x: left, y: 720 }, end: { x: right, y: 720 }, thickness: 1, color: rgb(224 / 255, 230 / 255, 240 / 255) });
 
   page.drawText("RECEIVED FROM", { x: left, y: 680, size: 7, font: bold, color: blue, characterSpacing: 1 });
-  page.drawText(safePdfText(client.business_name || client.contact_name || "Client").slice(0, 58), { x: left, y: 656, size: 14, font: bold, color: navy });
-  if (client.contact_name && client.business_name) page.drawText(safePdfText(client.contact_name).slice(0, 58), { x: left, y: 638, size: 9, font: regular, color: muted });
-  if (client.email) page.drawText(safePdfText(client.email).slice(0, 70), { x: left, y: 621, size: 9, font: regular, color: muted });
+  page.drawText(safePdfText(receiptClient.business_name || receiptClient.contact_name || "Client").slice(0, 58), { x: left, y: 656, size: 14, font: bold, color: navy });
+  if (receiptClient.contact_name && receiptClient.business_name) page.drawText(safePdfText(receiptClient.contact_name).slice(0, 58), { x: left, y: 638, size: 9, font: regular, color: muted });
+  if (receiptClient.email) page.drawText(safePdfText(receiptClient.email).slice(0, 70), { x: left, y: 621, size: 9, font: regular, color: muted });
 
   page.drawText("PAYMENT DETAILS", { x: 325, y: 680, size: 7, font: bold, color: blue, characterSpacing: 1 });
   const details = [
@@ -222,7 +232,8 @@ async function sendReceipt(admin: any, paymentId: string) {
     if (uploadError) throw new Error("Receipt PDF could not be stored securely.");
 
     const amount = money(receipt.snapshot?.amount ?? payment.amount, String(payment.currency || "ZAR"));
-    const greeting = client.contact_name || client.business_name || "there";
+    const receiptClient = receiptClientDetails(receipt.snapshot || {}, client);
+    const greeting = receiptClient.contact_name || receiptClient.business_name || "there";
     const html = '<!doctype html><html><body style="margin:0;background:#F4F7FC;padding:32px 12px;font-family:Arial,sans-serif;color:#081533"><div style="max-width:600px;margin:auto;background:#fff;border:1px solid #E4EAF3;border-radius:18px;overflow:hidden"><div style="height:5px;background:#0152F4"></div><div style="padding:34px"><div style="font-size:12px;font-weight:800;letter-spacing:2px;color:#002096">SWAYPHICS</div><h1 style="font-size:24px;margin:24px 0 12px">Payment received.</h1><p style="font-size:14px;line-height:1.7;color:#56627A">Hello ' + escapeHtml(greeting) + ',</p><p style="font-size:14px;line-height:1.7;color:#56627A">We have received your payment of <strong style="color:#081533">' + escapeHtml(amount) + '</strong>. Your receipt is attached for your records.</p><div style="padding:16px;background:#F6F9FF;border-radius:12px"><div style="font-size:10px;color:#8190A5;letter-spacing:1px">RECEIPT NUMBER</div><div style="font-size:16px;font-weight:800;margin-top:6px">' + escapeHtml(receipt.receipt_number) + '</div></div><p style="font-size:13px;color:#56627A;line-height:1.7;margin-top:24px">Thank you for choosing Swayphics.</p><p style="font-size:13px;color:#56627A;margin-top:22px">Kind regards,<br><strong>Lesego Gumede</strong><br>Swayphics</p></div></div></body></html>';
     const from = Deno.env.get("RESEND_FROM_EMAIL") || "Swayphics <info@swayphics.co.za>";
     const response = await fetch("https://api.resend.com/emails", {
