@@ -142,7 +142,7 @@ async function listReceipts(admin: any) {
   if (!rows?.length) return json({ ok: true, receipts: [] });
   const paymentIds = [...new Set(rows.map((row: any) => row.payment_id))];
   const { data: deliveries, error: deliveryError } = await admin.from("payment_receipt_deliveries")
-    .select("receipt_id,status,recipient_email,provider_message_id,pdf_storage_path,attempt_count,last_attempt_at,sent_at,last_error")
+    .select("receipt_id,status,recipient_email,provider_message_id,pdf_storage_path,attempt_count,last_attempt_at,sent_at,last_error,provider_delivery_status,provider_delivered_at,provider_event_at")
     .in("receipt_id", rows?.map((row: any) => row.id) || []);
   if (deliveryError) return json({ ok: false, error: "Receipt delivery status could not be loaded." }, 503);
   const { data: payments, error: paymentError } = await admin.from("payments")
@@ -190,21 +190,17 @@ async function sendReceipt(admin: any, paymentId: string) {
   if (ensureError) return json({ ok: false, error: "Receipt delivery could not be prepared." }, 503);
 
   const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  const { data: claim, error: claimError } = await admin.from("payment_receipt_deliveries")
-    .update({ status: "sending", attempt_count: (await admin.from("payment_receipt_deliveries").select("attempt_count").eq("receipt_id", receipt.id).single()).data?.attempt_count + 1 || 1, last_attempt_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_error: null })
-    .eq("receipt_id", receipt.id)
-    .or("status.in.(pending,failed),and(status.eq.sending,updated_at.lt." + staleBefore + ")")
-    .select("receipt_id,attempt_count").maybeSingle();
+  const { data: claim, error: claimError } = await admin.rpc("claim_payment_receipt_delivery", {
+    p_receipt_id: receipt.id,
+    p_stale_before: staleBefore,
+  });
   if (claimError) return json({ ok: false, error: "Receipt delivery could not be claimed." }, 503);
-  if (!claim) {
+  if (!claim?.claimed) {
     const { data: current } = await admin.from("payment_receipt_deliveries")
       .select("status,provider_message_id").eq("receipt_id", receipt.id).maybeSingle();
     if (current?.status === "sent") return json({ ok: true, already_sent: true, receipt_number: receipt.receipt_number });
     return json({ ok: false, error: "This receipt is already being processed. Try again shortly." }, 409);
   }
-  await admin.from("payment_receipt_delivery_attempts").insert({
-    receipt_id: receipt.id, status: "sending",
-  });
 
   const { data: client, error: clientError } = await admin.from("clients")
     .select("business_name,contact_name,email").eq("id", payment.client_id).maybeSingle();
@@ -245,7 +241,7 @@ async function sendReceipt(admin: any, paymentId: string) {
       },
       body: JSON.stringify({
         from, to: [recipient], subject: "Payment receipt " + receipt.receipt_number + " from Swayphics",
-        html, attachments: [{ filename: receipt.receipt_number + ".pdf", content: bytesToBase64(pdf) }],
+        html, tags: [{ name: "receipt_id", value: receipt.id }], attachments: [{ filename: receipt.receipt_number + ".pdf", content: bytesToBase64(pdf) }],
       }),
     });
     const responseText = await response.text();

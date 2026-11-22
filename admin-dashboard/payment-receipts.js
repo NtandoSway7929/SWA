@@ -69,7 +69,13 @@
     list.innerHTML = receipts.map(function (row) {
       var client = row.client || {}, delivery = row.delivery || {};
       var state = String(delivery.status || "pending");
-      var label = state === "sent" ? "Email accepted" : state === "failed" ? "Delivery failed" : state === "sending" ? "Sending" : "Awaiting delivery";
+      var label = state === "sent" ? "Accepted by Resend" : state === "failed" ? "Delivery failed" : state === "sending" ? "Sending" : "Awaiting delivery";
+      var providerState = String(delivery.provider_delivery_status || "unknown");
+      var providerLabel = providerState === "delivered" ? "Delivered to recipient mail server" :
+        providerState === "delayed" ? "Delivery delayed by recipient mail server" :
+        providerState === "bounced" ? "Email bounced" :
+        providerState === "complained" ? "Recipient marked email as spam" :
+        state === "sent" ? "Awaiting provider delivery confirmation" : "";
       var canSend = state !== "sent" && state !== "sending";
       return '<article class="pr-item">' +
         '<div class="pr-item-head"><div><strong>' + esc(row.receipt_number) + '</strong><small>' + esc(client.business_name || client.contact_name || "Client") + ' · ' + esc(date(row.issued_at)) + '</small></div>' +
@@ -77,6 +83,7 @@
         '<div class="pr-meta"><span>Payment method</span><strong>' + esc(row.method || "—") + '</strong></div>' +
         '<div class="pr-meta"><span>Recipient</span><strong>' + esc(delivery.recipient_email || client.email || "No email address") + '</strong></div>' +
         '<div class="pr-status" data-state="' + esc(state) + '">' + esc(label) + (delivery.attempt_count ? ' · ' + esc(delivery.attempt_count) + ' attempt(s)' : '') + '</div>' +
+        (providerLabel ? '<div class="pr-provider-status" data-provider-state="' + esc(providerState) + '">' + esc(providerLabel) + (providerState === "delivered" && delivery.provider_delivered_at ? ' · ' + esc(date(delivery.provider_delivered_at)) : '') + '</div>' : '') +
         (delivery.last_error ? '<p class="pr-error">' + esc(delivery.last_error) + '</p>' : '') +
         '<div class="pr-actions">' + (canSend ? '<button type="button" data-pr-send="' + esc(row.payment_id) + '">' + (state === "failed" ? "Retry email" : "Send receipt") + '</button>' : '<span class="pr-sent">Sent ' + esc(date(delivery.sent_at)) + '</span>') + '</div>' +
       '</article>';
@@ -173,6 +180,9 @@
       #sway-payment-receipts .pr-status[data-state=sent]{color:#18764B}
       #sway-payment-receipts .pr-status[data-state=failed]{color:#A02A2A}
       #sway-payment-receipts .pr-error{font-size:11px;color:#A02A2A;overflow-wrap:anywhere}
+      #sway-payment-receipts .pr-provider-status{font-size:10px;color:#66717B}
+      #sway-payment-receipts .pr-provider-status[data-provider-state=delivered]{color:#18764B}
+      #sway-payment-receipts .pr-provider-status[data-provider-state=bounced],#sway-payment-receipts .pr-provider-status[data-provider-state=complained]{color:#A02A2A}
       #sway-payment-receipts .pr-actions{display:flex;gap:8px}
       #sway-payment-receipts .pr-actions button{min-height:34px;padding:0 13px;border:0;border-radius:9px;background:#0152F4;color:#fff;font-size:10px;font-weight:800;cursor:pointer}
       #sway-payment-receipts .pr-actions button:disabled{opacity:.55;cursor:wait}
