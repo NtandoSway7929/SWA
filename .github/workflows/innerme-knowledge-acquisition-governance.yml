@@ -1,0 +1,45 @@
+name: InnerMe Acquisition Governance
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "supabase/migrations/20261019030000_innerme_knowledge_acquisition_workflow.sql"
+      - "supabase/migrations/20261019033000_innerme_knowledge_acquisition_compatibility_hardening.sql"
+      - "admin-dashboard/innerme-knowledge-intelligence.js"
+      - "scripts/innerme-knowledge-acquisition-governance.test.mjs"
+      - ".github/workflows/innerme-knowledge-acquisition-governance.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "supabase/migrations/20261019030000_innerme_knowledge_acquisition_workflow.sql"
+      - "supabase/migrations/20261019033000_innerme_knowledge_acquisition_compatibility_hardening.sql"
+      - "admin-dashboard/innerme-knowledge-intelligence.js"
+      - "scripts/innerme-knowledge-acquisition-governance.test.mjs"
+      - ".github/workflows/innerme-knowledge-acquisition-governance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Verify acquisition workflow contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check standalone JavaScript syntax
+        run: node --check admin-dashboard/innerme-knowledge-intelligence.js
+
+      - name: Check governance regression test syntax
+        run: node --check scripts/innerme-knowledge-acquisition-governance.test.mjs
+
+      - name: Run provider-free governance contract tests
+        run: node scripts/innerme-knowledge-acquisition-governance.test.mjs
