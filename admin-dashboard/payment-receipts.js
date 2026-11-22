@@ -1,0 +1,161 @@
+(function () {
+  "use strict";
+  if (window.__swayPaymentReceiptsLoaded) return;
+  window.__swayPaymentReceiptsLoaded = true;
+
+  var SUPABASE_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
+  var ACCESS_KEY = "swayphics_admin_access_token";
+  var REFRESH_KEY = "swayphics_admin_refresh_token";
+  var root = null, receipts = [], busy = false;
+
+  function esc(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (c) {
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function money(value, currency) {
+    return new Intl.NumberFormat("en-ZA",{style:"currency",currency:currency || "ZAR"}).format(Number(value || 0));
+  }
+  function date(value) {
+    if (!value) return "—";
+    var d = new Date(value);
+    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString("en-ZA",{timeZone:"Africa/Johannesburg"});
+  }
+  function token() {
+    try { return localStorage.getItem(ACCESS_KEY) || ""; } catch (_) { return ""; }
+  }
+  async function refreshSession() {
+    var refresh = "";
+    try { refresh = localStorage.getItem(REFRESH_KEY) || ""; } catch (_) {}
+    if (!refresh) return false;
+    var response = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token", {
+      method:"POST",headers:{"apikey":SUPABASE_KEY,"Content-Type":"application/json"},
+      body:JSON.stringify({refresh_token:refresh})
+    });
+    if (!response.ok) return false;
+    var data = await response.json();
+    if (!data.access_token || !data.refresh_token) return false;
+    localStorage.setItem(ACCESS_KEY,data.access_token);
+    localStorage.setItem(REFRESH_KEY,data.refresh_token);
+    return true;
+  }
+  async function request(payload, retried) {
+    var access = token();
+    if (!access) throw new Error("Your administrator session is missing. Sign in again.");
+    var response = await fetch(SUPABASE_URL + "/functions/v1/deliver-payment-receipt", {
+      method:"POST",
+      headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer " + access,"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify(payload || {}),cache:"no-store"
+    });
+    if (response.status === 401 && !retried && await refreshSession()) return request(payload,true);
+    var raw = await response.text(), data = null;
+    try { data = raw ? JSON.parse(raw) : null; } catch (_) {}
+    if (!response.ok || !data || data.ok !== true) throw new Error(data && data.error || "The receipt request could not be completed.");
+    return data;
+  }
+  function status(message, bad) {
+    var node = root && root.querySelector("[data-pr-status]");
+    if (!node) return;
+    node.textContent = message || "";
+    node.setAttribute("data-error",bad ? "true" : "false");
+  }
+  function render() {
+    var list = root.querySelector("[data-pr-list]");
+    if (!receipts.length) {
+      list.innerHTML = '<div class="pr-empty"><strong>No receipts yet</strong><p>Issued payment receipts will appear here.</p></div>';
+      return;
+    }
+    list.innerHTML = receipts.map(function (row) {
+      var client = row.client || {}, delivery = row.delivery || {};
+      var state = String(delivery.status || "pending");
+      var label = state === "sent" ? "Email accepted" : state === "failed" ? "Delivery failed" : state === "sending" ? "Sending" : "Awaiting delivery";
+      var canSend = state !== "sent" && state !== "sending";
+      return '<article class="pr-item">' +
+        '<div class="pr-item-head"><div><strong>' + esc(row.receipt_number) + '</strong><small>' + esc(client.business_name || client.contact_name || "Client") + ' · ' + esc(date(row.issued_at)) + '</small></div>' +
+        '<b>' + esc(money(row.amount,row.currency)) + '</b></div>' +
+        '<div class="pr-meta"><span>Payment method</span><strong>' + esc(row.method || "—") + '</strong></div>' +
+        '<div class="pr-meta"><span>Recipient</span><strong>' + esc(delivery.recipient_email || client.email || "No email address") + '</strong></div>' +
+        '<div class="pr-status" data-state="' + esc(state) + '">' + esc(label) + (delivery.attempt_count ? ' · ' + esc(delivery.attempt_count) + ' attempt(s)' : '') + '</div>' +
+        (delivery.last_error ? '<p class="pr-error">' + esc(delivery.last_error) + '</p>' : '') +
+        '<div class="pr-actions">' + (canSend ? '<button type="button" data-pr-send="' + esc(row.payment_id) + '">' + (state === "failed" ? "Retry email" : "Send receipt") + '</button>' : '<span class="pr-sent">Sent ' + esc(date(delivery.sent_at)) + '</span>') + '</div>' +
+      '</article>';
+    }).join("");
+  }
+  async function load() {
+    status("Loading issued receipts…",false);
+    try {
+      var data = await request({action:"list"});
+      if (!Array.isArray(data.receipts)) throw new Error("Receipt list response is incomplete.");
+      receipts = data.receipts;
+      render();
+      root.querySelector("[data-pr-count]").textContent = String(receipts.filter(function (r) { return !r.delivery || r.delivery.status !== "sent"; }).length);
+      status(receipts.length + " issued receipt(s).",false);
+    } catch (error) { status(error.message || "Unable to load receipts.",true); }
+  }
+  async function handleClick(event) {
+    if (event.target.closest("[data-pr-close]")) { root.setAttribute("data-open","false"); return; }
+    if (event.target.closest("[data-pr-open]")) { root.setAttribute("data-open","true"); load(); return; }
+    var send = event.target.closest("[data-pr-send]");
+    if (!send || busy) return;
+    busy = true;
+    send.disabled = true;
+    try {
+      status("Generating PDF and sending receipt…",false);
+      var result = await request({action:"send",payment_id:send.dataset.prSend});
+      status("Email accepted by the provider for receipt " + result.receipt_number + " (" + result.recipient + ").",false);
+      await load();
+    } catch (error) {
+      status(error.message || "Receipt email could not be sent.",true);
+      await load();
+    } finally { busy = false; }
+  }
+  function mount() {
+    var style = document.createElement("style");
+    style.textContent = `
+      #sway-payment-receipts{position:fixed;right:22px;bottom:84px;z-index:9998;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      #sway-payment-receipts .pr-launch{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:#081533;color:#fff;box-shadow:0 12px 34px rgba(8,21,51,.22);font-size:11px;font-weight:800;cursor:pointer}
+      #sway-payment-receipts .pr-count{min-width:22px;height:22px;display:grid;place-items:center;padding:0 6px;border-radius:99px;background:#fff;color:#081533;font-size:11px}
+      #sway-payment-receipts .pr-panel{display:none;position:fixed;right:22px;bottom:140px;width:min(620px,calc(100vw - 28px));max-height:min(78vh,760px);overflow:auto;background:#fff;border:1px solid #dfe5ea;border-radius:20px;padding:20px;box-shadow:0 24px 70px #07163835}
+      #sway-payment-receipts[data-open=true] .pr-panel{display:block}
+      #sway-payment-receipts .pr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+      #sway-payment-receipts h2{font-size:18px;margin:0 0 5px;color:#081533}
+      #sway-payment-receipts p{font-size:12px;line-height:1.55;color:#66717B}
+      #sway-payment-receipts .pr-close{border:0;background:transparent;font-size:22px;color:#56616B;cursor:pointer}
+      #sway-payment-receipts .pr-list{display:grid;gap:10px}
+      #sway-payment-receipts .pr-item{display:grid;gap:9px;padding:14px;border:1px solid #e5e9ed;border-radius:15px;background:#FAFBFC}
+      #sway-payment-receipts .pr-item-head{display:flex;justify-content:space-between;gap:12px}
+      #sway-payment-receipts .pr-item-head>div{display:grid;gap:4px;min-width:0}
+      #sway-payment-receipts .pr-item-head strong{font-size:13px;color:#081533}
+      #sway-payment-receipts .pr-item-head small{font-size:11px;color:#66717B}
+      #sway-payment-receipts .pr-item-head>b{font-size:14px;white-space:nowrap;color:#081533}
+      #sway-payment-receipts .pr-meta{display:flex;justify-content:space-between;gap:12px;font-size:11px}
+      #sway-payment-receipts .pr-meta span{color:#66717B}
+      #sway-payment-receipts .pr-meta strong{text-align:right;overflow-wrap:anywhere;color:#081533}
+      #sway-payment-receipts .pr-status{font-size:11px;font-weight:800;color:#56616B}
+      #sway-payment-receipts .pr-status[data-state=sent]{color:#18764B}
+      #sway-payment-receipts .pr-status[data-state=failed]{color:#A02A2A}
+      #sway-payment-receipts .pr-error{font-size:11px;color:#A02A2A;overflow-wrap:anywhere}
+      #sway-payment-receipts .pr-actions{display:flex;gap:8px}
+      #sway-payment-receipts .pr-actions button{min-height:34px;padding:0 13px;border:0;border-radius:9px;background:#0152F4;color:#fff;font-size:10px;font-weight:800;cursor:pointer}
+      #sway-payment-receipts .pr-actions button:disabled{opacity:.55;cursor:wait}
+      #sway-payment-receipts .pr-sent{font-size:10px;color:#18764B;font-weight:700}
+      #sway-payment-receipts .pr-empty{padding:28px 8px;text-align:center}
+      #sway-payment-receipts .pr-empty strong{font-size:13px;color:#081533}
+      #sway-payment-receipts [data-pr-status]{margin-top:12px;font-size:11px;color:#56616B;line-height:1.5}
+      #sway-payment-receipts [data-pr-status][data-error=true]{color:#9A2525}
+      @media(max-width:600px){#sway-payment-receipts{right:12px;bottom:76px}#sway-payment-receipts .pr-panel{right:12px;bottom:132px;padding:15px;max-height:calc(100vh - 155px)}}
+    `;
+    document.head.appendChild(style);
+    root = document.createElement("div");
+    root.id = "sway-payment-receipts";
+    root.setAttribute("data-open","false");
+    root.innerHTML = '<button type="button" class="pr-launch" data-pr-open>Payment receipts <span class="pr-count" data-pr-count>0</span></button>' +
+      '<section class="pr-panel" aria-label="Payment receipt delivery"><div class="pr-head"><div><h2>Payment receipts</h2><p>Issued receipts are emailed after verified payments. Failed deliveries can be retried here.</p></div><button type="button" class="pr-close" data-pr-close aria-label="Close">×</button></div>' +
+      '<div class="pr-list" data-pr-list><div class="pr-empty">Open the panel to load receipts.</div></div><p data-pr-status role="status" aria-live="polite"></p></section>';
+    document.body.appendChild(root);
+    root.addEventListener("click",handleClick);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded",mount);
+  else mount();
+})();

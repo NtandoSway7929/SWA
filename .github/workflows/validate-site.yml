@@ -2,7 +2,7 @@ name: Validate Swayphics site
 
 on:
   push:
-    branches: ["main", "feature/admin-table-controls-phase-2", "design/admin-dashboard-top-nav-hybrid-hero"]
+    branches: ["main", "feature/admin-table-controls-phase-2", "design/admin-dashboard-top-nav-hybrid-hero", "feature/automatic-payment-receipts"]
   pull_request:
     branches: ["main"]
 
@@ -24,6 +24,8 @@ jobs:
           node --check admin-dashboard/innerme-workspace-health.js
           node --check admin-dashboard/admin-table-controls.js
           node --check admin-dashboard/bank-reconciliation-import.js
+          node --check admin-dashboard/payment-receipts.js
+          node --check admin-dashboard/admin-manual-payments.js
           node --check admin-dashboard/innerme-provider-usage.js
 
       - name: Test admin welcome authentication handshake
@@ -130,6 +132,9 @@ jobs:
 
       - name: Test invoice payment settings navigation
         run: node scripts/yoco-invoice-settings.test.cjs
+
+      - name: Test payment receipt email delivery
+        run: node scripts/payment-receipt-delivery.test.cjs
 
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs

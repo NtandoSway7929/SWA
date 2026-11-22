@@ -602,6 +602,8 @@ export function createPaystackWebhookHandler(
           error: "Verified Paystack event could not be settled yet.",
         }, 503);
       }
+      const settledPaymentId = String(settlement?.payment_id || "");
+      if (settledPaymentId) await dispatchPaymentReceipt(settledPaymentId, deps.logError);
       return deps.respond({
         ok: true,
         received: true,
@@ -618,6 +620,26 @@ export function createPaystackWebhookHandler(
       }, 500);
     }
   };
+}
+
+async function dispatchPaymentReceipt(paymentId: string, logError: (...values: unknown[]) => void) {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) {
+    logError("Receipt delivery dispatch is not configured.");
+    return;
+  }
+  try {
+    const response = await fetch((url.endsWith("/") ? url.slice(0, -1) : url) + "/functions/v1/deliver-payment-receipt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": key },
+      body: JSON.stringify({ action: "send", payment_id: paymentId }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!response.ok) logError("Receipt email will need a retry.", response.status);
+  } catch (error) {
+    logError("Receipt delivery dispatch failed after verified Paystack settlement.", error instanceof Error ? error.message : "Unknown error.");
+  }
 }
 
 if (import.meta.main) Deno.serve(createPaystackWebhookHandler());

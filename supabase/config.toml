@@ -36,6 +36,10 @@ verify_jwt = false
 [functions.create-payment-checkout]
 verify_jwt = false
 
+# Paystack authenticates provider callbacks using its signed webhook payload.
+[functions.paystack-payment-webhook]
+verify_jwt = false
+
 [functions.yoco-payment-webhook]
 verify_jwt = false
 
@@ -48,3 +52,11 @@ verify_jwt = false
 # Manual bank-transfer submissions use private portal tokens or admin JWTs in the handler.
 [functions.bank-transfer]
 verify_jwt = false
+
+# Receipt delivery accepts administrator JWTs and internal calls authenticated with the project secret key.
+[functions.deliver-payment-receipt]
+verify_jwt = false
+
+# Manual offline payment entry authenticates administrator JWTs in the function.
+[functions.admin-manual-payment]
+verify_jwt = true
