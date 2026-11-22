@@ -12,6 +12,34 @@ alter table public.payments
     add constraint payments_provider_check
     check (provider is null or provider = any (array['yoco'::text, 'paystack'::text]));
 
+alter table public.payment_webhook_events
+    drop constraint if exists payment_webhook_events_provider_check;
+alter table public.payment_webhook_events
+    add constraint payment_webhook_events_provider_check
+    check (provider = any (array['yoco'::text, 'paystack'::text]));
+alter table public.payment_webhook_events
+    drop constraint if exists payment_webhook_events_environment_check;
+alter table public.payment_webhook_events
+    add constraint payment_webhook_events_environment_check
+    check (
+        (provider = 'yoco' and environment = 'test')
+        or (provider = 'paystack' and environment = 'live')
+    );
+
+alter table public.payment_refunds
+    drop constraint if exists payment_refunds_provider_check;
+alter table public.payment_refunds
+    add constraint payment_refunds_provider_check
+    check (provider = any (array['yoco'::text, 'paystack'::text]));
+alter table public.payment_refunds
+    drop constraint if exists payment_refunds_environment_check;
+alter table public.payment_refunds
+    add constraint payment_refunds_environment_check
+    check (
+        (provider = 'yoco' and environment = 'test')
+        or (provider = 'paystack' and environment = 'live')
+    );
+
 select extensions.plan(32);
 
 select extensions.has_table('innerme_private', 'client_financial_deletion_context',
@@ -82,6 +110,7 @@ create temp table client_financial_deletion_test_ids (
     paystack_refund_id uuid,
     paystack_event_id uuid,
     attempt_id uuid,
+    pending_attempt_id uuid,
     refund_id uuid,
     reconciliation_id uuid,
     bank_submission_id uuid,
@@ -109,6 +138,8 @@ declare
     v_paystack_event_id uuid;
     v_paystack_event_reference text;
     v_attempt_id uuid;
+    v_pending_attempt_id uuid;
+    v_delete_blocked boolean := false;
     v_event_id uuid;
     v_refund_id uuid;
     v_receipt_id uuid;
@@ -199,13 +230,24 @@ begin
     )
     returning id into v_attempt_id;
 
+    insert into public.payment_attempts (
+        invoice_id, client_id, provider, environment, amount_cents,
+        currency, idempotency_key, status
+    )
+    values (
+        v_invoice_id, v_client_id, 'yoco', 'test', 1000,
+        'ZAR', 'client-delete-pending-attempt-' || gen_random_uuid()::text,
+        'pending'
+    )
+    returning id into v_pending_attempt_id;
+
     insert into public.payment_webhook_events (
         provider, environment, provider_event_id, event_type,
         payment_attempt_id, signature_verified, processing_status
     )
     values (
         'yoco', 'test', 'client-delete-refund-event-' || gen_random_uuid()::text,
-        'refund.succeeded', v_attempt_id, true, 'received'
+        'refund.succeeded', v_attempt_id, true, 'processed'
     )
     returning id into v_event_id;
 
@@ -228,7 +270,7 @@ begin
     )
     values (
         'paystack', 'live', v_paystack_event_reference,
-        'refund.processed', null, true, 'received'
+        'refund.processed', null, true, 'processed'
     )
     returning id into v_paystack_event_id;
 
@@ -239,7 +281,7 @@ begin
     values (
         v_paystack_payment_id, 'paystack', 'live',
         'client-delete-paystack-refund-' || gen_random_uuid()::text,
-        5, 'ZAR', 'pending', v_paystack_event_reference
+        5, 'ZAR', 'failed', v_paystack_event_reference
     )
     returning id into v_paystack_refund_id;
 
@@ -358,13 +400,31 @@ begin
     returning id into v_unauthorised_client_id;
 
     perform set_config('request.jwt.claim.sub', v_admin_id::text, true);
+
+    -- A live checkout must stop the purge without touching any client data.
+    begin
+        perform public.admin_delete_client_with_financial_records(v_client_id);
+    exception
+        when sqlstate '55000' then
+            v_delete_blocked := true;
+    end;
+
+    if not v_delete_blocked
+       or not exists (select 1 from public.clients where id = v_client_id) then
+        raise exception 'An active checkout did not safely block client deletion.';
+    end if;
+
+    update public.payment_attempts
+    set status = 'abandoned'
+    where id = v_pending_attempt_id;
+
     v_result := public.admin_delete_client_with_financial_records(v_client_id);
 
     if (v_result->>'client_id')::uuid is distinct from v_client_id
        or (v_result->>'invoices_deleted')::integer <> 2
        or (v_result->>'invoice_items_deleted')::integer <> 1
        or (v_result->>'payments_deleted')::integer <> 2
-       or (v_result->>'payment_attempts_deleted')::integer <> 1
+       or (v_result->>'payment_attempts_deleted')::integer <> 2
        or (v_result->>'payment_receipts_deleted')::integer <> 1
        or (v_result->>'payment_refunds_deleted')::integer <> 2
        or (v_result->>'payment_reconciliations_deleted')::integer <> 1
@@ -387,7 +447,7 @@ begin
 
     insert into client_financial_deletion_test_ids (
         client_id, invoice_id, paystack_invoice_id, payment_id, paystack_payment_id,
-        paystack_refund_id, paystack_event_id, attempt_id, refund_id,
+        paystack_refund_id, paystack_event_id, attempt_id, pending_attempt_id, refund_id,
         reconciliation_id, bank_submission_id, proof_path,
         keep_client_id, keep_invoice_id, keep_payment_id, keep_attempt_id,
         cross_reconciliation_id, cross_action_id, cross_evidence_id,
@@ -395,7 +455,7 @@ begin
     )
     values (
         v_client_id, v_invoice_id, v_paystack_invoice_id, v_payment_id, v_paystack_payment_id,
-        v_paystack_refund_id, v_paystack_event_id, v_attempt_id, v_refund_id,
+        v_paystack_refund_id, v_paystack_event_id, v_attempt_id, v_pending_attempt_id, v_refund_id,
         v_reconciliation_id, v_submission_id, v_proof_path,
         v_keep_client_id, v_keep_invoice_id, v_keep_payment_id, v_keep_attempt_id,
         v_cross_reconciliation_id, v_cross_action_id, v_cross_evidence_id,
@@ -427,8 +487,14 @@ select extensions.ok(
     'all linked payments are deleted'
 );
 select extensions.ok(
-    not exists (select 1 from public.payment_attempts where id = (select attempt_id from client_financial_deletion_test_ids)),
-    'all linked payment attempts are deleted'
+    not exists (
+        select 1 from public.payment_attempts
+        where id in (
+            (select attempt_id from client_financial_deletion_test_ids),
+            (select pending_attempt_id from client_financial_deletion_test_ids)
+        )
+    ),
+    'all settled and safely abandoned linked payment attempts are deleted'
 );
 select extensions.ok(
     not exists (select 1 from public.payment_receipts where payment_id = (select payment_id from client_financial_deletion_test_ids)),
