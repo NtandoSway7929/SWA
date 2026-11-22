@@ -179,7 +179,10 @@
       #sway-payment-receipts .pr-status{font-size:11px;font-weight:800;color:#56616B}
       #sway-payment-receipts .pr-status[data-state=sent]{color:#18764B}
       #sway-payment-receipts .pr-status[data-state=failed]{color:#A02A2A}
-      #sway-payment-receipts .pr-error{font-size:11px;color:#A02A2A;overflow-wrap:anywhere}\n      #sway-payment-receipts .pr-provider-status{font-size:10px;color:#66717B}\n      #sway-payment-receipts .pr-provider-status[data-provider-state=delivered]{color:#18764B}\n      #sway-payment-receipts .pr-provider-status[data-provider-state=bounced],#sway-payment-receipts .pr-provider-status[data-provider-state=complained]{color:#A02A2A}
+      #sway-payment-receipts .pr-error{font-size:11px;color:#A02A2A;overflow-wrap:anywhere}
+      #sway-payment-receipts .pr-provider-status{font-size:10px;color:#66717B}
+      #sway-payment-receipts .pr-provider-status[data-provider-state=delivered]{color:#18764B}
+      #sway-payment-receipts .pr-provider-status[data-provider-state=bounced],#sway-payment-receipts .pr-provider-status[data-provider-state=complained]{color:#A02A2A}
       #sway-payment-receipts .pr-actions{display:flex;gap:8px}
       #sway-payment-receipts .pr-actions button{min-height:34px;padding:0 13px;border:0;border-radius:9px;background:#0152F4;color:#fff;font-size:10px;font-weight:800;cursor:pointer}
       #sway-payment-receipts .pr-actions button:disabled{opacity:.55;cursor:wait}
