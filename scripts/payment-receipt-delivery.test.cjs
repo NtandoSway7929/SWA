@@ -91,7 +91,7 @@ assert.match(resendWebhook, /svix-signature/);
 assert.match(resendWebhook, /RESEND_WEBHOOK_SECRET/);
 assert.match(resendWebhook, /email\.delivered/);
 assert.match(resendWebhook, /payment_receipt_provider_events/);
-assert.match(config, /\\[functions\.resend-receipt-webhook\\][\\s\\S]*?verify_jwt = false/);
+assert.match(config, /\[functions\.resend-receipt-webhook\][\s\S]*?verify_jwt = false/);
 assert.match(html, /payment-receipts\.js/);
 assert.match(config, /\[functions\.deliver-payment-receipt\][\s\S]*?verify_jwt = false/);
 assert.match(config, /\[functions\.paystack-payment-webhook\][\s\S]*?verify_jwt = false/);
