@@ -790,6 +790,11 @@ async function main() {
     assert.ok((await tenderTab.innerText()).includes("Tender & Corporate Groups"),
       "the dedicated campaign tab should appear inside Leads");
     await tenderTab.click();
+    assert.equal(
+      (await page.locator("#sway-workspace-main .sway-workspace-heading-copy h2").innerText()).trim(),
+      "Leads",
+      "the existing Leads heading should remain visible when the campaign tab is active"
+    );
     const tenderPanel = page.locator("#sway-tender-campaign-panel");
     await tenderPanel.waitFor({ state: "visible", timeout: 10000 });
     await tenderPanel.locator(".sway-tender-table tbody tr").first().waitFor({ state: "visible", timeout: 10000 });
