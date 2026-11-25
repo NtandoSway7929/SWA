@@ -48,6 +48,47 @@ const leads = [
   }
 ];
 
+const campaignProspects = [
+  {
+    id: "prospect-ui-test-1", campaign_id: "campaign-ui-test",
+    source_prospect_id: "SWP-UI-001", business_name: "Tender Workspace Test Holdings",
+    business_category: "Emerging Holding Company", industry: "Construction & Civil Engineering",
+    province: "Gauteng", city: "Pretoria", website_url: null,
+    website_status: "No website found", website_issues: "No official website located in synthetic test data.",
+    email: "prospect@example.invalid", additional_email: null, phone: "0100000000",
+    whatsapp: null, physical_address: null, linkedin_url: null, facebook_url: null,
+    tender_participation_evidence: "Synthetic award register fixture.",
+    tender_award_history: "One synthetic award; test data only.",
+    tender_reference: "TEST/001", procuring_entity: "Synthetic Municipality",
+    tender_award_value: "Not disclosed", verified_award_count: 1,
+    tender_dependence_evidence: "Revenue dependence unconfirmed.",
+    digital_opportunity: "Corporate website and capability profile.",
+    recommended_services: "Website design and development",
+    source_urls: "https://example.invalid/source",
+    audit_status: "Synthetic audit fixture",
+    audit_notes: "Synthetic audit notes.",
+    audit_evidence_urls: "https://example.invalid/audit",
+    audit_outreach_disposition: "Research only",
+    contact_verification_status: "Synthetic test record",
+    qualification_status: "research_required", stage: "research_required",
+    email_consent_status: "not_requested", do_not_contact: false
+  },
+  {
+    id: "prospect-ui-test-2", campaign_id: "campaign-ui-test",
+    source_prospect_id: "SWP-UI-002", business_name: "Second Tender Test Group",
+    business_category: "Diversified Business Group", industry: "Facilities Management",
+    province: "Limpopo", city: "Polokwane", website_url: "https://example.invalid",
+    website_status: "Needs review", website_issues: "Synthetic website review required.",
+    email: null, phone: null, tender_participation_evidence: "Bidder only.",
+    tender_award_history: "No award confirmed.", tender_reference: "TEST/002",
+    procuring_entity: "Synthetic Municipality", source_urls: "https://example.invalid/second",
+    audit_status: "Not independently reviewed", audit_notes: "Synthetic record.",
+    audit_evidence_urls: null, audit_outreach_disposition: "Hold",
+    contact_verification_status: "Unverified", qualification_status: "research_required",
+    stage: "research_required", email_consent_status: "not_requested", do_not_contact: false
+  }
+];
+
 const tasks = [
   {
     id: "task-low", title: "Prepare proposal", description: "Draft a website proposal",
@@ -265,6 +306,11 @@ function dataFor(url) {
   if (url.pathname === "/auth/v1/user") {
     return { id: TEST_USER_ID, email: "admin-ui-test@example.invalid", role: "authenticated" };
   }
+  if (url.pathname === "/rest/v1/lead_campaigns") {
+    return [{ id: "campaign-ui-test", campaign_key: "tender-corporate-groups-2026",
+      name: "Tender & Corporate Groups", status: "active" }];
+  }
+  if (url.pathname === "/rest/v1/lead_campaign_prospects") return campaignProspects;
   if (url.pathname === "/rest/v1/admin_users") {
     return [
       {
@@ -736,6 +782,43 @@ async function main() {
       "confirming the follow-up scan must invoke the existing authenticated RPC exactly once");
 
     await navigate("leads", "crm");
+
+    // Exercise the dedicated Tender & Corporate Groups tab using only
+    // synthetic prospect records and the in-memory Supabase route.
+    const tenderTab = page.locator('[data-sway-tender-mode="campaign"]');
+    await tenderTab.waitFor({ state: "visible", timeout: 10000 });
+    assert.ok((await tenderTab.innerText()).includes("Tender & Corporate Groups"),
+      "the dedicated campaign tab should appear inside Leads");
+    await tenderTab.click();
+    const tenderPanel = page.locator("#sway-tender-campaign-panel");
+    await tenderPanel.waitFor({ state: "visible", timeout: 10000 });
+    await tenderPanel.locator(".sway-tender-table tbody tr").first().waitFor({ state: "visible", timeout: 10000 });
+    assert.equal(await tenderPanel.locator(".sway-tender-table tbody tr").count(), 2,
+      "the campaign workspace should load and display the two synthetic prospect records");
+    assert.ok((await tenderPanel.innerText()).includes("Tender Workspace Test Holdings"),
+      "the campaign table should render the company name from its campaign prospect record");
+    assert.ok((await tenderPanel.innerText()).includes("Email marketing remains locked until permission is recorded."),
+      "the campaign should clearly disclose that marketing outreach is permission-gated");
+    await tenderPanel.locator('[data-sway-tender-open="prospect-ui-test-1"]').click();
+    const prospectDetail = tenderPanel.locator(".sway-tender-detail");
+    await prospectDetail.waitFor({ state: "visible", timeout: 5000 });
+    assert.ok((await prospectDetail.innerText()).includes("Synthetic Municipality"),
+      "the prospect profile should show the recorded procuring institution");
+    assert.ok((await prospectDetail.innerText()).includes("https://example.invalid/source"),
+      "the prospect profile should expose the recorded research evidence");
+    assert.ok((await prospectDetail.innerText()).includes("not_requested"),
+      "the prospect profile should show that marketing consent has not been requested");
+    await tenderPanel.locator('[data-sway-tender-search]').fill("Second Tender Test Group");
+    assert.equal(await tenderPanel.locator(".sway-tender-table tbody tr").count(), 1,
+      "campaign search should filter prospects by business name");
+    assert.ok((await tenderPanel.innerText()).includes("Second Tender Test Group"),
+      "filtered campaign results should show the matching prospect");
+    await page.locator('[data-sway-tender-mode="standard"]').click();
+    const standardLeadView = page.locator("#sway-workspace-main");
+    await standardLeadView.locator('[data-admin-table-row="leads"]').first().waitFor({ state: "visible", timeout: 5000 });
+    assert.equal(await standardLeadView.locator('[data-admin-table-row="leads"]').count(), 4,
+      "switching back to Standard Leads should restore all existing CRM lead records");
+
     const leadView = page.locator("#sway-workspace-main");
     const leadRows = leadView.locator('[data-admin-table-row="leads"]');
     assert.equal(await leadRows.count(), 4, "the actual Leads view should render all synthetic lead records");
