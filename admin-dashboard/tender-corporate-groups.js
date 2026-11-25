@@ -156,7 +156,7 @@
       button.setAttribute("aria-selected", active ? "true" : "false");
     });
     const count = tabs.querySelector("[data-sway-tender-count]");
-    if (count && state.prospects.length) count.textContent = String(state.prospects.length);
+    if (count && state.prospects.length && count.textContent !== String(state.prospects.length)) count.textContent = String(state.prospects.length);
   }
 
   function setStandardVisibility() {
