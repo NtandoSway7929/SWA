@@ -130,8 +130,15 @@
         if (!button) return;
         setMode(button.dataset.swayTenderMode);
       });
-      const heading = document.querySelector(ROOT_SELECTOR + " .sway-workspace-heading");
-      if (heading && heading.parentElement) heading.insertAdjacentElement("afterend", tabs);
+      const root = document.querySelector(ROOT_SELECTOR);
+      const heading = root && root.querySelector(".sway-workspace-heading-copy h2");
+      let headingContainer = heading;
+      while (headingContainer && headingContainer.parentElement !== root) {
+        headingContainer = headingContainer.parentElement;
+      }
+      if (headingContainer && headingContainer.parentElement === root) {
+        headingContainer.insertAdjacentElement("afterend", tabs);
+      }
     }
 
     let panel = document.getElementById("sway-tender-campaign-panel");
