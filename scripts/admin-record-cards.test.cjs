@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, "..");
 const workspace = fs.readFileSync(path.join(root, "admin-dashboard", "admin-workspace.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
 const css = fs.readFileSync(path.join(root, "admin-dashboard", "admin-record-cards.css"), "utf8");
+const deletionMigration = fs.readFileSync(path.join(root, "supabase", "migrations", "20261122120000_swayphics_client_financial_purge.sql"), "utf8");
 
 function section(source, startMarker, label) {
     const start = source.indexOf(startMarker);
@@ -136,15 +137,29 @@ for (const view of ["tasks", "followups", "communications"]) {
 const clientDeleteHandler = section(
     workspace, "    async function removeRecord(type, id)", "record deletion handler"
 );
-assert.match(clientDeleteHandler, /state\.invoices\.filter/);
-assert.match(clientDeleteHandler, /state\.payments\.filter/);
-assert.match(clientDeleteHandler, /clientInvoices\.length/);
-assert.match(clientDeleteHandler, /clientPayments\.length/);
-assert.match(clientDeleteHandler, /archive the client/i);
-assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\)/,
-    "client deletion must not cascade-delete invoice history");
-assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHandler.indexOf("swayConfirm(confirmMessage)"),
-    "financial-history checks must run before asking to confirm client deletion");
+assert.match(clientDeleteHandler, /delete_swayphics_client/);
+assert.match(clientDeleteHandler, /storage_objects/);
+assert.match(clientDeleteHandler, /storageByBucket/);
+assert.match(clientDeleteHandler, /offset \+= 1000/);
+assert.match(clientDeleteHandler, /failedStorageCleanupCount/);
+assert.match(clientDeleteHandler, /This does not cancel or reverse transactions held by Yoco, Paystack or a bank/i);
+assert.doesNotMatch(clientDeleteHandler, /state\.invoices\.filter|state\.payments\.filter/,
+    "client deletion must use the atomic database purge RPC instead of incomplete client-side cascades");
+assert.match(deletionMigration, /public\.delete_swayphics_client/);
+assert.match(deletionMigration, /innerme_private\.delete_swayphics_client/);
+assert.match(deletionMigration, /security definer/);
+assert.match(deletionMigration, /revoke all on function innerme_private\.delete_swayphics_client\(uuid\) from public, anon, authenticated/);
+assert.match(deletionMigration, /public\.is_swayphics_owner\(\)/);
+assert.match(deletionMigration, /app\.client_financial_purge/);
+assert.match(deletionMigration, /payment_reconciliation_actions/);
+assert.match(deletionMigration, /payment_reconciliation_evidence/);
+assert.match(deletionMigration, /payment_webhook_events/);
+assert.match(deletionMigration, /bank_transfer_submissions/);
+assert.match(deletionMigration, /Swayphics owners can delete payment proof files/);
+assert.match(deletionMigration, /bucket_id = 'swayphics-payment-proofs'/);
+assert.match(deletionMigration, /invoice_items/);
+assert.match(deletionMigration, /status in \('created', 'pending', 'requires_review'\)/);
+assert.match(deletionMigration, /grant execute on function public\.delete_swayphics_client\(uuid\) to authenticated/);
 
 assert.ok(workspace.includes("Archive this invoice first. Sent, paid and overdue invoice records should be retained"),
     "issued, paid and overdue invoices must be protected from permanent deletion");
@@ -188,7 +203,7 @@ assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-record-card/);
 assert.match(css, /@media \(max-width: 620px\)/);
 assert.match(css, /prefers-reduced-motion/);
 
-assert.match(html, /admin-workspace\.js\?v=20261121-safe-record-deletion-1/,
+assert.match(html, /admin-workspace\.js\?v=20261122-client-financial-purge-1/,
     "the communication viewer workspace script must use a refreshed cache key");
 
 console.log("Admin record-card contract tests passed for 15 dashboard views and communication viewing.");
