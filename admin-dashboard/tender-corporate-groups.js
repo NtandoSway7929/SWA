@@ -172,7 +172,7 @@
     const panel = document.getElementById("sway-tender-campaign-panel");
     if (!root || !tabs || !panel) return;
 
-    const heading = root.querySelector(".sway-workspace-heading");
+    const heading = root.querySelector(".sway-workspace-heading-copy h2");
     let headingContainer = heading;
     while (headingContainer && headingContainer.parentElement !== root) headingContainer = headingContainer.parentElement;
     const keep = new Set([headingContainer, tabs, panel].filter(Boolean));
