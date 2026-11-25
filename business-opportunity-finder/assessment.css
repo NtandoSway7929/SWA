@@ -38,7 +38,7 @@ h1 span{color:var(--blue)}
 .option:hover,.option[aria-pressed=true]{border-color:rgba(1,82,244,.55);background:#f3f7ff}
 .option-mark{width:18px;height:18px;flex:0 0 18px;border:1.5px solid #b6c2d7;border-radius:50%;display:grid;place-items:center}
 .option[aria-pressed=true] .option-mark{border:5px solid var(--blue)}
-.question-actions{display:flex;justify-content:space-between;align-items:center;margin-top:30px}
+.question-actions{display:flex;justify-content:space-between;align-items:center;margin-top:30px}.secondary-actions{display:flex;align-items:center;gap:18px}
 .question-actions .button{min-width:150px}
 .evidence-note{display:grid;gap:5px;background:#f2f6ff;border:1px solid #e2eaff;border-radius:15px;padding:16px;margin:25px 0;color:#53617d;font-size:.76rem;line-height:1.65}
 .evidence-note strong{color:var(--navy)}
