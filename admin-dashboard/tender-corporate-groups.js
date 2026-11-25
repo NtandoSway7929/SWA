@@ -24,6 +24,8 @@
     ["do_not_contact", "Do not contact"]
   ];
 
+  let mountedPanelNode = null;
+
   const state = {
     mode: "standard",
     campaign: null,
@@ -164,7 +166,9 @@
     if (!root || !tabs || !panel) return;
 
     const heading = root.querySelector(".sway-workspace-heading");
-    const keep = new Set([heading, tabs, panel].filter(Boolean));
+    let headingContainer = heading;
+    while (headingContainer && headingContainer.parentElement !== root) headingContainer = headingContainer.parentElement;
+    const keep = new Set([headingContainer, tabs, panel].filter(Boolean));
     Array.from(root.children).forEach(child => {
       if (keep.has(child)) {
         child.classList.remove("sway-tender-standard-hidden");
@@ -604,11 +608,21 @@
     if (!item || item.qualification_status !== "qualified" || item.do_not_contact) return;
     if (!window.confirm("Add " + item.business_name + " to the main CRM Leads pipeline as a new, uncontacted lead? No email will be sent.")) return;
     try {
-      const existing = await api(apiUrl("leads", {
-        select: "id,business_name,email",
-        or: "(business_name.ilike." + encodeURIComponent(item.business_name) + ",email.eq." + encodeURIComponent(item.email || "___no_email___") + ")",
-        limit: "5"
-      }));
+      let existing = [];
+      if (item.email) {
+        existing = await api(apiUrl("leads", {
+          select: "id,business_name,email",
+          email: "ilike." + item.email,
+          limit: "5"
+        }));
+      }
+      if (!existing.length) {
+        existing = await api(apiUrl("leads", {
+          select: "id,business_name,email",
+          business_name: "ilike." + item.business_name,
+          limit: "5"
+        }));
+      }
       const match = (existing || []).find(lead =>
         String(lead.business_name || "").trim().toLowerCase() === String(item.business_name).trim().toLowerCase() ||
         (item.email && String(lead.email || "").trim().toLowerCase() === item.email.trim().toLowerCase())
@@ -705,7 +719,10 @@
     const ui = renderTabs();
     if (!ui.tabs.isConnected || !ui.panel.isConnected) return;
     setStandardVisibility();
-    if (state.mode === "campaign" && state.loaded) renderCampaign();
+    if (ui.panel !== mountedPanelNode) {
+      mountedPanelNode = ui.panel;
+      if (state.mode === "campaign" && state.loaded) renderCampaign();
+    }
   }
 
   function scheduleMount() {
