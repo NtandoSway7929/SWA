@@ -12,6 +12,7 @@
   const stepLabel = $("#step-label");
   const continueButton = $("#continue-button");
   const backButton = $("#back-button");
+  const skipButton = $("#skip-button");
   const state = { answers: {}, history: [], current: "industry" };
 
   const questions = {
@@ -220,6 +221,17 @@
   backButton.addEventListener("click", () => {
     const previous = state.history.pop();
     if (previous) showQuestion(previous);
+  });
+
+  skipButton.addEventListener("click", () => {
+    const index = sequence.indexOf(state.current);
+    delete state.answers[state.current];
+    if (index === sequence.length - 1) {
+      renderResults();
+      return;
+    }
+    state.history.push(state.current);
+    showQuestion(sequence[index + 1]);
   });
 
   $("#exit-button").addEventListener("click", () => {
