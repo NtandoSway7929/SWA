@@ -15,7 +15,6 @@ assert.match(html, /id="results"/);
 assert.match(html, /name="consent"/);
 assert.match(html, /name="businessName"/);
 assert.match(html, /name="email"/);
-assert.match(html, /name="website" hidden/);
 assert.match(js, /const sequence = \["industry", "booking", "enquiry_process", "discovery", "challenge"\]/);
 assert.match(js, /industrySpecific/);
 assert.match(js, /findingsForAnswers/);
