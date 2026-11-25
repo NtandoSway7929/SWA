@@ -785,8 +785,30 @@ async function main() {
 
     // Exercise the dedicated Tender & Corporate Groups tab using only
     // synthetic prospect records and the in-memory Supabase route.
+    const campaignMountDiagnostics = await page.evaluate(() => {
+      const root = document.querySelector("#sway-workspace-main");
+      const heading = root && root.querySelector(".sway-workspace-heading-copy h2");
+      const tabs = document.getElementById("sway-tender-campaign-tabs");
+      return {
+        moduleLoaded: !!window.swayphicsTenderCampaignLoaded,
+        rootFound: !!root,
+        headingText: heading ? heading.textContent.trim() : null,
+        headingParent: heading && heading.parentElement ? heading.parentElement.outerHTML.slice(0, 900) : null,
+        rootDirectChildren: root ? Array.from(root.children).map(node => ({
+          tag: node.tagName, className: node.className, id: node.id
+        })) : [],
+        tabsPresent: !!tabs,
+        tabsConnected: !!(tabs && tabs.isConnected),
+        panelPresent: !!document.getElementById("sway-tender-campaign-panel"),
+        scriptLoaded: Array.from(document.scripts).some(node => node.src.includes("tender-corporate-groups.js"))
+      };
+    });
     const tenderTab = page.locator('[data-sway-tender-mode="campaign"]');
-    await tenderTab.waitFor({ state: "visible", timeout: 10000 });
+    await tenderTab.waitFor({ state: "visible", timeout: 10000 }).catch(async error => {
+      throw new Error("Campaign tab did not mount: " + JSON.stringify(campaignMountDiagnostics) +
+        "; page errors: " + JSON.stringify(metrics.pageErrors) + "; console errors: " +
+        JSON.stringify(metrics.consoleErrors) + "; cause: " + error.message);
+    });
     assert.ok((await tenderTab.innerText()).includes("Tender & Corporate Groups"),
       "the dedicated campaign tab should appear inside Leads");
     await tenderTab.click();
