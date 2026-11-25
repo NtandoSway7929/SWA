@@ -24,6 +24,7 @@ on:
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/index.html"
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
+      - "scripts/admin-tender-campaign.test.cjs"
       - "scripts/admin-lead-cards.test.cjs"
       - "scripts/admin-record-cards.test.cjs"
       - "scripts/admin-table-controls-db-smoke.cjs"
@@ -98,6 +99,9 @@ jobs:
 
       - name: Verify lead-card structure and full-details entry point
         run: node scripts/admin-lead-cards.test.cjs
+
+      - name: Verify Tender & Corporate Groups campaign workspace and consent controls
+        run: node scripts/admin-tender-campaign.test.cjs
 
       - name: Run desktop and mobile browser checks
         run: |
