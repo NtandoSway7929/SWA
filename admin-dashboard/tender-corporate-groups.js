@@ -739,13 +739,15 @@
   }
 
   function start() {
-    const root = document.querySelector(ROOT_SELECTOR);
-    if (!root) {
-      window.setTimeout(start, 250);
+    if (!document.body) {
+      document.addEventListener("DOMContentLoaded", start, { once: true });
       return;
     }
+    // The workspace renderer can replace the main workspace node during
+    // navigation. Observe the stable document body so the campaign tab
+    // remounts against the current Leads view after that replacement.
     const observer = new MutationObserver(scheduleMount);
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     scheduleMount();
     window.addEventListener("storage", event => {
       if (event.key === "swayphics_admin_access_token" && !event.newValue) {
