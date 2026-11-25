@@ -349,10 +349,10 @@
       const safe = safeUrl(url);
       return safe ? '<a href="' + escapeHtml(safe) + '" target="_blank" rel="noopener">' + escapeHtml(label || safe) + '</a>' : "";
     };
-    const sources = String(item.source_urls || "").split(/;\\s*/).filter(Boolean).map((url, i) =>
+    const sources = String(item.source_urls || "").split(/;\s*/).filter(Boolean).map((url, i) =>
       link(url, "Source " + (i + 1))
     ).filter(Boolean).join("");
-    const auditSources = String(item.audit_evidence_urls || "").split(/;\\s*/).filter(Boolean).map((url, i) =>
+    const auditSources = String(item.audit_evidence_urls || "").split(/;\s*/).filter(Boolean).map((url, i) =>
       link(url, "Audit source " + (i + 1))
     ).filter(Boolean).join("");
     const dnc = !!item.do_not_contact;
@@ -411,7 +411,7 @@
       '</div>' +
       '<div class="sway-tender-detail-actions">' +
         (item.lead_id ? '<span class="sway-tender-linked">Linked to CRM lead</span><span class="sway-tender-lead-id">' + escapeHtml(item.lead_id) + '</span>' :
-          '<button type="button" class="sway-tender-primary" data-sway-tender-promote="' + escapeHtml(item.id) + '"' + (item.qualification_status !== "qualified" || dnc ? " disabled title=\\"Qualify this prospect before adding it to the main CRM.\\"" : "") + '>Add to main CRM leads</button>') +
+          '<button type="button" class="sway-tender-primary" data-sway-tender-promote="' + escapeHtml(item.id) + '"' + (item.qualification_status !== "qualified" || dnc ? " disabled title=\"Qualify this prospect before adding it to the main CRM.\"" : "") + '>Add to main CRM leads</button>') +
         '<button type="button" class="sway-tender-danger" data-sway-tender-do-not-contact="' + escapeHtml(item.id) + '"' + (dnc ? " disabled" : "") + '>Mark do not contact</button>' +
       '</div>' +
       (dnc ? '<p class="sway-tender-optout">This prospect is permanently marked Do Not Contact. Marketing outreach is disabled.</p>' : '') +
