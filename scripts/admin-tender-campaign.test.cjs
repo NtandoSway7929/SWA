@@ -42,7 +42,7 @@ for (const contract of [
 }
 
 assert.match(script, /email_consent_status !== "granted" \|\| item\.do_not_contact/);
-assert.match(script, /stage = "do_not_contact"/);
+assert.match(script, /stage: "do_not_contact"/);
 assert.match(script, /email_consent_status: "revoked"/);
 assert.match(script, /qualification_status !== "qualified" \|\| dnc/);
 assert.match(script, /No email will be sent/);
