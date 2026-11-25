@@ -804,9 +804,12 @@ async function main() {
     await prospectDetail.waitFor({ state: "visible", timeout: 5000 });
     assert.ok((await prospectDetail.innerText()).includes("Synthetic Municipality"),
       "the prospect profile should show the recorded procuring institution");
-    assert.ok((await prospectDetail.innerText()).includes("https://example.invalid/source"),
-      "the prospect profile should expose the recorded research evidence");
-    assert.ok((await prospectDetail.innerText()).includes("not_requested"),
+    assert.equal(
+      await prospectDetail.locator(".sway-tender-source-list a").first().getAttribute("href"),
+      "https://example.invalid/source",
+      "the prospect profile should expose the recorded research evidence URL"
+    );
+    assert.ok((await prospectDetail.innerText()).includes("not requested"),
       "the prospect profile should show that marketing consent has not been requested");
     await tenderPanel.locator('[data-sway-tender-search]').fill("Second Tender Test Group");
     assert.equal(await tenderPanel.locator(".sway-tender-table tbody tr").count(), 1,
