@@ -20,6 +20,9 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ??
     Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "";
 const TINYFISH_API_KEY = Deno.env.get("TINYFISH_API_KEY") ?? "";
+// Default-off legal/data-governance gate. Set only after Swayphics records approval.
+const TINYFISH_DATA_USE_APPROVED =
+    Deno.env.get("TINYFISH_DATA_USE_APPROVED") === "true";
 const ALLOWED_ORIGINS = new Set([
     "https://swayphics.co.za",
     "https://www.swayphics.co.za"
@@ -685,6 +688,13 @@ Deno.serve(async (request) => {
         return jsonResponse({
             error: "This assessment does not contain the required permission and business details for public-source inspection."
         }, 409, origin);
+    }
+
+    if (!TINYFISH_DATA_USE_APPROVED) {
+        return jsonResponse({
+            code: "provider_data_use_not_approved",
+            error: "Live public-source inspection is disabled until Swayphics approves the provider data-use terms or obtains an appropriate written agreement."
+        }, 503, origin);
     }
 
     const { data: existing, error: existingError } = await service
