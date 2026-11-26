@@ -1,3 +1,9 @@
+import {
+    CONSENT_VERSION,
+    detectPlatform,
+    normalisePublicUrl
+} from "../inspect-business-assessment/provider.mjs";
+
 export const ASSESSMENT_VERSION = "bof-2026-11-v1";
 export const CONTACT_NOTICE_VERSION = "bof-contact-v1";
 
@@ -106,6 +112,74 @@ function cleanText(value, fieldName, maxLength) {
     return cleaned;
 }
 
+
+function isGoogleBusinessUrl(value) {
+    try {
+        const host = new URL(value).hostname.toLowerCase();
+        return host === "google.com" || host.endsWith(".google.com") ||
+            /^google\.[a-z.]+$/i.test(host) || host === "maps.app.goo.gl" || host === "g.page";
+    } catch {
+        return false;
+    }
+}
+
+function normalizePublicPresence(value, businessName, location) {
+    if (!isObject(value) || value.inspection_consent !== true) {
+        return { inspection_consent: false };
+    }
+    if (value.inspection_consent_version !== CONSENT_VERSION) {
+        throw new Error("The public-presence inspection consent version is not supported.");
+    }
+    if (!businessName || !location) {
+        throw new Error("Enter the business name and city or area before agreeing to a public-presence inspection.");
+    }
+
+    const optionalUrl = (raw, label) => {
+        const cleaned = cleanText(raw, label, 2048);
+        if (!cleaned) return null;
+        return normalisePublicUrl(cleaned);
+    };
+
+    const websiteUrl = optionalUrl(value.website_url, "Website URL");
+    if (websiteUrl && (detectPlatform(websiteUrl) || isGoogleBusinessUrl(websiteUrl))) {
+        throw new Error("Enter a business website URL in the website field.");
+    }
+
+    const googleUrl = optionalUrl(value.google_business_profile_url, "Google Business Profile URL");
+    if (googleUrl && !isGoogleBusinessUrl(googleUrl)) {
+        throw new Error("Enter a Google Maps or Google Business Profile link.");
+    }
+
+    const rawSocials = value.social_profile_urls === undefined ? [] : value.social_profile_urls;
+    if (!Array.isArray(rawSocials) || rawSocials.length > 4) {
+        throw new Error("Provide no more than four public social profile links.");
+    }
+    const socialProfileUrls = [];
+    const seen = new Set();
+    for (const entry of rawSocials) {
+        if (!isObject(entry)) throw new Error("A social profile entry is invalid.");
+        const url = optionalUrl(entry.url, "Social profile URL");
+        if (!url) continue;
+        const platform = detectPlatform(url);
+        if (!platform || (entry.platform && entry.platform !== platform)) {
+            throw new Error("Each social profile URL must match Instagram, Facebook, TikTok or LinkedIn.");
+        }
+        if (!seen.has(url)) {
+            seen.add(url);
+            socialProfileUrls.push({ platform, url });
+        }
+    }
+
+    return {
+        inspection_consent: true,
+        inspection_consent_version: CONSENT_VERSION,
+        consented_at: new Date().toISOString(),
+        website_url: websiteUrl,
+        google_business_profile_url: googleUrl,
+        social_profile_urls: socialProfileUrls
+    };
+}
+
 function validateChoice(value, allowed, fieldName) {
     if (typeof value !== "string" || !Object.hasOwn(allowed, value)) {
         throw new Error(`Choose a valid ${fieldName}.`);
@@ -171,7 +245,12 @@ export function normalizeAssessmentPayload(payload) {
     const location = cleanText(payload.business_profile.location, "Location", 100);
     const businessProfile = {
         business_name: businessName || null,
-        location: location || null
+        location: location || null,
+        public_presence: normalizePublicPresence(
+            payload.business_profile.public_presence,
+            businessName,
+            location
+        )
     };
     const responses = EXPECTED_QUESTIONS.map((question_id) => ({
         question_id,
