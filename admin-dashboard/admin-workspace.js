@@ -17618,8 +17618,33 @@ function simpleBars(items, color) {
     function openEmailComposer(
         contactType,
         contactId,
-        threadId
+        threadId,
+        composerOptions
     ) {
+        const campaignOptions =
+            composerOptions && typeof composerOptions === "object"
+                ? composerOptions
+                : {};
+        const isCampaignProspect =
+            contactType === "campaign-prospect";
+        const campaignRecipient =
+            isCampaignProspect
+                ? {
+                    id: String(campaignOptions.leadId || "").trim(),
+                    contact_name: String(campaignOptions.recipientName || "").trim(),
+                    business_name: String(campaignOptions.businessName || "").trim(),
+                    email: String(campaignOptions.recipientEmail || "").trim()
+                }
+                : null;
+
+        if (
+            isCampaignProspect &&
+            !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(campaignRecipient.email)
+        ) {
+            swayAlert("A valid campaign prospect email address is required.");
+            return;
+        }
+
         const modalId =
             "sway-email-composer";
 
@@ -17702,19 +17727,21 @@ function simpleBars(items, color) {
         }
 
         let selectedType =
-            contactType === "client" ||
-            contactType === "lead"
-                ? contactType
-                : (
-                    replyContact?.type ||
-                    (
-                        emailContactRecords(
-                            "lead"
-                        ).length
-                            ? "lead"
-                            : "client"
-                    )
-                );
+            isCampaignProspect
+                ? "lead"
+                : contactType === "client" ||
+                  contactType === "lead"
+                    ? contactType
+                    : (
+                        replyContact?.type ||
+                        (
+                            emailContactRecords(
+                                "lead"
+                            ).length
+                                ? "lead"
+                                : "client"
+                        )
+                    );
 
         let selectedId =
             contactId || "";
@@ -17750,10 +17777,12 @@ function simpleBars(items, color) {
         const recipientEmail =
             isReply
                 ? replyRecipient
-                : (
-                    selectedRecord?.email ||
-                    ""
-                );
+                : isCampaignProspect
+                    ? campaignRecipient.email
+                    : (
+                        selectedRecord?.email ||
+                        ""
+                    );
 
         if (
             isReply &&
@@ -17772,15 +17801,24 @@ function simpleBars(items, color) {
                         replyThread
                     )
                 )
-                : (
-                    selectedRecord
-                        ? generateEmailSubject(
-                            selectedType,
-                            selectedRecord,
+                : isCampaignProspect
+                    ? (
+                        campaignOptions.subject ||
+                        generateEmailSubject(
+                            "lead",
+                            campaignRecipient,
                             "not-website-related"
                         )
-                        : ""
-                );
+                    )
+                    : (
+                        selectedRecord
+                            ? generateEmailSubject(
+                                selectedType,
+                                selectedRecord,
+                                "not-website-related"
+                            )
+                            : ""
+                    );
 
         const replySubject =
             isReply
@@ -17846,52 +17884,56 @@ function simpleBars(items, color) {
                 "</div>" +
                 '<form class="sway-email-composer-form">' +
                     (
-                        isReply
+                        isCampaignProspect
                             ? (
                                 '<div class="sway-email-recipient-preview">' +
-                                    "<span>To</span>" +
-                                    "<strong>" +
-                                        esc(
-                                            replyInbound?.from_name ||
-                                            replyInbound?.from_email ||
-                                            "Recipient"
-                                        ) +
-                                    "</strong>" +
-                                    "<b>" +
-                                        esc(
-                                            recipientEmail
-                                        ) +
-                                    "</b>" +
-                                "</div>"
+                                    "<span>To</span><strong>" +
+                                        esc(campaignRecipient.contact_name || campaignRecipient.business_name || "Recipient") +
+                                    "</strong><b>" +
+                                        esc(campaignRecipient.email) +
+                                    "</b></div>"
                             )
-                            : (
-                                '<div class="sway-email-composer-recipient-grid">' +
-                                    '<div class="sway-email-field">' +
-                                        '<label for="sway-email-contact-type">Recipient type</label>' +
-                                        '<select id="sway-email-contact-type">' +
-                                            '<option value="lead"' +
-                                                (selectedType === "lead" ? " selected" : "") +
-                                            '>Lead</option>' +
-                                            '<option value="client"' +
-                                                (selectedType === "client" ? " selected" : "") +
-                                            '>Client</option>' +
-                                        "</select>" +
-                                    "</div>" +
-                                    '<div class="sway-email-field">' +
-                                        '<label for="sway-email-contact-id">Recipient</label>' +
-                                        '<select id="sway-email-contact-id">' +
-                                            emailContactOptions(
-                                                selectedType,
-                                                selectedId
+                            : isReply
+                                ? (
+                                    '<div class="sway-email-recipient-preview">' +
+                                        "<span>To</span>" +
+                                        "<strong>" +
+                                            esc(
+                                                replyInbound?.from_name ||
+                                                replyInbound?.from_email ||
+                                                "Recipient"
                                             ) +
-                                        "</select>" +
+                                        "</strong>" +
+                                        "<b>" +
+                                            esc(recipientEmail) +
+                                        "</b>" +
+                                    "</div>"
+                                )
+                                : (
+                                    '<div class="sway-email-composer-recipient-grid">' +
+                                        '<div class="sway-email-field">' +
+                                            '<label for="sway-email-contact-type">Recipient type</label>' +
+                                            '<select id="sway-email-contact-type">' +
+                                                '<option value="lead"' +
+                                                    (selectedType === "lead" ? " selected" : "") +
+                                                '>Lead</option>' +
+                                                '<option value="client"' +
+                                                    (selectedType === "client" ? " selected" : "") +
+                                                '>Client</option>' +
+                                            "</select>" +
+                                        "</div>" +
+                                        '<div class="sway-email-field">' +
+                                            '<label for="sway-email-contact-id">Recipient</label>' +
+                                            '<select id="sway-email-contact-id">' +
+                                                emailContactOptions(selectedType, selectedId) +
+                                            "</select>" +
+                                        "</div>" +
                                     "</div>" +
-                                "</div>" +
-                                '<div class="sway-email-recipient-preview" id="sway-email-recipient-preview">Select a recipient to continue.</div>'
-                            )
+                                    '<div class="sway-email-recipient-preview" id="sway-email-recipient-preview">Select a recipient to continue.</div>'
+                                )
                     ) +
                     (
-                        isReply
+                        isReply || (isCampaignProspect && !campaignOptions.allowProposalTypes)
                             ? ""
                             : '<div class="sway-email-field">' +
                                 '<div class="sway-email-label-row">' +
@@ -17920,11 +17962,20 @@ function simpleBars(items, color) {
                             esc(
                                 isReply
                                     ? replySubject
-                                    : generateEmailSubject(
-                                        selectedType,
-                                        selectedRecord,
-                                        "not-website-related"
-                                    )
+                                    : isCampaignProspect
+                                        ? (
+                                            campaignOptions.subject ||
+                                            generateEmailSubject(
+                                                "lead",
+                                                campaignRecipient,
+                                                "not-website-related"
+                                            )
+                                        )
+                                        : generateEmailSubject(
+                                            selectedType,
+                                            selectedRecord,
+                                            "not-website-related"
+                                        )
                             ) +
                         '">' +
                     "</div>" +
@@ -17989,6 +18040,11 @@ function simpleBars(items, color) {
                 "#sway-email-message"
             );
 
+        if (isCampaignProspect) {
+            messageInput.value =
+                String(campaignOptions.message || "");
+        }
+
         const proposalTypeInput =
             modal.querySelector(
                 "#sway-email-proposal-type"
@@ -18012,20 +18068,33 @@ function simpleBars(items, color) {
         let lastAutoSubject =
             isReply
                 ? replySubject
-                : (
-                    selectedRecord
-                        ? generateEmailSubject(
-                            selectedType,
-                            selectedRecord,
+                : isCampaignProspect
+                    ? (
+                        campaignOptions.subject ||
+                        generateEmailSubject(
+                            "lead",
+                            campaignRecipient,
                             proposalTypeState
                         )
-                        : ""
-                );
+                    )
+                    : (
+                        selectedRecord
+                            ? generateEmailSubject(
+                                selectedType,
+                                selectedRecord,
+                                proposalTypeState
+                            )
+                            : ""
+                    );
 
         let subjectWasEdited =
             false;
 
         function selectedContact() {
+            if (isCampaignProspect) {
+                return campaignRecipient;
+            }
+
             return (
                 emailContactRecords(
                     selectedTypeState
@@ -18038,7 +18107,7 @@ function simpleBars(items, color) {
         }
 
         function updateRecipient() {
-            if (isReply) {
+            if (isReply || isCampaignProspect) {
                 return;
             }
 
@@ -18145,7 +18214,7 @@ function simpleBars(items, color) {
                 false;
         }
 
-        if (!isReply) {
+        if (!isReply && !isCampaignProspect) {
             typeInput.addEventListener(
                 "change",
                 function () {
@@ -18251,7 +18320,9 @@ function simpleBars(items, color) {
                 const targetEmail =
                     isReply
                         ? recipientEmail
-                        : contact?.email;
+                        : isCampaignProspect
+                            ? campaignRecipient.email
+                            : contact?.email;
 
                 if (!targetEmail) {
                     swayAlert(
@@ -18286,13 +18357,17 @@ function simpleBars(items, color) {
                                     replyContact?.type ||
                                     ""
                                 )
+                                : isCampaignProspect
+                                ? "lead"
                                 : selectedTypeState,
                             isReply
                                 ? (
                                     replyContact?.id ||
                                     ""
                                 )
-                                : contact.id,
+                                : isCampaignProspect
+                                    ? campaignRecipient.id
+                                    : (contact?.id || ""),
                             targetEmail,
                             subject,
                             message,
@@ -18301,6 +18376,18 @@ function simpleBars(items, color) {
                                 ? "not-website-related"
                                 : proposalTypeState
                         );
+
+                    let campaignUpdateError = null;
+                    if (
+                        isCampaignProspect &&
+                        typeof campaignOptions.onSent === "function"
+                    ) {
+                        try {
+                            await campaignOptions.onSent(result);
+                        } catch (campaignError) {
+                            campaignUpdateError = campaignError;
+                        }
+                    }
 
                     modal.remove();
 
@@ -18319,7 +18406,15 @@ function simpleBars(items, color) {
                         renderView();
                     }
 
-                    if (
+                    if (campaignUpdateError) {
+                        swayAlert(
+                            "Email sent to " +
+                            targetEmail +
+                            ", but the campaign record could not be updated: " +
+                            (campaignUpdateError.message || "Unknown update error.")
+                        );
+                    } else if (
+                        !isCampaignProspect &&
                         result &&
                         result.communication_logged ===
                             false
@@ -18382,11 +18477,11 @@ function simpleBars(items, color) {
                 }
             );
 
-        if (!isReply) {
+        if (!isReply && !isCampaignProspect) {
             updateRecipient();
         }
 
-        if (!isReply && selectedIdState) {
+        if (!isReply && !isCampaignProspect && selectedIdState) {
             const currentContact = selectedContact();
             if (currentContact && currentContact.email) {
                 recipientPreview.innerHTML =
@@ -18401,6 +18496,29 @@ function simpleBars(items, color) {
 
         messageInput.focus();
     }
+
+    window.swayphicsOpenCampaignEmailComposer = function (options) {
+        const details =
+            options && typeof options === "object"
+                ? options
+                : {};
+        const email =
+            String(details.recipientEmail || "").trim();
+
+        if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) {
+            swayAlert("A valid email address is required to open Swayphics Mail.");
+            return;
+        }
+
+        openEmailComposer(
+            "campaign-prospect",
+            "",
+            "",
+            Object.assign({}, details, {
+                recipientEmail: email
+            })
+        );
+    };
 
     function renderInvoices() {
         const showArchived = state.showArchivedInvoices === true;
