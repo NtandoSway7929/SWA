@@ -42,6 +42,12 @@ assert.match(functionSource, /business_assessment_inspections/,
     "The function must persist inspection run state");
 assert.match(functionSource, /business_assessment_evidence/,
     "The function must persist source-specific evidence");
+assert.match(functionSource, /let evidencePersisted = false/,
+    "The worker must track whether its evidence batch has already been persisted");
+assert.match(functionSource, /evidenceRows\.length && !evidencePersisted/,
+    "A later run-status failure must not insert the same evidence batch a second time");
+assert.match(functionSource, /if \(completionUpdateError\) throw new Error/,
+    "A failed completion-status write must be treated as an inspection failure");
 assert.match(functionSource, /api\.search\.tinyfish\.ai/,
     "The worker must use the TinyFish Search REST endpoint");
 assert.match(functionSource, /api\.fetch\.tinyfish\.ai/,
