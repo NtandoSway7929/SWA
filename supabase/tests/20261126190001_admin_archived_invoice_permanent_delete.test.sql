@@ -84,6 +84,18 @@ select extensions.ok(
 );
 
 select extensions.ok(
+    not exists (
+        select 1
+          from pg_proc p,
+               lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+         where p.oid='innerme_private.purge_archived_invoice_test_data(uuid,text)'::regprocedure
+           and acl.grantee=0
+           and acl.privilege_type='EXECUTE'
+    ),
+    'PUBLIC cannot invoke the private helper'
+);
+
+select extensions.ok(
     position('public.is_swayphics_owner()' in pg_get_functiondef(
         'innerme_private.purge_archived_invoice_test_data(uuid,text)'::regprocedure
     )) > 0,
