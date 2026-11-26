@@ -10,11 +10,11 @@ const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "
 const script = fs.readFileSync(path.join(root, "admin-dashboard", "tender-corporate-groups.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "admin-dashboard", "tender-corporate-groups.css"), "utf8");
 const migration = fs.readFileSync(
-const evidenceMigration = fs.readFileSync(
-  path.join(root, "supabase", "migrations", "20261126153000_preserve_tender_workbook_detail.sql"),
+  path.join(root, "supabase", "migrations", "20261125110000_tender_corporate_groups_campaign.sql"),
   "utf8"
 );
-  path.join(root, "supabase", "migrations", "20261125110000_tender_corporate_groups_campaign.sql"),
+const evidenceMigration = fs.readFileSync(
+  path.join(root, "supabase", "migrations", "20261126153000_preserve_tender_workbook_detail.sql"),
   "utf8"
 );
 
