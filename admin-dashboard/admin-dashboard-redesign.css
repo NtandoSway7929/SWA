@@ -65,19 +65,19 @@
 
 #sway-admin-workspace .sway-workspace-nav-scroll {
     display: flex !important;
+    flex-wrap: wrap !important;
     align-items: center !important;
-    gap: 5px !important;
+    justify-content: flex-start !important;
+    column-gap: 8px !important;
+    row-gap: 8px !important;
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     margin: 0 !important;
     padding: 2px 1px 5px !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    scrollbar-width: thin;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible !important;
+    scrollbar-width: none;
 }
 
 #sway-admin-workspace .sway-workspace-nav-group {
@@ -97,11 +97,13 @@
     width: auto !important;
     min-width: 0 !important;
     min-height: 40px !important;
+    flex: 0 0 auto !important;
     padding: 0 13px !important;
-    border: 1px solid transparent !important;
+    border: 1px solid #E5EAF2 !important;
     border-radius: 11px !important;
-    background: transparent !important;
+    background: #F8FAFD !important;
     color: #536078 !important;
+    box-shadow: 0 1px 2px rgba(10, 30, 70, 0.025) !important;
     font-family: 'Montserrat', 'Plus Jakarta Sans', sans-serif !important;
     font-size: 0.66rem !important;
     font-weight: 700 !important;
@@ -288,6 +290,13 @@ body.sway-dark-mode #sway-admin-workspace .sway-settings-direct-nav {
     color: #C2CDE0 !important;
 }
 
+body.sway-dark-mode #sway-admin-workspace .sway-workspace-nav-group-toggle,
+body.sway-dark-mode #sway-admin-workspace .sway-settings-direct-nav {
+    border-color: rgba(151, 176, 214, 0.17) !important;
+    background: rgba(255, 255, 255, 0.035) !important;
+    box-shadow: none !important;
+}
+
 body.sway-dark-mode #sway-admin-workspace .sway-workspace-nav-group.has-active > .sway-workspace-nav-group-toggle,
 body.sway-dark-mode #sway-admin-workspace .sway-workspace-nav-group.open > .sway-workspace-nav-group-toggle {
     border-color: rgba(119, 193, 252, 0.16) !important;
@@ -337,10 +346,15 @@ body.sway-dark-mode #sway-admin-workspace .sway-top-nav-menu-layer .sway-workspa
     }
 
     #sway-admin-workspace .sway-workspace-nav-scroll {
-        gap: 4px !important;
+        flex-wrap: nowrap !important;
+        column-gap: 6px !important;
+        row-gap: 0 !important;
         overflow-x: auto !important;
         overflow-y: hidden !important;
+        padding-bottom: 7px !important;
         scrollbar-width: none;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
     }
 
     #sway-admin-workspace .sway-workspace-nav-scroll::-webkit-scrollbar {
