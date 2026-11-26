@@ -1367,10 +1367,14 @@ async function main() {
       console.error("Inbox read action focus diagnostic:", JSON.stringify(focusDebug));
       throw error;
     }
+    await page.waitForFunction(() =>
+      window.__swayInboxReadFocus?.finalFocusSucceeded === true &&
+      document.activeElement?.getAttribute("data-email-thread-read-toggle") === "thread-ui-test"
+    , null, { timeout: 5000 });
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute("data-email-thread-read-toggle") || ""),
       "thread-ui-test",
-      "keyboard focus should return to the updated conversation read-state action"
+      "keyboard focus should remain on the updated conversation read-state action after the delayed legacy callback"
     );
     assert.equal(emailMessages.find(item => item.id === "email-inbound-ui-test").is_read, true,
       "Mark read should update every inbound message in the conversation in the mocked store");
