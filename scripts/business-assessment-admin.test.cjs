@@ -34,7 +34,7 @@ assert.doesNotMatch(script, /submission_key/,
     "The private idempotency key must not be retrieved or exposed by the admin viewer");
 assert.doesNotMatch(script, /SUPABASE_SERVICE_ROLE_KEY|service_role/i,
     "The admin browser must not use a service-role credential");
-assert.match(script, /read-only review/i,
+assert.match(page, /read-only review/i,
     "The viewer must disclose that it does not convert leads or change assessments");
 assert.match(nav, /Business assessments/,
     "A Business assessments destination must be injected into the CRM navigation");
