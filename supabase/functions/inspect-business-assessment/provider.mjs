@@ -8,7 +8,7 @@ const DISALLOWED_HOSTS = new Set([
     "169.254.169.254"
 ]);
 
-function isGoogleMapsUrl(value) {
+export function isGoogleMapsUrl(value) {
     try {
         const url = new URL(value);
         const hostname = url.hostname.toLowerCase();
