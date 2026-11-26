@@ -297,11 +297,11 @@ insert into public.payment_webhook_events (
     '10000000-0000-4000-8000-000000000005',
     'yoco',
     'test',
-    'purge-qa-webhook-0001',
-    'payment.succeeded',
+    'purge-qa-refund-event-0001',
+    'refund.succeeded',
     '10000000-0000-4000-8000-000000000004',
     true,
-    'processed'
+    'received'
 );
 
 insert into public.payment_receipts (
@@ -314,14 +314,15 @@ insert into public.payment_receipts (
 );
 
 insert into public.payment_refunds (
-    id, payment_id, provider, environment, amount, status
+    id, payment_id, provider, environment, provider_event_id, amount, status
 ) values (
     '10000000-0000-4000-8000-000000000007',
     '10000000-0000-4000-8000-000000000003',
     'yoco',
     'test',
+    'purge-qa-refund-event-0001',
     1.00,
-    'pending'
+    'succeeded'
 );
 
 insert into public.payment_reconciliation (
