@@ -4497,7 +4497,7 @@
             optionalApi("/rest/v1/budget_entries?select=*&order=transaction_date.desc,created_at.desc", []),
             optionalApi("/rest/v1/budget_category_allocations?select=*&order=period_month.desc,category.asc", []),
             optionalApi("/rest/v1/payment_refunds?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/payment_attempts?select=id,payment_id,provider,environment,status&order=created_at.desc", [])
+            optionalApi("/rest/v1/payment_attempts?select=id,invoice_id,payment_id,provider,environment,status&order=created_at.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -29035,8 +29035,23 @@ function simpleBars(items, color) {
                                     });
 
                                 if (invoicePayments.length || invoiceAttempts.length) {
+                                    const linkedRecords = [];
+                                    if (invoicePayments.length) {
+                                        linkedRecords.push(
+                                            invoicePayments.length +
+                                            (invoicePayments.length === 1 ? " payment record" : " payment records")
+                                        );
+                                    }
+                                    if (invoiceAttempts.length) {
+                                        linkedRecords.push(
+                                            invoiceAttempts.length +
+                                            (invoiceAttempts.length === 1 ? " online payment attempt" : " online payment attempts")
+                                        );
+                                    }
                                     swayAlert(
-                                        "This invoice has payment or payment-attempt records. They must be retained for financial history, so the invoice cannot be permanently deleted."
+                                        "This invoice cannot be permanently deleted because it is linked to " +
+                                        linkedRecords.join(" and ") +
+                                        ". Swayphics retains payment and checkout records for financial and reconciliation history. No records were deleted."
                                     );
                                     return;
                                 }
