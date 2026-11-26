@@ -93,40 +93,59 @@
         return linkLoadPromise;
     }
 
-    async function protectAssessmentEnquiryActions() {
-        if (!sessionVerified) return;
-        const main = document.getElementById("sway-workspace-main");
-        if (!main || !main.querySelector('[data-ai-record^="enquiries:"]')) return;
+    function embeddedAssessmentId(card) {
+        const match = String(card.textContent || "")
+            .match(/Business Opportunity Finder assessment reference:\\s*([0-9a-f-]{36})/i);
+        return match ? match[1] : "";
+    }
 
-        await loadAssessmentEnquiryIds();
-        main.querySelectorAll('[data-ai-record^="enquiries:"]').forEach((card) => {
-            const record = String(card.getAttribute("data-ai-record") || "");
-            const enquiryId = record.slice("enquiries:".length);
-            let assessmentId = assessmentEnquiryIds.get(enquiryId) || "";
+    function attachAssessmentReviewAction(card, assessmentId) {
+        if (!assessmentId) return;
 
-            if (!assessmentId) {
-                const message = card.querySelector(".sway-record-card-detail-wide strong");
-                const match = String(message ? message.textContent : "")
-                    .match(/Business Opportunity Finder assessment reference:\\s*([0-9a-f-]{36})/i);
-                assessmentId = match ? match[1] : "";
-            }
+        const legacyConvertButton = card.querySelector("[data-enquiry-status][data-status-next='contacted']");
+        if (legacyConvertButton) legacyConvertButton.remove();
 
-            if (!assessmentId) return;
+        const actions = card.querySelector(".sway-record-card-actions");
+        if (!actions) return;
 
-            const legacyConvertButton = card.querySelector("[data-enquiry-status][data-status-next='contacted']");
-            if (legacyConvertButton) legacyConvertButton.remove();
-
-            const actions = card.querySelector(".sway-record-card-actions");
-            if (!actions || actions.querySelector("[data-bfa-review-link]")) return;
-
-            const reviewLink = document.createElement("a");
-            reviewLink.href = "business-assessments.html?assessment=" + encodeURIComponent(assessmentId);
+        let reviewLink = actions.querySelector("[data-bfa-review-link]");
+        if (!reviewLink) {
+            reviewLink = document.createElement("a");
             reviewLink.className = "sway-workspace-button primary";
             reviewLink.dataset.bfaReviewLink = "true";
             reviewLink.textContent = "Review assessment";
             actions.insertBefore(reviewLink, actions.firstChild);
-            const eyebrow = card.querySelector(".sway-record-card-eyebrow");
-            if (eyebrow) eyebrow.textContent = "BUSINESS OPPORTUNITY FINDER";
+        }
+        reviewLink.href = "business-assessments.html?assessment=" + encodeURIComponent(assessmentId);
+
+        const eyebrow = card.querySelector(".sway-record-card-eyebrow");
+        if (eyebrow) eyebrow.textContent = "BUSINESS OPPORTUNITY FINDER";
+    }
+
+    async function protectAssessmentEnquiryActions() {
+        if (!sessionVerified) return;
+        const main = document.getElementById("sway-workspace-main");
+        if (!main) return;
+        const cards = Array.from(main.querySelectorAll('[data-ai-record^="enquiries:"]'));
+        if (!cards.length) return;
+
+        // Remove the legacy converter immediately from assessment cards. The
+        // enquiry message contains the opaque assessment reference inserted
+        // by the server-side contact-request transaction.
+        cards.forEach((card) => {
+            const directAssessmentId = embeddedAssessmentId(card);
+            if (directAssessmentId) attachAssessmentReviewAction(card, directAssessmentId);
+        });
+
+        // Keep the linked column lookup as a fallback for card renderings that
+        // do not expose the full enquiry message.
+        await loadAssessmentEnquiryIds();
+        cards.forEach((card) => {
+            if (!card.isConnected) return;
+            const record = String(card.getAttribute("data-ai-record") || "");
+            const enquiryId = record.slice("enquiries:".length);
+            const assessmentId = assessmentEnquiryIds.get(enquiryId) || "";
+            if (assessmentId) attachAssessmentReviewAction(card, assessmentId);
         });
     }
 
