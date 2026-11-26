@@ -379,15 +379,16 @@ No revenue loss, conversion uplift, customer count, ROI, guarantee or performanc
 
 ## 12. Implementation sequence and release gate
 
-1. Confirm TinyFish REST API account access and configure `TINYFISH_API_KEY` in a non-production Supabase environment. The key must never be pasted into chat or committed.
-2. Add optional public-source URLs and versioned inspection consent to the isolated assessment form.
-3. Add a reviewed migration for the inspection-run and evidence tables, RLS, indexes and admin read policies. Do not apply it to production before approval and a clean migration-history reconciliation.
-4. Add deterministic URL validation and provider contract helpers with mocked tests.
-5. Add the admin-authenticated inspection Edge Function and bounded background worker.
-6. Add the assessment viewer's source-candidate, evidence and retry UI.
-7. Run feature-specific tests, security tests, browser tests and provider failure simulations.
-8. Verify a controlled test assessment end-to-end using public test pages and a test TinyFish key.
-9. Only then update proposal snapshot handoff and review the final migration/function deployment plan.
+1. Review TinyFish's current self-service data terms before sending any assessment-related information. Its published Terms of Service allow submitted Customer Data to be used for service operation and improvement, including AI-model training/evaluation. Confirm this is acceptable for Swayphics and the intended business-assessment data, or obtain a separate written agreement with suitable data-use restrictions. Do not enable live inspections until this decision is recorded.
+2. Confirm TinyFish REST API account access and configure `TINYFISH_API_KEY` in a non-production Supabase environment. The key must never be pasted into chat or committed.
+3. Add optional public-source URLs and versioned inspection consent to the isolated assessment form, with provider-use disclosures in the Swayphics Privacy Policy and the consent notice.
+4. Add a reviewed migration for the inspection-run and evidence tables, RLS, indexes and admin read policies. Do not apply it to production before approval and a clean migration-history reconciliation.
+5. Add deterministic URL validation and provider contract helpers with mocked tests.
+6. Add the admin-authenticated inspection Edge Function and bounded background worker.
+7. Add the assessment viewer's source-candidate, evidence and retry UI.
+8. Run feature-specific tests, security tests, browser tests and provider failure simulations.
+9. Verify a controlled test assessment end-to-end using public test pages and a test TinyFish key.
+10. Only then update proposal snapshot handoff and review the final migration/function deployment plan.
 
 **Release gate:** Phase 4 is not complete until the Swayphics administrator can trigger an inspection, view source-specific observed evidence and limitations, retry safely, and demonstrate that the same assessment's existing self-reported findings and CRM state remain unchanged.
 
