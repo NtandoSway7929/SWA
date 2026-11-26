@@ -8,6 +8,19 @@ const DISALLOWED_HOSTS = new Set([
     "169.254.169.254"
 ]);
 
+function isGoogleMapsUrl(value) {
+    try {
+        const url = new URL(value);
+        const hostname = url.hostname.toLowerCase();
+        if (hostname === "maps.app.goo.gl" || hostname === "g.page") return true;
+        const isGoogleHost = /(^|\.)google\.[a-z.]+$/i.test(hostname);
+        return isGoogleHost &&
+            (hostname.startsWith("maps.") || /^\/maps(?:\/|$)/i.test(url.pathname));
+    } catch {
+        return false;
+    }
+}
+
 export function normalisePublicUrl(value) {
     if (typeof value !== "string" || !value.trim()) return null;
     let url;
@@ -35,10 +48,7 @@ export function normalisePublicUrl(value) {
     // Retain only non-sensitive place identifiers for Google Maps URLs.
     // For ordinary business/profile URLs, query parameters are not needed
     // to identify the public page and may contain tracking or session data.
-    const isGoogleMaps = hostname === "google.com" ||
-        hostname.endsWith(".google.com") ||
-        hostname === "maps.app.goo.gl" ||
-        hostname === "g.page";
+    const isGoogleMaps = isGoogleMapsUrl(url.toString());
     if (isGoogleMaps) {
         const allowedParams = new Set([
             "q", "query", "query_place_id", "cid", "ftid", "ll", "center", "zoom", "map_action", "api"
@@ -152,6 +162,10 @@ export function matchBusinessIdentity({
 
     if (sourceType === "social_profile" && businessNameMatch && locationMatch && sourceUrl) {
         try {
+            if (!detectPlatform(sourceUrl)) {
+                basis.push("The resolved destination is not on a supported public social platform.");
+                return { status: "ambiguous", basis };
+            }
             const slug = normaliseWords(new URL(sourceUrl).pathname);
             const distinctiveTokens = nameTokens.filter((token) =>
                 !["the", "hair", "beauty", "salon", "studio", "business", "company", "services", "group", "limited", "ltd", "pty"].includes(token)
@@ -174,8 +188,13 @@ export function matchBusinessIdentity({
 
     // A Google listing is on a known Google Maps host; still require both the
     // supplied business name and locality to be visible in the extracted page.
-    if (sourceType === "google_business_profile" && businessNameMatch && locationMatch) {
-        return { status: "confirmed", basis };
+    if (sourceType === "google_business_profile") {
+        if (!sourceUrl || !isGoogleMapsUrl(sourceUrl)) {
+            basis.push("The resolved source is not a Google Maps or Business Profile URL.");
+            return { status: "ambiguous", basis };
+        }
+        if (businessNameMatch && locationMatch) return { status: "confirmed", basis };
+        return { status: "ambiguous", basis };
     }
 
     if (businessNameMatch && locationMatch) return { status: "confirmed", basis };
