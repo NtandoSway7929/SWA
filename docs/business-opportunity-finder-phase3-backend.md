@@ -79,23 +79,20 @@ A valid contact request creates one `website_enquiries` row with source `Busines
 - Assessment answers and report content are read-only in the admin viewer. It shows evidence classifications, recommendations and linked enquiry contact details when a contact request exists. It does not expose the submission key.
 - The CRM navigation adds a Business assessments destination only after the existing admin session resolves successfully. Assessment-linked enquiry cards have their generic `Contacted → Lead` action removed immediately and receive a Review assessment link, so they cannot be converted through the old Website/contacted conversion path.
 - A separate explicit conversion UI now checks for possible existing leads, lets an administrator link a confirmed match without modifying that lead, or deliberately create a separate new lead after confirmation.
-- The conversion UI calls the new `convert_business_assessment_to_lead` RPC defined in draft migration `20261126170200_business_assessment_lead_conversion.sql`. That migration has **not** been applied to production. The UI and migration must be reviewed and deployed together after approval.
+- The conversion UI calls the `convert_business_assessment_to_lead` RPC installed in Swayphics Web by production migration `20261126181839_business_assessment_lead_conversion`. The matching SQL file in this branch uses the same version. The database function is live; the public and admin frontend changes remain unmerged and undeployed.
 - Proposal snapshot handoff and external digital-presence inspection remain separate follow-on work.
 
 ## Rollout boundary
 
-The database and Edge Function are deployed in production. The public assessment and admin viewer code is committed only to the unmerged feature branch / draft PR; neither page has been deployed to the public website or production admin dashboard. A positive live HTTP submission against the new endpoint and a signed-in browser review of the new admin page have not yet been performed. Keep the page noindex until those checks, conversion-path implementation, privacy review and launch review are complete.
+The assessment schema, submission Edge Function and assessment-to-lead conversion RPC are deployed in production. The public assessment and admin viewer code remains on the unmerged feature branch / draft PR; neither page has been deployed to the public website or production admin dashboard. A positive live HTTP submission and signed-in browser review of the new admin page remain outstanding. Keep the page noindex until those checks, privacy review and launch review are complete.
 
 
-## Draft: assessment-to-lead conversion (not deployed)
+## Assessment-to-lead conversion — production database
 
-A separate migration has been prepared on the feature branch:
-`20261126170200_business_assessment_lead_conversion.sql`. It is a draft and has **not** been applied to the production project.
-
-It introduces an admin-authorised, SECURITY DEFINER RPC with a fixed empty search path. The RPC has three explicit actions:
+Migration `20261126181839_business_assessment_lead_conversion` has been applied to Swayphics Web and is recorded in the production migration history. The matching repository file is `20261126181839_business_assessment_lead_conversion.sql`. It installs an admin-authorised, SECURITY DEFINER RPC with a fixed empty search path. The RPC has three explicit actions:
 
 - `preview`: checks exact email, normalised phone and business-name matches and returns possible candidates without changing records.
 - `link_existing`: links the assessment and enquiry to a selected matching lead without changing that lead's details, source, stage or contact history.
 - `create_new`: creates a new lead only after explicit confirmation. The new lead uses source `Business Opportunity Finder`, status `new`, and the converting administrator as assignee. It does not set `last_contacted_at` or a follow-up date. The linked enquiry moves to its supported `converted` status; its `contacted_at` remains unchanged.
 
-The admin viewer now contains the matching and conversion controls, but they are not production-ready until this separate migration is approved, applied and tested against real assessment/contact records. This draft migration has not been applied to production.
+The matching and conversion controls remain on the unmerged frontend branch. Production currently contains zero business assessments, so there is no real respondent record available for a live conversion walkthrough. A transaction-scoped runtime test using synthetic assessment, enquiry and lead rows exercised matching, existing-lead linking, mandatory new-lead confirmation, new-lead creation, record preservation and the no-false-contact/no-follow-up safeguards; the transaction rolled back. Before frontend rollout, complete a positive live HTTP assessment submission and a signed-in browser walkthrough when a real respondent record is available.
