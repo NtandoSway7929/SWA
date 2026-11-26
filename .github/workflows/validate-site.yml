@@ -40,8 +40,11 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Check Business Opportunity Finder inspection Edge Function
-        run: deno check supabase/functions/inspect-business-assessment/index.ts
+      - name: Check Business Opportunity Finder Edge Functions
+        run: |
+          set -e
+          deno check supabase/functions/inspect-business-assessment/index.ts
+          deno check supabase/functions/submit-business-assessment/index.ts
 
       - name: Validate standalone JavaScript
         run: |
