@@ -69,11 +69,11 @@ assert.match(migration, /alter table public\.lead_campaign_prospects enable row 
 assert.match(migration, /public\.is_swayphics_admin\(\)/i);
 assert.match(migration, /references public\.leads\(id\) on delete set null/i);
 assert.match(migration, /unique \(campaign_id, source_prospect_id\)/i);
-assert.match(evidenceMigration, /alter table public\\.lead_campaign_prospects/i);
+assert.match(evidenceMigration, /alter table public\.lead_campaign_prospects/i);
 assert.match(evidenceMigration, /add column if not exists original_score/i);
-assert.match(evidenceMigration, /create table if not exists public\\.lead_campaign_tender_evidence/i);
-assert.match(evidenceMigration, /alter table public\\.lead_campaign_tender_evidence enable row level security/i);
-assert.match(evidenceMigration, /public\\.is_swayphics_admin\\(\\)/i);
+assert.match(evidenceMigration, /create table if not exists public\.lead_campaign_tender_evidence/i);
+assert.match(evidenceMigration, /alter table public\.lead_campaign_tender_evidence enable row level security/i);
+assert.match(evidenceMigration, /public\.is_swayphics_admin\(\)/i);
 assert.match(script, /Original workbook qualification score/);
 assert.match(script, /lead_campaign_tender_evidence/);
 
