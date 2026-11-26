@@ -46,6 +46,12 @@ assert.match(html, /Nothing is submitted to Swayphics/,
     "The preview must disclose that answers are not submitted");
 assert.match(js, /const stepCount = 5/,
     "The assessment should remain a five-question guided flow");
+assert.match(js, /aria-pressed=/,
+    "Selected options must use the native toggle-button pressed state");
+assert.doesNotMatch(js, /aria-checked=|role="radio"|role="checkbox"/,
+    "Native buttons must not be given unsupported radio or checkbox roles");
+assert.match(html, /class="bof-step-title" tabindex="-1"/,
+    "Question headings must be available for managed keyboard focus");
 assert.match(js, /evidence: "Self-reported"/,
     "Findings must retain their evidence classification");
 assert.match(html, /no independent website, social-media or Google Business Profile checks have been performed/i,
