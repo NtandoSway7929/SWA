@@ -490,6 +490,261 @@
         status.textContent = result.message || "The lead conversion could not be completed.";
     }
 
+
+    function inspectionTimestamp(value) {
+        if (!value) return "Not recorded";
+        return formattedDate(value);
+    }
+
+    function inspectionSourceLabel(row) {
+        if (row.source_type === "website") return "Business website";
+        if (row.source_type === "google_business_profile") return "Google Business Profile";
+        const platform = String(row.platform || "social").replace(/_/g, " ");
+        return platform.charAt(0).toUpperCase() + platform.slice(1) + " profile";
+    }
+
+    function safeExternalLink(parent, value, label) {
+        if (typeof value !== "string" || !value.trim()) return;
+        try {
+            const url = new URL(value);
+            if (!["https:", "http:"].includes(url.protocol)) return;
+            const link = element("a", "bfa-inspection-link", label || url.hostname);
+            link.href = url.toString();
+            link.target = "_blank";
+            link.rel = "noopener noreferrer nofollow";
+            parent.appendChild(link);
+        } catch (error) {
+            // Invalid stored URLs are not rendered as links.
+        }
+    }
+
+    function inspectionStatusLabel(value) {
+        return String(value || "unknown").replace(/_/g, " ");
+    }
+
+    function renderInspectionEvidence(parent, row) {
+        const card = element("article", "bfa-inspection-evidence");
+        const heading = element("div", "bfa-inspection-evidence-heading");
+        heading.appendChild(element("strong", "", inspectionSourceLabel(row)));
+        heading.appendChild(element("span", "bfa-inspection-status", inspectionStatusLabel(row.source_status)));
+        card.appendChild(heading);
+
+        const match = element("p", "bfa-inspection-meta",
+            "Identity match: " + inspectionStatusLabel(row.identity_match_status || "not_checked") +
+            " · Captured: " + inspectionTimestamp(row.observed_at || row.created_at));
+        card.appendChild(match);
+
+        if (row.source_title) card.appendChild(element("h4", "bfa-inspection-title", row.source_title));
+        const url = row.final_url || row.source_url || row.requested_url;
+        if (url) safeExternalLink(card, url, "Open inspected source");
+
+        if (row.identity_match_basis && row.identity_match_basis.length) {
+            const basis = element("ul", "bfa-inspection-basis");
+            row.identity_match_basis.forEach((item) => basis.appendChild(element("li", "", String(item))));
+            card.appendChild(basis);
+        }
+
+        const observations = row.observations && typeof row.observations === "object"
+            ? row.observations : {};
+        const observationItems = [
+            observations.page_title ? "Page title: " + observations.page_title : "",
+            observations.meta_description ? "Description: " + observations.meta_description : "",
+            Array.isArray(observations.contact_links) && observations.contact_links.length
+                ? "Contact links found: " + observations.contact_links.length : "",
+            Array.isArray(observations.booking_links) && observations.booking_links.length
+                ? "Booking links found: " + observations.booking_links.length : "",
+            observations.language ? "Language: " + observations.language : ""
+        ].filter(Boolean);
+        if (observationItems.length) {
+            const summary = element("ul", "bfa-inspection-observations");
+            observationItems.forEach((item) => summary.appendChild(element("li", "", item)));
+            card.appendChild(summary);
+        }
+
+        if (row.evidence_excerpt) {
+            const excerpt = element("p", "bfa-inspection-excerpt", row.evidence_excerpt);
+            card.appendChild(excerpt);
+        }
+        if (row.provider_error_code) {
+            card.appendChild(element("p", "bfa-inspection-meta",
+                "Provider limitation: " + row.provider_error_code +
+                (row.upstream_status ? " (HTTP " + row.upstream_status + ")" : "")));
+        }
+        parent.appendChild(card);
+    }
+
+    async function triggerPublicPresenceInspection(assessmentId, button, message) {
+        await refreshAdminSession(false);
+        const token = localStorage.getItem(ACCESS_KEY) || accessToken || "";
+        if (!token) throw new Error("Your administrator session has expired. Sign in again.");
+        const response = await fetch(SUPABASE_URL + "/functions/v1/inspect-business-assessment", {
+            method: "POST",
+            headers: {
+                "apikey": SUPABASE_PUBLISHABLE_KEY,
+                "Authorization": "Bearer " + token,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                assessment_id: assessmentId,
+                idempotency_key: window.crypto && typeof window.crypto.randomUUID === "function"
+                    ? window.crypto.randomUUID()
+                    : createInspectionUuid()
+            }),
+            cache: "no-store"
+        });
+
+        let result = null;
+        try { result = await response.json(); } catch (error) { result = null; }
+        if (!response.ok || !result || result.ok !== true) {
+            throw new Error(result && typeof result.error === "string"
+                ? result.error
+                : "The public-presence inspection could not be started.");
+        }
+        message.textContent = result.existing_active_run
+            ? "An inspection is already running. Refresh this section to see its latest status."
+            : "Inspection request accepted. The source checks are running separately from the original report.";
+    }
+
+    function createInspectionUuid() {
+        const bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0"));
+        return [
+            hex.slice(0, 4).join(""),
+            hex.slice(4, 6).join(""),
+            hex.slice(6, 8).join(""),
+            hex.slice(8, 10).join(""),
+            hex.slice(10, 16).join("")
+        ].join("-");
+    }
+
+    async function renderInspectionSection(parent, item) {
+        const section = addSection(
+            parent,
+            "Independent public-presence inspection",
+            "A separate read-only check of public information. These results do not overwrite respondent answers or create a lead."
+        );
+        const profile = item.business_profile || {};
+        const presence = profile.public_presence || {};
+        if (presence.inspection_consent !== true ||
+            presence.inspection_consent_version !== "bof-public-presence-v1") {
+            section.appendChild(element("p", "bfa-inspection-notice",
+                "No valid public-presence inspection permission is recorded for this assessment. No independent website, Google Business Profile or social-profile check has been run."));
+            return;
+        }
+
+        const sources = element("div", "bfa-inspection-requested-sources");
+        sources.appendChild(element("span", "bfa-inspection-request-label", "Permission recorded for"));
+        const sourceLabels = [
+            presence.website_url ? "Website link supplied" : "Website search",
+            presence.google_business_profile_url ? "Google Business Profile link supplied" : "Google Business Profile search",
+            Array.isArray(presence.social_profile_urls) && presence.social_profile_urls.length
+                ? "Social profile links supplied" : "Public social profile search"
+        ];
+        sources.appendChild(element("p", "", sourceLabels.join(" · ")));
+        [
+            presence.website_url,
+            presence.google_business_profile_url,
+            ...(Array.isArray(presence.social_profile_urls)
+                ? presence.social_profile_urls.map((entry) => entry && entry.url).filter(Boolean)
+                : [])
+        ].forEach((url) => safeExternalLink(sources, url));
+        section.appendChild(sources);
+
+        const message = element("p", "bfa-inspection-message");
+        section.appendChild(message);
+        const latest = await api(
+            "/rest/v1/business_assessment_inspections?select=id,status,inspection_version,requested_sources,failure_code,failure_summary,queued_at,started_at,completed_at,created_at&assessment_id=eq." +
+            encodeURIComponent(item.id) + "&order=created_at.desc&limit=1"
+        );
+        const run = Array.isArray(latest) && latest.length ? latest[0] : null;
+        let evidence = [];
+        if (run) {
+            const records = await api(
+                "/rest/v1/business_assessment_evidence?select=id,source_type,source_status,platform,requested_url,source_url,final_url,source_title,observations,evidence_excerpt,identity_match_status,identity_match_basis,provider_error_code,upstream_status,observed_at,created_at&inspection_id=eq." +
+                encodeURIComponent(run.id) + "&order=created_at.asc&limit=20"
+            );
+            evidence = Array.isArray(records) ? records : [];
+
+            const runSummary = element("div", "bfa-inspection-run-summary");
+            const runHeading = element("div", "bfa-inspection-evidence-heading");
+            runHeading.appendChild(element("strong", "", "Latest inspection"));
+            runHeading.appendChild(element("span", "bfa-inspection-status", inspectionStatusLabel(run.status)));
+            runSummary.appendChild(runHeading);
+            runSummary.appendChild(element("p", "bfa-inspection-meta",
+                "Inspection version: " + String(run.inspection_version || "Unknown") +
+                " · Started: " + inspectionTimestamp(run.started_at || run.queued_at)));
+            if (run.failure_summary) runSummary.appendChild(element("p", "bfa-inspection-notice", run.failure_summary));
+            if (run.failure_code) runSummary.appendChild(element("p", "bfa-inspection-meta", "Run limitation: " + run.failure_code));
+            section.appendChild(runSummary);
+
+            if (evidence.length) {
+                evidence.forEach((record) => renderInspectionEvidence(section, record));
+            } else if (["queued", "running"].includes(run.status)) {
+                section.appendChild(element("p", "bfa-inspection-notice",
+                    "The inspection has been queued. Source-by-source results will appear here when the worker saves them."));
+            } else {
+                section.appendChild(element("p", "bfa-inspection-notice",
+                    "No source evidence was saved for this run. Review its status and limitation before drawing any conclusion."));
+            }
+        } else {
+            section.appendChild(element("p", "bfa-inspection-notice",
+                "No independent public-presence inspection has been run yet."));
+        }
+
+        const controls = element("div", "bfa-inspection-actions");
+        const refresh = element("button", "bfa-inspection-secondary", "Refresh inspection status");
+        refresh.type = "button";
+        refresh.addEventListener("click", async () => {
+            refresh.disabled = true;
+            try {
+                await renderInspectionSection(parent, item);
+                section.remove();
+            } catch (error) {
+                message.textContent = error.message || "Inspection status could not be refreshed.";
+            } finally {
+                refresh.disabled = false;
+            }
+        });
+        controls.appendChild(refresh);
+
+        if (!run || !["queued", "running"].includes(run.status)) {
+            const inspect = element("button", "bfa-inspection-primary",
+                run ? "Run a fresh inspection" : "Inspect public presence");
+            inspect.type = "button";
+            inspect.addEventListener("click", async () => {
+                const confirmation = [
+                    "Swayphics will check public business information for:",
+                    "• Business website: " + (presence.website_url || "discoverable public website"),
+                    "• Google Business Profile: " + (presence.google_business_profile_url || "public Google listing"),
+                    "• Social profiles: " + (Array.isArray(presence.social_profile_urls) && presence.social_profile_urls.length
+                        ? presence.social_profile_urls.map((entry) => entry.platform).join(", ")
+                        : "public profiles on supported platforms"),
+                    "",
+                    "Only public pages will be checked. Some sources may be unavailable or need manual identity review. This action does not contact the business."
+                ].join("\n");
+                if (!window.confirm(confirmation)) return;
+                inspect.disabled = true;
+                inspect.textContent = "Starting inspection…";
+                message.textContent = "Submitting the inspection request.";
+                try {
+                    await triggerPublicPresenceInspection(item.id, inspect, message);
+                } catch (error) {
+                    message.textContent = error.message || "The inspection request failed.";
+                } finally {
+                    inspect.disabled = false;
+                    inspect.textContent = "Inspect public presence";
+                }
+            });
+            controls.appendChild(inspect);
+        } else {
+            message.textContent = "An inspection is currently " + run.status + ". Use Refresh inspection status to check for results.";
+        }
+        section.appendChild(controls);
+    }
+
     async function showAssessment(id) {
         const item = assessments.find((record) => record.id === id);
         if (!item) return;
@@ -591,6 +846,7 @@
         disclaimer.appendChild(element("p", "", report.disclaimer ||
             "This assessment is based on respondent answers. No independent website, social-media or Google Business Profile inspection has been performed."));
 
+        await renderInspectionSection(detailContent, item);
         renderConversionSection(detailContent, item, report);
 
         const actions = element("div", "bfa-detail-actions");
