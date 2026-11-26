@@ -23,7 +23,13 @@ on:
       - "admin-dashboard/admin-record-cards.css"
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/index.html"
+      - "admin-dashboard/tender-corporate-groups.js"
+      - "admin-dashboard/tender-corporate-groups.css"
       - "scripts/admin-table-controls-dashboard-smoke.cjs"
+      - "scripts/admin-tender-campaign.test.cjs"
+      - "supabase/migrations/20261125110000_tender_corporate_groups_campaign.sql"
+      - "supabase/migrations/20261126153000_preserve_tender_workbook_detail.sql"
+      - "scripts/admin-tender-campaign.test.cjs"
       - "scripts/admin-lead-cards.test.cjs"
       - "scripts/admin-record-cards.test.cjs"
       - "scripts/admin-table-controls-db-smoke.cjs"
@@ -98,6 +104,9 @@ jobs:
 
       - name: Verify lead-card structure and full-details entry point
         run: node scripts/admin-lead-cards.test.cjs
+
+      - name: Verify Tender & Corporate Groups campaign workspace and consent controls
+        run: node scripts/admin-tender-campaign.test.cjs
 
       - name: Run desktop and mobile browser checks
         run: |
