@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(26);
+select extensions.plan(30);
 
 select extensions.has_table(
     'public',
@@ -163,6 +163,70 @@ select extensions.ok(
     ),
     'identity match explanations must be a JSON array'
 );
+
+-- Seed one isolated assessment and source-evidence run through service_role.
+insert into public.business_assessments (id)
+values ('10000000-0000-4000-8000-000000000001');
+
+set local role service_role;
+insert into public.business_assessment_inspections (
+    id, assessment_id, inspection_version, status, requested_sources,
+    idempotency_key, requested_by, consent_version, provider
+) values (
+    '10000000-0000-4000-8000-000000000002',
+    '10000000-0000-4000-8000-000000000001',
+    'bof-evidence-test-v1',
+    'completed',
+    '["website"]'::jsonb,
+    '10000000-0000-4000-8000-000000000003',
+    null,
+    'bof-public-presence-v1',
+    'tinyfish'
+);
+insert into public.business_assessment_evidence (
+    id, inspection_id, source_type, source_status, source_url,
+    source_title, observations, identity_match_status, identity_match_basis,
+    evidence_excerpt, observed_at
+) values (
+    '10000000-0000-4000-8000-000000000004',
+    '10000000-0000-4000-8000-000000000002',
+    'website',
+    'observed',
+    'https://example.co.za/',
+    'Example Business',
+    '{"page_title":"Example Business"}'::jsonb,
+    'confirmed',
+    '["Business name and domain matched."]'::jsonb,
+    'Example public evidence.',
+    now()
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
+select extensions.is(
+    (select count(*)::integer from public.business_assessment_inspections),
+    1,
+    'the Swayphics administrator can read an inspection run'
+);
+select extensions.is(
+    (select count(*)::integer from public.business_assessment_evidence),
+    1,
+    'the Swayphics administrator can read evidence linked to the run'
+);
+
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', true);
+select extensions.is(
+    (select count(*)::integer from public.business_assessment_inspections),
+    0,
+    'an authenticated non-admin cannot read inspection runs'
+);
+select extensions.is(
+    (select count(*)::integer from public.business_assessment_evidence),
+    0,
+    'an authenticated non-admin cannot read evidence'
+);
+reset role;
 
 select * from extensions.finish();
 rollback;
