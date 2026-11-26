@@ -20,6 +20,9 @@ jobs:
           node --check business-opportunity-finder/business-opportunity-finder.js
           node scripts/business-opportunity-finder.test.cjs
           node scripts/business-opportunity-finder-flow.test.cjs
+          node scripts/business-assessment-admin.test.cjs
+          node --check admin-dashboard/business-assessments.js
+          node --check admin-dashboard/business-assessments-nav.js
           node --check supabase/functions/submit-business-assessment/rules.mjs
           node scripts/business-opportunity-rules.test.cjs
 
