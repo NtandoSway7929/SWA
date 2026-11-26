@@ -326,7 +326,7 @@ begin
             case when v_priority is not null then 'Respondent priority: ' || v_priority end,
             case when v_website_status is not null then 'Website status: ' || v_website_status end,
             case when v_finding_titles is not null then 'Self-reported opportunities: ' || v_finding_titles end,
-            'No Swayphics contact has been recorded by this conversion.'
+            'This conversion does not record or infer an outreach attempt.'
         );
 
         insert into public.leads (
