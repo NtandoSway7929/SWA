@@ -412,6 +412,7 @@
             note.content = event.target.value;
             note.contentFormat = "html";
             markChanged();
+            renderList();
         });
         layer.querySelector("[data-notes-save]").addEventListener("click", saveNow);
         layer.querySelector("[data-notes-pin]").addEventListener("click", togglePin);
