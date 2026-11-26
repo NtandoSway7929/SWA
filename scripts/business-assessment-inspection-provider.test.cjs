@@ -23,6 +23,10 @@ const assert = require("node:assert/strict");
     assert.throws(() => provider.normalisePublicUrl("https://user:pass@example.com"), /public HTTP or HTTPS/);
     assert.equal(provider.detectPlatform("https://www.instagram.com/example/"), "instagram");
     assert.equal(provider.detectPlatform("https://www.google.com/maps/place/example"), null);
+    assert.equal(
+        provider.normalisePublicUrl("https://maps.google.co.za/maps?query=Azande&authuser=2"),
+        "https://maps.google.co.za/maps?query=Azande"
+    );
 
     const confirmed = provider.matchBusinessIdentity({
         businessName: "Azande Hair & Beauty",
@@ -42,6 +46,26 @@ const assert = require("node:assert/strict");
         sourceUrl: "https://azandehair.co.za/"
     });
     assert.equal(officialWebsite.status, "confirmed");
+
+    const googleProfile = provider.matchBusinessIdentity({
+        businessName: "Azande Hair & Beauty",
+        location: "Pretoria",
+        title: "Azande Hair & Beauty",
+        text: "Azande Hair & Beauty, Pretoria.",
+        sourceType: "google_business_profile",
+        sourceUrl: "https://maps.google.co.za/maps/place/Azande"
+    });
+    assert.equal(googleProfile.status, "confirmed");
+
+    const googleSearchPage = provider.matchBusinessIdentity({
+        businessName: "Azande Hair & Beauty",
+        location: "Pretoria",
+        title: "Azande Hair & Beauty",
+        text: "Azande Hair & Beauty, Pretoria.",
+        sourceType: "google_business_profile",
+        sourceUrl: "https://www.google.co.za/search?q=Azande"
+    });
+    assert.equal(googleSearchPage.status, "ambiguous");
 
     const directoryListing = provider.matchBusinessIdentity({
         businessName: "Azande Hair & Beauty",
