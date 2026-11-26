@@ -40,6 +40,9 @@ assert.match(nav, /Business assessments/,
     "A Business assessments destination must be injected into the CRM navigation");
 assert.match(nav, /data-enquiry-status\]\[data-status-next='contacted'\]/,
     "The generic Contacted-to-Lead action must be removed for assessment enquiries");
+assert.match(script, /convert_business_assessment_to_lead/, "The viewer must call the dedicated admin conversion RPC");
+assert.match(script, /last-contacted timestamp/, "The viewer must disclose the new-lead contact-history rule");
+assert.match(script, /link_existing|create_new/, "The viewer must support explicit link-existing and create-new actions");
 assert.match(nav, /Review assessment/,
     "Assessment enquiries must route to the linked report");
 assert.match(css, /\.bfa-workspace/,
