@@ -9,7 +9,7 @@ import {
     matchBusinessIdentity,
     normalisePublicUrl,
     sanitiseExcerpt
-} from "./provider.mjs";
+} from "../_shared/business-assessment-evidence.mjs";
 
 declare const EdgeRuntime: {
     waitUntil(promise: Promise<unknown>): void;
