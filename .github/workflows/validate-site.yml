@@ -29,6 +29,7 @@ jobs:
           node --check admin-dashboard/business-assessments.js
           node --check admin-dashboard/business-assessments-nav.js
           node --check supabase/functions/submit-business-assessment/rules.mjs
+          node --check supabase/functions/_shared/business-assessment-evidence.mjs
           node --check supabase/functions/inspect-business-assessment/provider.mjs
           node scripts/business-opportunity-rules.test.cjs
           node scripts/business-assessment-inspection-provider.test.cjs
