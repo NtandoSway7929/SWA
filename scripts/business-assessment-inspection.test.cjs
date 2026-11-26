@@ -48,9 +48,9 @@ assert.match(functionSource, /api\.fetch\.tinyfish\.ai/,
     "The worker must use the TinyFish Fetch REST endpoint");
 assert.match(functionSource, /not_found_in_search/,
     "A search miss must be represented as a source status, not a factual absence claim");
-assert.match(functionSource, /typeof providerError\\?\.error === "string"/,
+assert.ok(functionSource.includes('typeof providerError?.error === "string"'),
     "TinyFish per-URL error strings must be read from the documented error field");
-assert.match(functionSource, /google\\.co\\.za/,
+assert.ok(functionSource.includes("google.co.za"),
     "South African Google Maps URLs must be included in profile discovery");
 assert.match(functionSource, /needs_admin_review/,
     "Ambiguous source identities must be flagged for administrator review");
@@ -59,7 +59,7 @@ assert.match(functionSource, /stale_worker/,
 assert.doesNotMatch(functionSource, /console\.(log|error)\([^)]*(TINYFISH_API_KEY|SERVICE_ROLE_KEY)/,
     "Provider and service credentials must never be logged");
 
-assert.match(providerFacade, /export \\* from "\.\.\\/_shared\\/business-assessment-evidence\\.mjs"/,
+assert.ok(providerFacade.includes('export * from "../_shared/business-assessment-evidence.mjs"'),
     "The inspection-local facade must re-export the canonical shared module");
 assert.match(provider, /export function normalisePublicUrl/,
     "User-supplied URLs must pass server-side public URL validation");
@@ -109,8 +109,8 @@ assert.match(publicScript, /inspection_consent: false/,
 assert.doesNotMatch(publicScript, /TINYFISH_API_KEY|SERVICE_ROLE_KEY/,
     "The public browser must not contain provider or service-role credentials");
 
-assert.match(adminAssessmentsPage, /business-assessments\\.css\\?v=20261126-phase4-inspection-1/);
-assert.match(adminAssessmentsPage, /business-assessments\\.js\\?v=20261126-phase4-inspection-1/);
+assert.ok(adminAssessmentsPage.includes("business-assessments.css?v=20261126-phase4-inspection-1"));
+assert.ok(adminAssessmentsPage.includes("business-assessments.js?v=20261126-phase4-inspection-1"));
 assert.match(adminScript, /functions\/v1\/inspect-business-assessment/,
     "The private admin viewer must trigger the inspection Edge Function");
 assert.match(adminScript, /window\.confirm/,
