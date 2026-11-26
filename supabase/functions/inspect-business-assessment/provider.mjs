@@ -31,6 +31,24 @@ export function normalisePublicUrl(value) {
         throw new Error("Only public HTTP or HTTPS business URLs can be submitted.");
     }
     url.hash = "";
+
+    // Retain only non-sensitive place identifiers for Google Maps URLs.
+    // For ordinary business/profile URLs, query parameters are not needed
+    // to identify the public page and may contain tracking or session data.
+    const isGoogleMaps = hostname === "google.com" ||
+        hostname.endsWith(".google.com") ||
+        hostname === "maps.app.goo.gl" ||
+        hostname === "g.page";
+    if (isGoogleMaps) {
+        const allowedParams = new Set([
+            "q", "query", "query_place_id", "cid", "ftid", "ll", "center", "zoom", "map_action", "api"
+        ]);
+        for (const key of Array.from(url.searchParams.keys())) {
+            if (!allowedParams.has(key.toLowerCase())) url.searchParams.delete(key);
+        }
+    } else {
+        url.search = "";
+    }
     return url.toString();
 }
 
@@ -62,9 +80,17 @@ function significantTokens(value) {
     return normaliseWords(value).split(" ").filter((token) => token.length > 2);
 }
 
-export function matchBusinessIdentity({ businessName, location, title, text }) {
+export function matchBusinessIdentity({
+    businessName,
+    location,
+    title,
+    text,
+    sourceType,
+    sourceUrl
+}) {
     const name = normaliseWords(businessName);
     const area = normaliseWords(location);
+    const titleText = normaliseWords(title);
     const source = normaliseWords([title, text].filter(Boolean).join(" "));
     if (!name || !source) {
         return {
@@ -80,6 +106,8 @@ export function matchBusinessIdentity({ businessName, location, title, text }) {
     const locationMatch = locationTokens.length > 0 &&
         locationTokens.every((token) => source.includes(token));
     const businessNameMatch = exactName || allNameTokens;
+    const titleMatch = Boolean(titleText) &&
+        (titleText.includes(name) || (nameTokens.length > 0 && nameTokens.every((token) => titleText.includes(token))));
     const basis = [];
 
     basis.push(businessNameMatch
@@ -89,6 +117,65 @@ export function matchBusinessIdentity({ businessName, location, title, text }) {
         basis.push(locationMatch
             ? "The fetched title or public text contains the supplied location."
             : "The supplied location could not be confirmed in the fetched content.");
+    }
+
+    // A directory, marketplace or generic search landing page can mention a
+    // business and its suburb without being that business's own website.
+    // Require an identity signal in the registered-domain label as well as
+    // a matching page title before classifying a website as observed.
+    if (sourceType === "website" && businessNameMatch && locationMatch && sourceUrl) {
+        try {
+            const labels = new URL(sourceUrl).hostname.toLowerCase().split(".");
+            let domainLabel = labels.length >= 2 ? labels[labels.length - 2] : "";
+            if (["co", "com", "org", "net", "gov", "ac", "edu"].includes(domainLabel) && labels.length >= 3) {
+                domainLabel = labels[labels.length - 3];
+            }
+            const distinctiveTokens = nameTokens.filter((token) =>
+                !["the", "hair", "beauty", "salon", "studio", "business", "company", "services", "group", "limited", "ltd", "pty"].includes(token)
+            );
+            const domainTokens = significantTokens(domainLabel);
+            const domainMatch = (distinctiveTokens.length ? distinctiveTokens : nameTokens)
+                .some((token) => domainTokens.some((domainToken) => domainToken.includes(token)));
+            basis.push(domainMatch
+                ? "The registered-domain label contains a distinctive part of the business name."
+                : "The registered domain does not contain a distinctive part of the business name; the page may be a directory or third-party listing.");
+            basis.push(titleMatch
+                ? "The page title independently matches the supplied business name."
+                : "The page title does not independently confirm the supplied business name.");
+            if (domainMatch && titleMatch) return { status: "confirmed", basis };
+            return { status: "ambiguous", basis };
+        } catch {
+            basis.push("The business website domain could not be checked safely.");
+            return { status: "ambiguous", basis };
+        }
+    }
+
+    if (sourceType === "social_profile" && businessNameMatch && locationMatch && sourceUrl) {
+        try {
+            const slug = normaliseWords(new URL(sourceUrl).pathname);
+            const distinctiveTokens = nameTokens.filter((token) =>
+                !["the", "hair", "beauty", "salon", "studio", "business", "company", "services", "group", "limited", "ltd", "pty"].includes(token)
+            );
+            const slugMatch = (distinctiveTokens.length ? distinctiveTokens : nameTokens)
+                .some((token) => slug.split(" ").some((slugToken) => slugToken.includes(token)));
+            basis.push(slugMatch
+                ? "The public profile URL contains a distinctive part of the business name."
+                : "The public profile URL does not independently match the business name.");
+            basis.push(titleMatch
+                ? "The public profile title independently matches the supplied business name."
+                : "The public profile title does not independently confirm the supplied business name.");
+            if (slugMatch && titleMatch) return { status: "confirmed", basis };
+            return { status: "ambiguous", basis };
+        } catch {
+            basis.push("The public profile URL could not be checked safely.");
+            return { status: "ambiguous", basis };
+        }
+    }
+
+    // A Google listing is on a known Google Maps host; still require both the
+    // supplied business name and locality to be visible in the extracted page.
+    if (sourceType === "google_business_profile" && businessNameMatch && locationMatch) {
+        return { status: "confirmed", basis };
     }
 
     if (businessNameMatch && locationMatch) return { status: "confirmed", basis };
