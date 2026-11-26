@@ -1,6 +1,7 @@
 import {
     CONSENT_VERSION,
     detectPlatform,
+    isGoogleMapsUrl as isGoogleBusinessUrl,
     normalisePublicUrl
 } from "../inspect-business-assessment/provider.mjs";
 
@@ -113,15 +114,6 @@ function cleanText(value, fieldName, maxLength) {
 }
 
 
-function isGoogleBusinessUrl(value) {
-    try {
-        const host = new URL(value).hostname.toLowerCase();
-        return host === "google.com" || host.endsWith(".google.com") ||
-            /^google\.[a-z.]+$/i.test(host) || host === "maps.app.goo.gl" || host === "g.page";
-    } catch {
-        return false;
-    }
-}
 
 function normalizePublicPresence(value, businessName, location) {
     if (!isObject(value) || value.inspection_consent !== true) {
