@@ -70,6 +70,16 @@ A valid contact request creates one `website_enquiries` row with source `Busines
 - `request_business_assessment_contact` is an invoker-rights RPC with execute permission restricted to `service_role`.
 - The existing `submit-enquiry` function and `convert_swayphics_enquiry_to_lead` RPC are unchanged.
 
+## Current application integration
+
+- The standalone Business Opportunity Finder page now submits the five validated answers to the endpoint and renders the server-generated report.
+- The respondent can request contact only after the report is displayed. The request has a separate contact notice and consent checkbox; details are submitted to the linked enquiry path, not stored in the assessment JSON.
+- The page remains `noindex, nofollow`. The report and step disclosures explain that answers are stored and that independent website/social/Google Business Profile inspection has not yet occurred.
+- A separate `admin-dashboard/business-assessments.html` page uses the existing Swayphics admin access and refresh tokens, verifies the Supabase user and the `is_swayphics_admin` RPC, and reads assessment records under RLS.
+- The admin viewer is read-only. It shows the assessment, evidence classifications, recommendations, and linked enquiry contact details when a contact request exists. It does not expose the submission key.
+- The CRM navigation adds a Business assessments destination only after the existing admin session resolves successfully. Assessment-linked enquiry cards receive a Review assessment link, and their generic `Contacted → Lead` action is removed so they cannot be converted through the old Website/contacted conversion path.
+- Assessment-to-lead conversion, linked lead history, proposal snapshot handoff, and external digital-presence inspection remain separate follow-on work.
+
 ## Rollout boundary
 
-The Edge Function and database are deployed. The standalone preview still needs its browser submission flow, post-report contact form, and admin assessment viewer integrated before the complete feature is launched. The page remains noindex until that end-to-end review is complete.
+The database and Edge Function are deployed in production. The public assessment and admin viewer code is committed only to the unmerged feature branch / draft PR; neither page has been deployed to the public website or production admin dashboard. A positive live HTTP submission against the new endpoint and a signed-in browser review of the new admin page have not yet been performed. Keep the page noindex until those checks, conversion-path implementation, privacy review and launch review are complete.
