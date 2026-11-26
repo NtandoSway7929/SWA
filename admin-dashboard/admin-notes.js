@@ -72,6 +72,7 @@
                     id: item.id,
                     title: String(item.title || "").slice(0, 140),
                     content: String(item.content || ""),
+                    contentFormat: item.contentFormat === "html" ? "html" : "text",
                     pinned: item.pinned === true,
                     createdAt: createdAt,
                     updatedAt: typeof item.updatedAt === "string" ? item.updatedAt : createdAt
@@ -110,6 +111,14 @@
         });
     }
 
+    function notePlainText(note) {
+        if (!note) return "";
+        if (note.contentFormat === "html" && window.swayphicsRichText) {
+            return window.swayphicsRichText.toText(note.content);
+        }
+        return String(note.content || "");
+    }
+
     function renderList() {
         if (!layer) return;
         var list = layer.querySelector("[data-notes-list]");
@@ -117,7 +126,7 @@
         var search = layer.querySelector("[data-notes-search]");
         var query = search ? search.value.trim().toLowerCase() : "";
         var visible = sortedNotes().filter(function (note) {
-            return !query || (note.title + " " + note.content).toLowerCase().includes(query);
+            return !query || (note.title + " " + notePlainText(note)).toLowerCase().includes(query);
         });
 
         if (count) count.textContent = notes.length + (notes.length === 1 ? " note" : " notes");
@@ -132,7 +141,7 @@
 
         list.innerHTML = visible.map(function (note) {
             var title = note.title.trim() || "Untitled note";
-            var preview = note.content.replace(/\s+/g, " ").trim();
+            var preview = notePlainText(note).replace(/\s+/g, " ").trim();
             if (preview.length > 116) preview = preview.slice(0, 113) + "...";
             return (
                 '<button type="button" class="sway-notes-item' + (note.id === selectedId ? " is-selected" : "") + '" data-note-id="' + escapeHTML(note.id) + '">' +
@@ -167,7 +176,15 @@
         if (editor) editor.hidden = false;
         if (emptyState) emptyState.hidden = true;
         if (title) title.value = note.title;
-        if (body) body.value = note.content;
+        if (body && body.__swayRichEditor) {
+            if (note.contentFormat === "html") {
+                body.__swayRichEditor.setHTML(note.content);
+            } else {
+                body.__swayRichEditor.setText(note.content);
+            }
+        } else if (body) {
+            body.value = note.content;
+        }
         if (pin) pin.textContent = note.pinned ? "Unpin note" : "Pin note";
         if (meta) meta.textContent = "Created " + formatDate(note.createdAt) + " · Updated " + formatDate(note.updatedAt);
         if (remove) remove.disabled = false;
@@ -242,6 +259,7 @@
             id: createId(),
             title: "",
             content: "",
+            contentFormat: "html",
             pinned: false,
             createdAt: now,
             updatedAt: now
@@ -355,13 +373,22 @@
                                 '</div>' +
                             '</div>' +
                             '<textarea class="sway-notes-body" data-notes-body placeholder="Start writing...&#10;&#10;Your notes are saved automatically as you type." aria-label="Note content"></textarea>' +
-                            '<div class="sway-notes-editor-footer"><span data-notes-meta></span><span>Plain text · Auto-save enabled</span></div>' +
+                            '<div class="sway-notes-editor-footer"><span data-notes-meta></span><span>Rich text · Auto-save enabled</span></div>' +
                         '</div>' +
                     '</section>' +
                 '</div>' +
             '</section>';
 
         document.body.appendChild(layer);
+
+        var notesBody = layer.querySelector("[data-notes-body]");
+        if (notesBody && window.swayphicsRichText) {
+            window.swayphicsRichText.mount(notesBody, {
+                variant: "notes",
+                placeholder: "Start writing... Use headings, lists and checklists.",
+                ariaLabel: "Note content"
+            });
+        }
 
         layer.querySelector("[data-notes-close]").addEventListener("click", closePanel);
         layer.querySelectorAll("[data-notes-new]").forEach(function (button) {
@@ -383,7 +410,9 @@
             var note = selectedNote();
             if (!note) return;
             note.content = event.target.value;
+            note.contentFormat = "html";
             markChanged();
+            renderList();
         });
         layer.querySelector("[data-notes-save]").addEventListener("click", saveNow);
         layer.querySelector("[data-notes-pin]").addEventListener("click", togglePin);
