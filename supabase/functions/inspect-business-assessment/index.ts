@@ -183,6 +183,15 @@ function isSocialUrl(value: string) {
     return Boolean(detectPlatform(value));
 }
 
+function safePublicUrl(value: unknown) {
+    if (typeof value !== "string" || !value.trim()) return null;
+    try {
+        return normalisePublicUrl(value);
+    } catch {
+        return null;
+    }
+}
+
 function addCandidate(target: Candidate[], seen: Set<string>, item: Candidate) {
     let normalised: string | null = null;
     try { normalised = normalisePublicUrl(item.source_url); } catch { return; }
@@ -256,7 +265,7 @@ async function discoverCandidates(assessment: any): Promise<{
                 "instagram.com,facebook.com,tiktok.com,linkedin.com,google.com"
             );
             const match = search.results.find((item: any) => {
-                const url = normalisePublicUrl(item.url);
+                const url = safePublicUrl(item.url);
                 return url && !isSocialUrl(url) && !isGoogleMapsUrl(url);
             });
             if (match) {
@@ -287,7 +296,7 @@ async function discoverCandidates(assessment: any): Promise<{
                 "google.com,maps.app.goo.gl,g.page"
             );
             const match = search.results.find((item: any) => {
-                const url = normalisePublicUrl(item.url);
+                const url = safePublicUrl(item.url);
                 return url && isGoogleMapsUrl(url);
             });
             if (match) {
@@ -321,24 +330,31 @@ async function discoverCandidates(assessment: any): Promise<{
         });
     }
 
-    if (!socials.length) {
+    const supportedSocialPlatforms = ["instagram", "facebook", "tiktok", "linkedin"];
+    const missingSocialPlatforms = supportedSocialPlatforms.filter((platform) =>
+        !requestedPlatforms.has(platform)
+    );
+    if (missingSocialPlatforms.length && candidates.length < MAX_FETCH_URLS) {
         try {
             const search = await tinyfishSearch(
                 businessName + " " + location + " official business social profile",
                 "instagram.com,facebook.com,tiktok.com,linkedin.com"
             );
-            const socialSeen = new Set<string>();
+            const discoveredPlatforms = new Set<string>();
             for (const item of search.results) {
                 const platform = detectPlatform(item.url);
-                if (!platform || socialSeen.has(platform)) continue;
-                socialSeen.add(platform);
+                if (!platform || requestedPlatforms.has(platform) || discoveredPlatforms.has(platform)) continue;
+                const candidateUrl = safePublicUrl(item.url);
+                if (!candidateUrl) continue;
+                discoveredPlatforms.add(platform);
                 addCandidate(candidates, seen, {
                     source_type: "social_profile", platform, requested_url: null,
-                    source_url: item.url, source_title: item.title, search_snippet: item.snippet
+                    source_url: candidateUrl, source_title: item.title, search_snippet: item.snippet
                 });
-                if (socialSeen.size >= 4 || candidates.length >= MAX_FETCH_URLS) break;
+                if (discoveredPlatforms.size >= missingSocialPlatforms.length ||
+                    candidates.length >= MAX_FETCH_URLS) break;
             }
-            if (!socialSeen.size) noResults.push("social_profile");
+            if (!discoveredPlatforms.size) noResults.push("social_profile");
         } catch (error) {
             searchErrors.push({
                 source_type: "social_profile",
