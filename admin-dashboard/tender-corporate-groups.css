@@ -176,3 +176,46 @@ body.sway-dark-mode .sway-tender-controls select,
 body.sway-dark-mode .sway-tender-workflow select,
 body.sway-dark-mode .sway-tender-dialog textarea,
 body.sway-dark-mode .sway-tender-dialog select { background:#142442; color:#e5ecf8; border-color:rgba(151,180,235,.16); }
+
+
+.sway-tender-score-line { color:#436aa7 !important; font-size:.55rem !important; font-weight:800; }
+.sway-tender-detail-summary {
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 14px;
+  padding:11px 13px; border:1px solid rgba(0,32,150,.09); border-radius:11px;
+  background:#f7f9ff; color:#52617a; font-size:.63rem;
+}
+.sway-tender-detail-summary strong { color:#002096; font:800 .82rem 'Montserrat',sans-serif; }
+.sway-tender-priority { padding:5px 8px; border-radius:7px; border:1px solid rgba(0,32,150,.12); font:800 .57rem 'Montserrat',sans-serif; }
+.sway-tender-priority.high { background:#fff8ec; color:#94621a; border-color:rgba(148,98,26,.18); }
+.sway-tender-priority.medium { background:#f2f6ff; color:#315ca6; border-color:rgba(49,92,166,.18); }
+.sway-tender-priority.low { background:#f6f7f9; color:#657184; }
+.sway-tender-evidence-section { margin-top:14px; padding:14px; border:1px solid rgba(0,32,150,.08); border-radius:13px; background:#fbfcff; }
+.sway-tender-evidence-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+.sway-tender-evidence-heading h4 { margin:0; color:#1b3155; font:800 .7rem 'Montserrat',sans-serif; }
+.sway-tender-evidence-heading>span { color:#7e8ca2; font-size:.58rem; }
+.sway-tender-evidence-record { padding:12px 0; border-top:1px solid rgba(0,32,150,.07); }
+.sway-tender-evidence-record:first-of-type { border-top:0; padding-top:0; }
+.sway-tender-evidence-top { display:flex; flex-wrap:wrap; align-items:center; gap:8px; justify-content:space-between; }
+.sway-tender-evidence-top>strong { color:#1b3155; font:800 .66rem 'Montserrat',sans-serif; }
+.sway-tender-role { display:inline-block; padding:4px 7px; border:1px solid rgba(0,32,150,.1); border-radius:7px; background:#f3f6fc; color:#53647f; font:800 .54rem 'Montserrat',sans-serif; }
+.sway-tender-role.awardee { background:#eff8f2; border-color:rgba(37,122,77,.16); color:#28714d; }
+.sway-tender-role.panel { background:#eef5ff; border-color:rgba(42,95,166,.16); color:#315d9c; }
+.sway-tender-role.participant { background:#f6f7f9; color:#68758a; }
+.sway-tender-evidence-record>p { margin:7px 0; color:#52617a; font-size:.61rem; line-height:1.5; }
+.sway-tender-evidence-record dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:8px 0; }
+.sway-tender-evidence-record dl>div { min-width:0; }
+.sway-tender-evidence-record dt { color:#8995a8; font-size:.53rem; font-weight:700; }
+.sway-tender-evidence-record dd { margin:3px 0 0; color:#394b69; font-size:.58rem; overflow-wrap:anywhere; }
+.sway-tender-evidence-record>a { display:inline-block; color:#2764c4; font-size:.57rem; text-decoration:none; }
+.sway-tender-evidence-record>a:hover { text-decoration:underline; }
+.sway-tender-evidence-record>small { margin-left:9px; color:#a0aabb; font-size:.5rem; }
+.sway-tender-evidence-note,.sway-tender-no-evidence { margin:9px 0 0; color:#8794a8; font-size:.56rem; line-height:1.55; }
+body.sway-dark-mode .sway-tender-detail-summary,
+body.sway-dark-mode .sway-tender-evidence-section { background:#142442; border-color:rgba(151,180,235,.13); }
+body.sway-dark-mode .sway-tender-evidence-top>strong,
+body.sway-dark-mode .sway-tender-evidence-record dd { color:#d8e2f4; }
+body.sway-dark-mode .sway-tender-evidence-record>p { color:#b9c7dd; }
+@media(max-width:680px) {
+  .sway-tender-evidence-record dl { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .sway-tender-evidence-heading { align-items:flex-start; }
+}
