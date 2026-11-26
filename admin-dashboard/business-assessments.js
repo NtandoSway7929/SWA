@@ -259,6 +259,237 @@
         parent.appendChild(card);
     }
 
+    function renderConversionSection(parent, item, report) {
+        const section = addSection(
+            parent,
+            "Convert to the lead pipeline",
+            "A contact request is not proof that Swayphics has already contacted this person. A new lead starts as New, with no last-contacted timestamp. Existing lead details and stages are never overwritten by linking."
+        );
+
+        if (item.lead_id) {
+            section.appendChild(element("p", "bfa-conversion-success",
+                "This assessment is already linked to lead " + item.lead_id + "."));
+            return;
+        }
+
+        if (!item.contact_requested) {
+            section.appendChild(element("p", "bfa-readonly-note",
+                "No contact request was submitted. This assessment must remain an assessment record and cannot be converted into a sales lead yet."));
+            return;
+        }
+
+        const status = element("p", "bfa-conversion-status",
+            "Check for possible existing leads before creating a new record.");
+        status.setAttribute("role", "status");
+        status.setAttribute("aria-live", "polite");
+
+        const resultArea = element("div", "bfa-conversion-results");
+        const previewButton = element("button", "bfa-conversion-primary", "Check for existing leads");
+        previewButton.type = "button";
+        previewButton.addEventListener("click", async () => {
+            previewButton.disabled = true;
+            previewButton.textContent = "Checking CRM…";
+            status.textContent = "Checking exact email, phone and business-name matches.";
+            resultArea.replaceChildren();
+
+            try {
+                const result = await api("/rest/v1/rpc/convert_business_assessment_to_lead", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        p_assessment_id: item.id,
+                        p_action: "preview"
+                    })
+                });
+                renderConversionPreview(result, item, report, status, resultArea);
+                previewButton.textContent = "Refresh possible matches";
+            } catch (error) {
+                status.textContent = error.message || "Possible lead matches could not be checked.";
+                previewButton.textContent = "Retry match check";
+            } finally {
+                previewButton.disabled = false;
+            }
+        });
+
+        section.append(status, previewButton, resultArea);
+    }
+
+    function renderConversionPreview(result, item, report, status, resultArea) {
+        resultArea.replaceChildren();
+
+        if (!result || typeof result !== "object") {
+            status.textContent = "The conversion check returned an unexpected response.";
+            return;
+        }
+
+        if (result.status === "already_converted") {
+            item.lead_id = result.lead_id;
+            item.status = "converted";
+            status.textContent = "This assessment is already linked to a lead.";
+            renderList();
+            return;
+        }
+
+        if (result.status !== "possible_matches" && result.status !== "ready_to_create") {
+            status.textContent = result.message || "This assessment is not ready for lead conversion.";
+            return;
+        }
+
+        const matches = Array.isArray(result.matches) ? result.matches : [];
+        if (matches.length) {
+            status.textContent = matches.length + " possible existing lead" +
+                (matches.length === 1 ? " was" : "s were") +
+                " found. Review the details before deciding what to do.";
+            matches.forEach((match) => {
+                const card = element("article", "bfa-match-card");
+                const heading = element("div", "bfa-match-heading");
+                heading.appendChild(element("strong", "", match.business_name || "Unnamed lead"));
+                heading.appendChild(element("span", "bfa-tag", displayStatus(match.status)));
+                card.appendChild(heading);
+
+                const details = [
+                    match.contact_name,
+                    match.email,
+                    match.phone,
+                    match.source ? "Source: " + match.source : "",
+                    Array.isArray(match.matching_reasons)
+                        ? "Matched by: " + match.matching_reasons.join(", ")
+                        : ""
+                ].filter(Boolean);
+                details.forEach((line) => card.appendChild(element("p", "", line)));
+
+                const linkButton = element("button", "bfa-conversion-secondary", "Link this assessment to this lead");
+                linkButton.type = "button";
+                linkButton.addEventListener("click", () => linkToExistingLead(match, item, status, resultArea, linkButton));
+                card.appendChild(linkButton);
+                resultArea.appendChild(card);
+            });
+        } else {
+            status.textContent = "No exact email, phone or business-name matches were found.";
+        }
+
+        const businessName = String(report.business_name || item.business_name || "").trim();
+        const createPanel = element("div", "bfa-create-lead-panel");
+        createPanel.appendChild(element("h4", "", matches.length
+            ? "Create a separate new lead"
+            : "Create a new lead"));
+
+        if (result.business_name_required || !businessName) {
+            const label = element("label", "bfa-business-name-field", "Business name for the new lead");
+            const input = element("input");
+            input.type = "text";
+            input.id = "bfa-business-name-override";
+            input.maxLength = 150;
+            input.autocomplete = "organization";
+            input.placeholder = "Enter the verified business name";
+            label.appendChild(input);
+            createPanel.appendChild(label);
+        } else {
+            createPanel.appendChild(element("p", "", "Business name: " + businessName));
+        }
+
+        if (matches.length) {
+            createPanel.appendChild(element("p", "bfa-match-warning",
+                "A possible existing lead was found. Creating a separate record may duplicate that business. Only continue when you have reviewed the matches and confirmed a separate lead is appropriate."));
+        }
+
+        const createButton = element("button", "bfa-conversion-primary",
+            matches.length ? "Create a separate new lead anyway" : "Create new lead");
+        createButton.type = "button";
+        createButton.addEventListener("click", async () => {
+            const overrideInput = createPanel.querySelector("#bfa-business-name-override");
+            const override = overrideInput ? String(overrideInput.value || "").trim() : null;
+            if (overrideInput && override.length < 2) {
+                status.textContent = "Enter a business name before creating the lead.";
+                overrideInput.focus();
+                return;
+            }
+
+            const confirmation = matches.length
+                ? "Possible existing lead matches were found. Are you sure this should be a separate new lead?"
+                : "Create a new lead with status New? This will not mark the respondent as contacted.";
+            if (!window.confirm(confirmation)) return;
+
+            createButton.disabled = true;
+            createButton.textContent = "Creating lead…";
+            status.textContent = "Creating the lead and linking the assessment.";
+            try {
+                const converted = await api("/rest/v1/rpc/convert_business_assessment_to_lead", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        p_assessment_id: item.id,
+                        p_action: "create_new",
+                        p_business_name_override: override || null,
+                        p_confirm_create_new: true
+                    })
+                });
+                handleConversionResult(converted, item, status, resultArea);
+            } catch (error) {
+                status.textContent = error.message || "The new lead could not be created.";
+            } finally {
+                createButton.disabled = false;
+                createButton.textContent = "Create new lead";
+            }
+        });
+        createPanel.appendChild(createButton);
+        resultArea.appendChild(createPanel);
+    }
+
+    async function linkToExistingLead(match, item, status, resultArea, button) {
+        if (!match || !match.id) return;
+        if (!window.confirm(
+            "Link this assessment to " + (match.business_name || "the selected lead") +
+            "? Existing lead details, source and status will remain unchanged."
+        )) return;
+
+        button.disabled = true;
+        button.textContent = "Linking…";
+        status.textContent = "Linking the assessment to the selected existing lead.";
+        try {
+            const result = await api("/rest/v1/rpc/convert_business_assessment_to_lead", {
+                method: "POST",
+                body: JSON.stringify({
+                    p_assessment_id: item.id,
+                    p_action: "link_existing",
+                    p_existing_lead_id: match.id
+                })
+            });
+            handleConversionResult(result, item, status, resultArea);
+        } catch (error) {
+            status.textContent = error.message || "The assessment could not be linked.";
+            button.disabled = false;
+            button.textContent = "Retry linking";
+        }
+    }
+
+    function handleConversionResult(result, item, status, resultArea) {
+        if (!result || typeof result !== "object") {
+            status.textContent = "The conversion service returned an unexpected response.";
+            return;
+        }
+        if (result.status === "created" || result.status === "linked_existing" || result.status === "already_converted") {
+            item.lead_id = result.lead_id;
+            item.status = "converted";
+            status.textContent = result.status === "created"
+                ? "New lead created with status New. No contact timestamp was added."
+                : result.status === "linked_existing"
+                    ? "Assessment linked. The existing lead's details, source and status were preserved."
+                    : "This assessment is already linked to a lead.";
+            resultArea.replaceChildren(element("p", "bfa-conversion-success",
+                "Lead reference: " + result.lead_id));
+            renderList();
+            return;
+        }
+        if (result.status === "business_name_required") {
+            status.textContent = result.message || "Enter the verified business name and try again.";
+            return;
+        }
+        if (result.status === "lead_not_a_matching_candidate") {
+            status.textContent = result.message || "That lead no longer matches. Refresh the match list.";
+            return;
+        }
+        status.textContent = result.message || "The lead conversion could not be completed.";
+    }
+
     async function showAssessment(id) {
         const item = assessments.find((record) => record.id === id);
         if (!item) return;
@@ -359,6 +590,8 @@
         const disclaimer = addSection(detailContent, "Evidence note");
         disclaimer.appendChild(element("p", "", report.disclaimer ||
             "This assessment is based on respondent answers. No independent website, social-media or Google Business Profile inspection has been performed."));
+
+        renderConversionSection(detailContent, item, report);
 
         const actions = element("div", "bfa-detail-actions");
         const copyButton = element("button", "", "Copy report");
