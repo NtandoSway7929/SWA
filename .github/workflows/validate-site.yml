@@ -29,7 +29,19 @@ jobs:
           node --check admin-dashboard/business-assessments.js
           node --check admin-dashboard/business-assessments-nav.js
           node --check supabase/functions/submit-business-assessment/rules.mjs
+          node --check supabase/functions/inspect-business-assessment/provider.mjs
           node scripts/business-opportunity-rules.test.cjs
+          node scripts/business-assessment-inspection-provider.test.cjs
+          node scripts/business-assessment-inspection.test.cjs
+
+
+      - name: Type-check Business Opportunity Finder inspection function
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check Business Opportunity Finder inspection Edge Function
+        run: deno check supabase/functions/inspect-business-assessment/index.ts
 
       - name: Validate standalone JavaScript
         run: |
