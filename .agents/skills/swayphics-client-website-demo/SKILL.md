@@ -31,6 +31,15 @@ Create credible, polished, client-specific website demos that help Swayphics win
 
 ### 2. Research the design system before coding
 
+**Use the vendored upstream design skills when relevant:** These are third-party skills imported from their original public repositories and must be read from their checked-in paths, not reconstructed from memory:
+
+1. `.agents/skills/frontend-design/SKILL.md` (Anthropic) for subject-led art direction, design planning and self-critique.
+2. `.agents/skills/impeccable/SKILL.md` (Impeccable) for shaping new surfaces, visual critique, polish, responsive adaptation and design audits. Load its referenced playbooks only when relevant.
+3. `.agents/skills/frontend-ui-engineering/SKILL.md` (Addy Osmani) for implementation quality, maintainable component structure and reference-led UI work.
+4. `.agents/skills/accessibility-engineering/SKILL.md` (Addy Osmani) for accessibility audits and remediation after a UI exists.
+
+The repository's universal Swayphics art-direction standard remains mandatory and takes precedence wherever a third-party suggestion conflicts with its 15 prohibitions, client-specific branding rules, safety requirements or approved project stack. For this repository's Vanilla HTML/CSS/JS projects, adapt framework-specific examples without adding React, Tailwind or new dependencies. Do not install or enable upstream hooks, run installers, activate live browser editing, execute downloaded engines or run audit scripts that install packages unless the user has explicitly authorised that operation. Read and reason from the vendored guidance without claiming a script, browser audit or test has run unless it actually has.
+
 **Mandatory shared standard:** Read and apply `.agents/skills/swayphics-art-direction/SKILL.md` before making visual decisions or writing frontend code. Its 15 banned design tropes, positive design standards and mandatory self-audit apply to every client demo. Reuse the design discipline, not Swayphics' brand identity: each prospect must receive a visual direction based on that client's verified brand, audience and approved project brief. Never apply Swayphics' palette, fonts, voice or logo to a client by default.
 
 1. If UI/UX Pro Max is installed, read its local `SKILL.md` and follow the provided design-system search workflow. Locate the installed search script from the actual filesystem; do not assume its path.
