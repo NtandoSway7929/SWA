@@ -177,8 +177,18 @@
   list-style: none;
 }
 .sway-rich-surface ul.sway-rich-checklist li {
-  cursor: pointer;
   list-style: none;
+}
+.sway-rich-task-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  margin-right: 5px;
+  color: #0152F4;
+  font: 500 17px/1 "Montserrat", sans-serif;
+  cursor: pointer;
+  user-select: none;
 }
 .sway-rich-surface blockquote {
   margin: 8px 0 13px;
