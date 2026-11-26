@@ -146,11 +146,11 @@ assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\
 assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHandler.indexOf("swayConfirm(confirmMessage)"),
     "financial-history checks must run before asking to confirm client deletion");
 
-assert.ok(workspace.includes("Archive this invoice first. Sent, paid and overdue invoice records should be retained"),
-    "issued, paid and overdue invoices must be protected from permanent deletion");
+assert.ok(workspace.includes("Only draft invoices can be deleted directly. Archive issued, paid and overdue invoices first."),
+    "only drafts or archived owner-approved invoices may be deleted");
 const invoiceActionStart = workspace.indexOf('.querySelectorAll("[data-invoice-action]")');
 const invoiceDeleteStart = workspace.indexOf('if (action === "delete")', invoiceActionStart);
-const invoiceDeleteEnd = workspace.indexOf("await logActivity(", invoiceDeleteStart);
+const invoiceDeleteEnd = workspace.indexOf("\n                        } catch (error)", invoiceDeleteStart);
 assert.ok(invoiceActionStart >= 0 && invoiceDeleteStart > invoiceActionStart && invoiceDeleteEnd > invoiceDeleteStart,
     "invoice delete action handler must exist");
 const invoiceDeleteHandler = workspace.slice(invoiceDeleteStart, invoiceDeleteEnd);
