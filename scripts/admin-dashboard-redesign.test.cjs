@@ -166,6 +166,23 @@ const navClickHandler = extractConstant(
     "workspace navigation click handler"
 );
 assert.ok(
+    redesignCss.includes("flex-wrap: wrap !important;") &&
+    redesignCss.includes("column-gap: 8px !important;") &&
+    redesignCss.includes("overflow: visible !important;"),
+    "desktop top-level navigation groups must wrap cleanly with clear spacing instead of colliding in one strip"
+);
+assert.ok(
+    redesignCss.includes("border: 1px solid #E5EAF2 !important;") &&
+    redesignCss.includes("background: #F8FAFD !important;"),
+    "top-level navigation destinations must remain visually distinct as individual controls"
+);
+assert.ok(
+    redesignCss.includes("flex-wrap: nowrap !important;") &&
+    redesignCss.includes("overflow-x: auto !important;"),
+    "tablet and mobile navigation must preserve a single touch-scrollable row"
+);
+
+assert.ok(
     navClickHandler.includes("openNavigationGroup.classList.remove(\"open\")") &&
     navClickHandler.includes("if (openMenu) openMenu.hidden = true") &&
     navClickHandler.includes('localStorage.setItem(\n                                    "swayphics_admin_nav_groups",\n                                    JSON.stringify({})'),
@@ -185,7 +202,7 @@ assert.ok(
 );
 
 assert.ok(
-    dashboardHtml.includes('href="admin-dashboard-redesign.css?v=20261105-top-navigation-'),
+    dashboardHtml.includes('href="admin-dashboard-redesign.css?v=20261126-top-navigation-4"'),
     "the isolated top-navigation stylesheet must be linked"
 );
 assert.ok(
