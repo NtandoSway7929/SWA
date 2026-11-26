@@ -30,6 +30,7 @@
     mode: "standard",
     campaign: null,
     prospects: [],
+    tenderEvidence: [],
     filtered: [],
     selectedId: null,
     loaded: false,
@@ -233,6 +234,11 @@
         campaign_id: "eq." + state.campaign.id,
         order: "business_name.asc"
       })) || [];
+      state.tenderEvidence = await api(apiUrl("lead_campaign_tender_evidence", {
+        select: "id,prospect_id,tender_record_id,source_prospect_id,company_name,tender_reference,procuring_institution,tender_description,award_value,award_date,procurement_role,company_award_count,evidence_url",
+        campaign_id: "eq." + state.campaign.id,
+        order: "tender_record_id.asc"
+      })) || [];
       state.loaded = true;
       updateTabs();
       renderCampaign();
@@ -249,8 +255,8 @@
     state.filtered = state.prospects.filter(item => {
       const haystack = [
         item.business_name, item.registered_company_name, item.industry, item.province,
-        item.city, item.email, item.phone, item.website_url, item.tender_reference,
-        item.tender_award_history, item.audit_outreach_disposition, item.source_prospect_id
+        item.city, item.email, item.phone, item.contact_person, item.website_url, item.tender_reference,
+        item.tender_award_history, item.audit_outreach_disposition, item.source_prospect_id, item.original_score
       ].join(" ").toLowerCase();
       if (term && !haystack.includes(term)) return false;
       if (state.stageFilter !== "all" && item.stage !== state.stageFilter) return false;
@@ -281,9 +287,12 @@
     const website = meaningful(item.website_status) || "Not assessed";
     const tenderStatus = isHighConfidenceAudit(item) ? "Evidence reviewed" : "Research required";
     const contact = meaningful(item.email) || meaningful(item.phone) || "No direct contact listed";
+    const score = item.original_score == null ? "Score pending" : "Original score " + item.original_score + "/100";
+    const priority = meaningful(item.original_priority) || "Unranked";
     return '<tr data-sway-tender-row="' + escapeHtml(item.id) + '">' +
       '<td><div class="sway-tender-company"><strong>' + escapeHtml(item.business_name) + '</strong><span>' +
-        escapeHtml(item.business_category || item.source_prospect_id) + '</span></div></td>' +
+        escapeHtml(item.business_category || item.source_prospect_id) + '</span><span class="sway-tender-score-line">' +
+        escapeHtml(score + " · " + priority + " priority") + '</span></div></td>' +
       '<td><div class="sway-tender-location">' + escapeHtml(item.industry || "Industry not listed") +
         '<span>' + escapeHtml([item.city, item.province].filter(Boolean).join(", ") || "Location not listed") + '</span></div></td>' +
       '<td><span class="sway-tender-chip ' + websiteTone(website) + '">' + escapeHtml(website) + '</span>' +
@@ -367,8 +376,16 @@
       '<div class="sway-tender-detail-head"><div><span class="sway-tender-eyebrow">PROSPECT RECORD · ' + escapeHtml(item.source_prospect_id) + '</span>' +
         '<h3>' + escapeHtml(item.business_name) + '</h3><p>' + escapeHtml(item.registered_company_name || item.business_category || "") + '</p></div>' +
         '<button type="button" class="sway-tender-close" data-sway-tender-close>Close</button></div>' +
+      '<div class="sway-tender-detail-summary">' +
+        '<span class="sway-tender-priority ' + escapeHtml(String(item.original_priority || "unranked").toLowerCase()) + '">' +
+          escapeHtml(item.original_priority || "Priority not set") + ' priority</span>' +
+        '<strong>' + escapeHtml(item.original_score == null ? "Score not available" : item.original_score + "/100") + '</strong>' +
+        '<span>Original workbook qualification score</span>' +
+      '</div>' +
       '<div class="sway-tender-detail-grid">' +
         detailBlock("Contact information", [
+          ["Contact person", meaningful(item.contact_person) || "Not identified"],
+          ["Contact source", meaningful(item.contact_source) || "Not recorded"],
           ["Business email", meaningful(item.email) || "Not found"],
           ["Additional email", meaningful(item.additional_email) || "Not found"],
           ["Telephone", meaningful(item.phone) || "Not found"],
@@ -393,13 +410,24 @@
           ["Verified awards", item.verified_award_count == null ? "Not recorded" : item.verified_award_count],
           ["Revenue dependence", item.tender_dependence_evidence || "Unconfirmed"]
         ]) +
-        detailBlock("Audit findings", [
+        detailBlock("Website audit evidence", [
+          ["Audit finding", meaningful(item.website_audit_problem) || item.website_issues || "No specific issue recorded"],
+          ["Audit evidence", meaningful(item.website_audit_evidence) || "No audit evidence note"],
+          ["Recommended improvement", meaningful(item.website_recommended_improvement) || "Not recorded"],
+          ["Commercial opportunity", meaningful(item.website_commercial_opportunity) || item.digital_opportunity || "Not assessed"],
+          ["Website audit priority", meaningful(item.website_audit_priority) || "Not scored"],
+          ["Website audit score", item.website_audit_score == null ? "Not scored" : item.website_audit_score + "/100"]
+        ]) +
+        detailBlock("Commercial intelligence", [
+          ["Original qualification", item.score_breakdown || "No scoring breakdown recorded"],
+          ["Commercial assessment", meaningful(item.commercial_intelligence_assessment) || "No commercial assessment recorded"],
+          ["Recommended outreach approach", meaningful(item.recommended_outreach_approach) || item.outreach_angle || "Not recorded"],
           ["Audit status", item.audit_status || "Not audited"],
           ["Audit notes", item.audit_notes || "No audit notes"],
-          ["Outreach disposition", item.audit_outreach_disposition || "Unreviewed"],
-          ["Research notes", item.research_notes || "No additional notes"]
+          ["Outreach disposition", item.audit_outreach_disposition || "Unreviewed"]
         ]) +
       '</div>' +
+      renderTenderEvidence(item) +
       '<div class="sway-tender-source-list"><strong>Research sources</strong><div>' + (sources || '<span>No source links recorded</span>') + '</div>' +
         (auditSources ? '<strong>Audit evidence</strong><div>' + auditSources + '</div>' : '') + '</div>' +
       '<div class="sway-tender-workflow">' +
@@ -423,6 +451,28 @@
       '</div>' +
       (dnc ? '<p class="sway-tender-optout">This prospect is permanently marked Do Not Contact. Marketing outreach is disabled.</p>' : '') +
     '</section>';
+  }
+
+  function renderTenderEvidence(item) {
+    const records = state.tenderEvidence.filter(record => record.prospect_id === item.id);
+    const rows = records.map(record =>
+      '<article class="sway-tender-evidence-record">' +
+        '<div class="sway-tender-evidence-top"><strong>' + escapeHtml(record.tender_reference || record.tender_record_id) + '</strong>' +
+          '<span class="sway-tender-role ' + (String(record.procurement_role || "").toLowerCase().includes("awardee") ? "awardee" :
+            (String(record.procurement_role || "").toLowerCase().includes("panel") ? "panel" : "participant")) + '">' +
+            escapeHtml(record.procurement_role || "Role not recorded") + '</span></div>' +
+        '<p>' + escapeHtml(record.tender_description || "No tender description recorded") + '</p>' +
+        '<dl><div><dt>Procuring institution</dt><dd>' + escapeHtml(record.procuring_institution || "Not recorded") + '</dd></div>' +
+          '<div><dt>Value / pricing</dt><dd>' + escapeHtml(record.award_value || "Not disclosed") + '</dd></div>' +
+          '<div><dt>Date / period</dt><dd>' + escapeHtml(record.award_date || "Not recorded") + '</dd></div></dl>' +
+        (safeUrl(record.evidence_url) ? '<a href="' + escapeHtml(safeUrl(record.evidence_url)) + '" target="_blank" rel="noopener">Open evidence source</a>' : '') +
+        '<small>' + escapeHtml(record.tender_record_id) + '</small>' +
+      '</article>'
+    ).join("");
+    return '<section class="sway-tender-evidence-section"><div class="sway-tender-evidence-heading"><h4>Individual tender records</h4>' +
+      '<span>' + records.length + ' source records</span></div>' +
+      (rows || '<p class="sway-tender-no-evidence">No individual tender-register rows are linked to this prospect.</p>') +
+      '<p class="sway-tender-evidence-note">Tender roles above are shown as recorded in the source workbook. The audit status and notes remain separate and should be used to qualify claims before outreach.</p></section>';
   }
 
   function detailBlock(title, pairs) {
@@ -675,14 +725,20 @@
   function exportCsv() {
     const columns = [
       ["source_prospect_id","Prospect ID"], ["business_name","Business Name"],
-      ["registered_company_name","Registered Company Name"], ["industry","Industry"],
+      ["registered_company_name","Registered Company Name"], ["original_priority","Original Priority"],
+      ["original_score","Original Score"], ["score_breakdown","Score Breakdown"], ["contact_person","Contact Person"],
+      ["contact_source","Contact Source"], ["industry","Industry"],
       ["province","Province"], ["city","City"], ["website_url","Website"],
       ["website_status","Website Status"], ["website_issues","Website Issues"],
+      ["website_audit_problem","Website Audit Problem"], ["website_audit_evidence","Website Audit Evidence"],
+      ["website_recommended_improvement","Website Recommended Improvement"], ["website_commercial_opportunity","Website Commercial Opportunity"],
       ["email","Business Email"], ["additional_email","Additional Email"],
       ["phone","Telephone"], ["tender_award_history","Tender Award History"],
       ["tender_reference","Tender Reference"], ["procuring_entity","Procuring Institution"],
       ["tender_award_value","Tender Award Value"], ["verified_award_count","Verified Awards"],
       ["audit_status","Audit Status"], ["audit_outreach_disposition","Audit Disposition"],
+      ["commercial_intelligence_assessment","Commercial Intelligence Assessment"],
+      ["recommended_outreach_approach","Recommended Outreach Approach"],
       ["qualification_status","Qualification"], ["stage","Campaign Stage"],
       ["email_consent_status","Email Consent"], ["do_not_contact","Do Not Contact"],
       ["source_urls","Research Sources"]
