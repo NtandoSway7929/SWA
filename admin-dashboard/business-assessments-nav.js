@@ -95,7 +95,7 @@
 
     function embeddedAssessmentId(card) {
         const match = String(card.textContent || "")
-            .match(/Business Opportunity Finder assessment reference:\\s*([0-9a-f-]{36})/i);
+            .match(/Business Opportunity Finder assessment reference:\s*([0-9a-f-]{36})/i);
         return match ? match[1] : "";
     }
 
