@@ -14,6 +14,16 @@
     const progressPercent = document.getElementById("bof-progress-percent");
     const reportContent = document.getElementById("bof-report-content");
     const copyButton = document.getElementById("bof-copy-report");
+    const publicPresencePanel = document.getElementById("bof-public-presence");
+    const inspectionConsentInput = document.getElementById("bof-inspection-consent");
+    const publicPresenceInputs = {
+        website: document.getElementById("bof-presence-website"),
+        google: document.getElementById("bof-presence-google"),
+        instagram: document.getElementById("bof-presence-instagram"),
+        facebook: document.getElementById("bof-presence-facebook"),
+        tiktok: document.getElementById("bof-presence-tiktok"),
+        linkedin: document.getElementById("bof-presence-linkedin")
+    };
 
     if (!intro || !assessment || !reportSection || !stepContent) {
         return;
@@ -21,6 +31,7 @@
 
     const ASSESSMENT_VERSION = "bof-2026-11-v1";
     const CONTACT_NOTICE_VERSION = "bof-contact-v1";
+    const INSPECTION_CONSENT_VERSION = "bof-public-presence-v1";
     const SUPABASE_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaWZocmliZ3NxZmF4Z3RvYnNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0OTI5MjksImV4cCI6MjEwMzA2ODkyOX0.rtSO-xIG_kqyBKEz6UvFmxy_-6onh-S8a2OcGD0bGmo";
@@ -291,7 +302,7 @@
                     '<input class="bof-text-input" id="bof-business-name" name="business_name" maxlength="100" autocomplete="organization" placeholder="e.g. Swayphics Studio" value="' + escapeHtml(answers.businessName) + '">' +
                     '<label class="bof-field-label" for="bof-location">City or area <span>(optional)</span></label>' +
                     '<input class="bof-text-input" id="bof-location" name="location" maxlength="100" autocomplete="address-level2" placeholder="e.g. Pretoria" value="' + escapeHtml(answers.location) + '">' +
-                    '<small class="bof-field-help">These details are only used in this on-screen preview. They are not sent or stored.</small>' +
+                    '<small class="bof-field-help">These details are included in your submitted assessment. They are optional.</small>' +
                 '</div>';
         }
 
@@ -324,6 +335,7 @@
             ? 'Create my summary <span aria-hidden="true">→</span>'
             : 'Continue <span aria-hidden="true">→</span>';
         stepError.hidden = true;
+        if (publicPresencePanel) publicPresencePanel.hidden = step.key !== "priority";
 
         const businessNameInput = document.getElementById("bof-business-name");
         const locationInput = document.getElementById("bof-location");
@@ -425,6 +437,26 @@
             showError("Choose an option to continue. You can select “Not sure yet” where it is available.");
             return false;
         }
+        if (step.key === "priority" && inspectionConsentInput && inspectionConsentInput.checked) {
+            if (!answers.businessName.trim() || !answers.location.trim()) {
+                showError("To request a public-presence check, enter the business name and city or area in the first step.");
+                return false;
+            }
+            const urlInputs = Object.values(publicPresenceInputs).filter(Boolean);
+            for (const input of urlInputs) {
+                if (!input.value.trim()) continue;
+                try {
+                    const url = new URL(input.value.trim());
+                    if (!["https:", "http:"].includes(url.protocol) || !url.hostname.includes(".")) {
+                        throw new Error("Invalid URL");
+                    }
+                } catch {
+                    showError("Check the public links you entered. Use complete URLs beginning with https:// or http://.");
+                    input.focus();
+                    return false;
+                }
+            }
+        }
         return true;
     }
 
@@ -445,6 +477,10 @@
         answers.contactMethods = [];
         answers.friction = [];
         answers.priority = "";
+        if (inspectionConsentInput) inspectionConsentInput.checked = false;
+        Object.values(publicPresenceInputs).forEach((input) => {
+            if (input) input.value = "";
+        });
         assessmentSubmissionKey = "";
         assessmentId = "";
         latestServerReport = null;
@@ -606,6 +642,27 @@
         }));
     }
 
+    function buildPublicPresencePayload() {
+        if (!inspectionConsentInput || !inspectionConsentInput.checked) {
+            return { inspection_consent: false };
+        }
+        const socialProfileUrls = [
+            ["instagram", publicPresenceInputs.instagram],
+            ["facebook", publicPresenceInputs.facebook],
+            ["tiktok", publicPresenceInputs.tiktok],
+            ["linkedin", publicPresenceInputs.linkedin]
+        ].filter(([, input]) => input && input.value.trim())
+            .map(([platform, input]) => ({ platform, url: input.value.trim() }));
+
+        return {
+            inspection_consent: true,
+            inspection_consent_version: INSPECTION_CONSENT_VERSION,
+            website_url: publicPresenceInputs.website ? publicPresenceInputs.website.value.trim() : "",
+            google_business_profile_url: publicPresenceInputs.google ? publicPresenceInputs.google.value.trim() : "",
+            social_profile_urls: socialProfileUrls
+        };
+    }
+
     async function submitAssessment() {
         if (!validateStep()) return;
 
@@ -625,7 +682,8 @@
             submission_key: assessmentSubmissionKey,
             business_profile: {
                 business_name: answers.businessName.trim(),
-                location: answers.location.trim()
+                location: answers.location.trim(),
+                public_presence: buildPublicPresencePayload()
             },
             responses: [
                 { question_id: "industry", answer: answers.industry },
