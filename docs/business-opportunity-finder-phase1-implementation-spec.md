@@ -7,7 +7,7 @@
 - **Phase 1 — design baseline:** complete.
 - **Phase 2 — isolated frontend:** implemented on PR #302's feature branch; not yet merged into `main` or deployed to the public site.
 - **Phase 3 — database/backend:** production schema, submission Edge Function and lead-conversion RPC deployed to the Swayphics Web Supabase project. A positive live HTTP assessment submission is still outstanding.
-- **Phase 4 — evidence inspection:** design recorded in [the Phase 4 evidence inspection plan](business-opportunity-finder-phase4-evidence-inspection.md); implementation has not started.
+- **Phase 4 — evidence inspection:** core implementation is on this feature branch: optional public-source consent and URLs, admin-only TinyFish Search/Fetch Edge Function, versioned inspection/evidence schema migration, and admin evidence viewer. BOF Node tests and Deno type-check pass. It is not deployed; non-production migration/provider integration and browser/live-provider verification remain.
 - **Phase 5 — CRM integration:** assessment viewer, lead history, proposal snapshot and admin conversion work implemented on PR #302's feature branch; not yet merged into `main` or deployed.
 - **Phase 6 — verification and rollout:** pending positive live submission, signed-in admin browser walkthrough, full test review and deployment approval.
 
