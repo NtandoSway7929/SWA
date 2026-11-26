@@ -48,7 +48,7 @@ assert.match(js, /const stepCount = 5/,
     "The assessment should remain a five-question guided flow");
 assert.match(js, /evidence: "Self-reported"/,
     "Findings must retain their evidence classification");
-assert.match(js, /no independent website, social-media or Google Business Profile checks have been performed/i,
+assert.match(html, /no independent website, social-media or Google Business Profile checks have been performed/i,
     "The report must disclose that external inspection has not occurred");
 assert.doesNotMatch(js, /fetch\s*\(|supabase|localStorage|sessionStorage/i,
     "The preview must not submit or persist assessment data");
