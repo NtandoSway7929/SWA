@@ -25,6 +25,10 @@ verify_jwt = false
 [functions.submit-enquiry]
 verify_jwt = false
 
+# Public assessment submissions are validated and rate-limited inside the handler.
+[functions.submit-business-assessment]
+verify_jwt = false
+
 # Public website chat is protected by origin/session rate limits in its public route.
 # All private workspace actions enforce user JWT and Swayphics-admin checks in the function.
 [functions.swayphics-ai]
