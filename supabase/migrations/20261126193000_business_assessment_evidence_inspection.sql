@@ -31,6 +31,9 @@ create index business_assessment_inspections_assessment_created_idx
     on public.business_assessment_inspections (assessment_id, created_at desc);
 create index business_assessment_inspections_status_created_idx
     on public.business_assessment_inspections (status, created_at);
+create index business_assessment_inspections_admin_created_idx
+    on public.business_assessment_inspections (requested_by, created_at desc)
+    where requested_by is not null;
 
 create unique index business_assessment_inspections_one_active_idx
     on public.business_assessment_inspections (assessment_id)
