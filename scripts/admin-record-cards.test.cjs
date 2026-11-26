@@ -154,19 +154,19 @@ const invoiceDeleteEnd = workspace.indexOf("\n                        } catch (e
 assert.ok(invoiceActionStart >= 0 && invoiceDeleteStart > invoiceActionStart && invoiceDeleteEnd > invoiceDeleteStart,
     "invoice delete action handler must exist");
 const invoiceDeleteHandler = workspace.slice(invoiceDeleteStart, invoiceDeleteEnd);
-assert.match(invoiceDeleteHandler, /state\\.payments\\.filter/);
-assert.match(invoiceDeleteHandler, /state\\.paymentAttempts\\.filter/);
-assert.match(invoiceDeleteHandler, /if \\(invoice\\.archived\\)/);
-assert.match(invoiceDeleteHandler, /state\\.currentAdmin\\.role !== "owner"/);
-assert.match(invoiceDeleteHandler, /window\\.prompt/);
+assert.match(invoiceDeleteHandler, /state\.payments\.filter/);
+assert.match(invoiceDeleteHandler, /state\.paymentAttempts\.filter/);
+assert.match(invoiceDeleteHandler, /if \(invoice\.archived\)/);
+assert.match(invoiceDeleteHandler, /state\.currentAdmin\.role !== "owner"/);
+assert.match(invoiceDeleteHandler, /window\.prompt/);
 assert.match(invoiceDeleteHandler, /admin_permanently_delete_archived_invoice/);
 assert.match(invoiceDeleteHandler, /p_invoice_id/);
 assert.match(invoiceDeleteHandler, /p_confirmation/);
-assert.match(invoiceDeleteHandler, /invoicePayments\\.length \\|\\| invoiceAttempts\\.length/);
-assert.match(invoiceDeleteHandler, /\\/rest\\/v1\\/invoices\\?id=eq\\./);
+assert.match(invoiceDeleteHandler, /invoicePayments\.length \|\| invoiceAttempts\.length/);
+assert.match(invoiceDeleteHandler, /\/rest\/v1\/invoices\?id=eq\./);
 assert.doesNotMatch(
     invoiceDeleteHandler.slice(invoiceDeleteHandler.indexOf('if (invoice.archived)'), invoiceDeleteHandler.indexOf('} else {')),
-    /\\/rest\\/v1\\/invoices\\?id=eq\\./,
+    /\/rest\/v1\/invoices\?id=eq\./,
     "archived invoices must use the protected RPC, not a direct table DELETE"
 );
 assert.ok(workspace.includes("payment_attempts?select=id,invoice_id,payment_id,provider,environment,status"),
