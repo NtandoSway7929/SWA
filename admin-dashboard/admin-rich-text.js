@@ -243,16 +243,34 @@
     let lastRange = null;
     let silent = false;
 
+    function selectionBelongsToSurface(range) {
+      return Boolean(range && (
+        range.commonAncestorContainer === surface ||
+        surface.contains(range.commonAncestorContainer)
+      ));
+    }
+
     function rememberSelection() {
       const selection = window.getSelection();
       if (!selection || !selection.rangeCount) return;
       const range = selection.getRangeAt(0);
-      if (surface.contains(range.commonAncestorContainer)) lastRange = range.cloneRange();
+      if (selectionBelongsToSurface(range)) lastRange = range.cloneRange();
+    }
+
+    function clearRememberedSelection() {
+      lastRange = null;
+      const selection = window.getSelection();
+      if (!selection || !selection.rangeCount) return;
+      if (selectionBelongsToSurface(selection.getRangeAt(0))) selection.removeAllRanges();
     }
 
     function restoreSelection() {
+      if (!lastRange || !selectionBelongsToSurface(lastRange)) {
+        lastRange = null;
+        surface.focus();
+        return;
+      }
       surface.focus();
-      if (!lastRange) return;
       const selection = window.getSelection();
       if (!selection) return;
       selection.removeAllRanges();
@@ -261,7 +279,6 @@
 
     function syncSource() {
       if (silent) return;
-      replaceFontTags(surface);
       const html = sanitizeHTML(surface.innerHTML);
       const text = String(surface.innerText || surface.textContent || "").replace(/\u00a0/g, " ").trim();
       source.value = text ? html : "";
@@ -358,6 +375,7 @@
       getHTML: function () { replaceFontTags(surface); return sanitizeHTML(surface.innerHTML); },
       getText: function () { return String(surface.innerText || surface.textContent || "").replace(/\u00a0/g, " ").trim(); },
       setHTML: function (html) {
+        clearRememberedSelection();
         silent = true;
         surface.innerHTML = sanitizeHTML(html);
         source.value = editor.getText() ? editor.getHTML() : "";
