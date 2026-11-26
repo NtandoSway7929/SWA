@@ -574,7 +574,7 @@
             ? channels.map((channel) => '<span class="bof-report-tag">' + escapeHtml(channel) + '</span>').join("")
             : '<span class="bof-report-tag">Not established</span>';
         const websiteStatusMarkup =
-            '<span class="bof-report-tag">Website status: ' +
+            '<span class="bof-report-tag">Website: ' +
             escapeHtml(getWebsiteStatus()) + '</span>';
 
         reportContent.innerHTML =
