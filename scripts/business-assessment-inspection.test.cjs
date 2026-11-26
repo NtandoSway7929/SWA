@@ -9,7 +9,8 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
 const config = read("supabase/config.toml");
 const functionSource = read("supabase/functions/inspect-business-assessment/index.ts");
-const provider = read("supabase/functions/inspect-business-assessment/provider.mjs");
+const provider = read("supabase/functions/_shared/business-assessment-evidence.mjs");
+const providerFacade = read("supabase/functions/inspect-business-assessment/provider.mjs");
 const migration = read("supabase/migrations/20261126193000_business_assessment_evidence_inspection.sql");
 const submissionRules = read("supabase/functions/submit-business-assessment/rules.mjs");
 const publicForm = read("business-opportunity-finder/index.html");
@@ -58,6 +59,8 @@ assert.match(functionSource, /stale_worker/,
 assert.doesNotMatch(functionSource, /console\.(log|error)\([^)]*(TINYFISH_API_KEY|SERVICE_ROLE_KEY)/,
     "Provider and service credentials must never be logged");
 
+assert.match(providerFacade, /export \\* from "\.\.\\/_shared\\/business-assessment-evidence\\.mjs"/,
+    "The inspection-local facade must re-export the canonical shared module");
 assert.match(provider, /export function normalisePublicUrl/,
     "User-supplied URLs must pass server-side public URL validation");
 assert.match(provider, /export function matchBusinessIdentity/,
