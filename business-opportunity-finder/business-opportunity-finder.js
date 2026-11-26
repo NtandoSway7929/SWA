@@ -302,13 +302,13 @@
             } else {
                 if (exclusiveValues.includes(value)) {
                     selected = selected.filter((item) => !exclusiveValues.includes(item));
-                    selected = selected.filter((item) => {
-                        return key !== "discovery" || ![
+                    if (key === "discovery") {
+                        selected = selected.filter((item) => ![
                             "instagram", "facebook", "tiktok", "google_business",
                             "website", "no_website", "directories"
-                        ].includes(item);
-                    });
-                } else {
+                        ].includes(item));
+                    }
+                } else if (!(key === "discovery" && ["referrals", "walk_ins"].includes(value))) {
                     selected = selected.filter((item) => !exclusiveValues.includes(item));
                 }
 
@@ -321,7 +321,7 @@
                     }
                     if (selected.includes("no_online_presence") && [
                         "instagram", "facebook", "tiktok", "google_business",
-                        "website", "directories"
+                        "website", "no_website", "directories"
                     ].includes(value)) {
                         selected = selected.filter((item) => item !== "no_online_presence");
                     }
