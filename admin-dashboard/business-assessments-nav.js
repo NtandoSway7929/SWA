@@ -5,7 +5,7 @@
     const REFRESH_KEY = "swayphics_admin_refresh_token";
     const API_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
     const API_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
-    let assessmentEnquiryIds = new Set();
+    let assessmentEnquiryIds = new Map();
     let lastLinkLoad = 0;
     let linkLoadPromise = null;
 
@@ -40,10 +40,10 @@
                 );
                 if (!response.ok) return assessmentEnquiryIds;
                 const rows = await response.json();
-                assessmentEnquiryIds = new Set(
+                assessmentEnquiryIds = new Map(
                     (Array.isArray(rows) ? rows : [])
                         .filter((row) => row && row.id && row.assessment_id)
-                        .map((row) => String(row.id))
+                        .map((row) => [String(row.id), String(row.assessment_id)])
                 );
                 lastLinkLoad = Date.now();
                 return assessmentEnquiryIds;
@@ -64,7 +64,8 @@
         main.querySelectorAll('[data-ai-record^="enquiries:"]').forEach((card) => {
             const record = String(card.getAttribute("data-ai-record") || "");
             const enquiryId = record.slice("enquiries:".length);
-            if (!assessmentEnquiryIds.has(enquiryId)) return;
+            const assessmentId = assessmentEnquiryIds.get(enquiryId);
+            if (!assessmentId) return;
 
             const legacyConvertButton = card.querySelector("[data-enquiry-status][data-status-next='contacted']");
             if (legacyConvertButton) legacyConvertButton.remove();
@@ -73,9 +74,7 @@
             if (!actions || actions.querySelector("[data-bfa-review-link]")) return;
 
             const reviewLink = document.createElement("a");
-            reviewLink.href = "business-assessments.html?assessment=" + encodeURIComponent(
-                findAssessmentIdForEnquiry(card)
-            );
+            reviewLink.href = "business-assessments.html?assessment=" + encodeURIComponent(assessmentId);
             reviewLink.className = "sway-workspace-button primary";
             reviewLink.dataset.bfaReviewLink = "true";
             reviewLink.textContent = "Review assessment";
@@ -85,12 +84,6 @@
         });
     }
 
-    function findAssessmentIdForEnquiry(card) {
-        const message = card.querySelector(".sway-record-card-detail-wide strong");
-        const text = message ? message.textContent || "" : card.textContent || "";
-        const match = text.match(/Business Opportunity Finder assessment reference:\s*([0-9a-f-]{36})/i);
-        return match ? match[1] : "";
-    }
 
     function start() {
         const root = document.getElementById("sway-admin-workspace");
