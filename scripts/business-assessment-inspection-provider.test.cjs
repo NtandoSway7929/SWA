@@ -51,14 +51,17 @@ const assert = require("node:assert/strict");
         description: "Contact the team.",
         language: "en",
         links: [
-            "https://example.com/contact",
-            "https://example.com/book-now",
+            "https://example.com/contact?email=customer%40example.com&token=private-token",
+            "https://example.com/book-now?session=private-session",
             "https://example.com/about"
         ],
         text: "Contact us at team@example.com or +27 82 123 4567."
     });
     assert.equal(observations.contact_links.length, 1);
     assert.equal(observations.booking_links.length, 1);
+    assert.equal(observations.contact_links[0], "https://example.com/contact");
+    assert.equal(observations.booking_links[0], "https://example.com/book-now");
+    assert.doesNotMatch(JSON.stringify(observations), /customer%40example\.com|private-token|private-session/);
     assert.doesNotMatch(observations.public_excerpt, /team@example.com|\+27 82/);
     assert.ok(observations.public_excerpt.includes("[email]"));
     assert.ok(observations.public_excerpt.includes("[phone]"));
