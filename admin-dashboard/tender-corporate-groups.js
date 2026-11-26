@@ -283,12 +283,68 @@
     ];
   }
 
+  function getEmailAddress(item) {
+    const candidates = [item.email, item.additional_email]
+      .map(value => meaningful(value))
+      .filter(Boolean);
+    return candidates.find(value => /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value)) || "";
+  }
+
+  function emailActionState(item) {
+    const email = getEmailAddress(item);
+    const consent = String(item.email_consent_status || "not_requested").toLowerCase();
+    if (!email) return { disabled: true, reason: "No valid business email address is recorded." };
+    if (item.do_not_contact || item.stage === "do_not_contact" || consent === "revoked") {
+      return { disabled: true, reason: "This prospect is marked Do Not Contact." };
+    }
+    if (consent === "requested") {
+      return { disabled: true, reason: "A permission request is already recorded. Await the prospect's response." };
+    }
+    return {
+      disabled: false,
+      email,
+      permissionRequest: consent !== "granted"
+    };
+  }
+
+  function buildEmailDraft(item) {
+    const action = emailActionState(item);
+    if (action.disabled) return "";
+
+    const business = String(item.business_name || "your organisation").trim();
+    const subject = action.permissionRequest
+      ? "Permission to contact " + business + " | Swayphics"
+      : "Swayphics | " + business;
+    const body = action.permissionRequest ? [
+      "Good day,",
+      "",
+      "I am reaching out on behalf of Swayphics. We came across " + business + " while researching businesses in your sector and would like to ask whether you would be willing to receive one follow-up email outlining a digital or website opportunity that may be relevant to your organisation.",
+      "",
+      "This message is only a request for permission. We will not send further marketing emails unless you give clear consent.",
+      "",
+      "Please reply YES if you consent to receiving that one follow-up email, or NO if you do not.",
+      "",
+      "Kind Regards,",
+      "",
+      "Lesego Gumede",
+      "Swayphics"
+    ].join("\n") : "";
+
+    return "mailto:" + action.email +
+      "?subject=" + encodeURIComponent(subject) +
+      (body ? "&body=" + encodeURIComponent(body) : "");
+  }
+
   function renderProspectRow(item) {
     const website = meaningful(item.website_status) || "Not assessed";
     const tenderStatus = isHighConfidenceAudit(item) ? "Evidence reviewed" : "Research required";
-    const contact = meaningful(item.email) || meaningful(item.phone) || "No direct contact listed";
+    const contact = meaningful(item.email) || meaningful(item.additional_email) || meaningful(item.phone) || "No direct contact listed";
     const score = item.original_score == null ? "Score pending" : "Original score " + item.original_score + "/100";
     const priority = meaningful(item.original_priority) || "Unranked";
+    const emailAction = emailActionState(item);
+    const emailTitle = emailAction.reason || (emailAction.permissionRequest
+      ? "Opens a one-time permission-request draft. Send manually, then record the request in Review."
+      : "Opens an email draft in your default mail application. Nothing is sent automatically.");
     return '<tr data-sway-tender-row="' + escapeHtml(item.id) + '">' +
       '<td><div class="sway-tender-company"><strong>' + escapeHtml(item.business_name) + '</strong><span>' +
         escapeHtml(item.business_category || item.source_prospect_id) + '</span><span class="sway-tender-score-line">' +
@@ -302,7 +358,11 @@
       '<td><div class="sway-tender-contact">' + escapeHtml(contact) + '<span>' +
         escapeHtml(item.contact_verification_status || "Unverified") + '</span></div></td>' +
       '<td><span class="sway-tender-stage">' + escapeHtml(stageLabel(item.stage)) + '</span></td>' +
-      '<td><button type="button" class="sway-tender-open" data-sway-tender-open="' + escapeHtml(item.id) + '">Review</button></td>' +
+      '<td><div class="sway-tender-row-actions">' +
+        '<button type="button" class="sway-tender-open" data-sway-tender-open="' + escapeHtml(item.id) + '">Review</button>' +
+        '<button type="button" class="sway-tender-email" data-sway-tender-email="' + escapeHtml(item.id) + '" title="' + escapeHtml(emailTitle) + '"' +
+          (emailAction.disabled ? " disabled" : "") + '>Email</button>' +
+      '</div></td>' +
     "</tr>";
   }
 
@@ -352,7 +412,7 @@
         '</select></label>' +
       '</div>' +
       '<div class="sway-tender-results-head"><strong>' + state.filtered.length + ' prospects</strong><span>Imported records retain their original audit status. Unreviewed prospects are not treated as qualified.</span></div>' +
-      '<div class="sway-tender-table-wrap"><table class="sway-tender-table"><thead><tr><th>Business</th><th>Industry / location</th><th>Website</th><th>Tender evidence</th><th>Contact</th><th>Campaign stage</th><th></th></tr></thead>' +
+      '<div class="sway-tender-table-wrap"><table class="sway-tender-table"><thead><tr><th>Business</th><th>Industry / location</th><th>Website</th><th>Tender evidence</th><th>Contact</th><th>Campaign stage</th><th>Actions</th></tr></thead>' +
       '<tbody>' + (tableRows || '<tr><td colspan="7" class="sway-tender-empty">No prospects match the selected filters.</td></tr>') + '</tbody></table></div>' +
       (selected ? renderDetail(selected) : '<div class="sway-tender-empty-state"><strong>Select a prospect to review its research.</strong><span>Open any row to inspect the contact details, website findings, tender evidence and audit notes.</span></div>') +
       '<p class="sway-tender-footnote">Research data imported from Swayphics_Tender_Prospects_Audited.xlsx. The original scores are historical pre-audit values, not validated current qualification scores. No email has been sent from this workspace.</p>';
@@ -487,6 +547,12 @@
       renderCampaign();
       const detail = panel.querySelector(".sway-tender-detail");
       if (detail) detail.scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
+    panel.querySelectorAll("[data-sway-tender-email]").forEach(button => button.addEventListener("click", () => {
+      const item = state.prospects.find(prospect => prospect.id === button.dataset.swayTenderEmail);
+      if (!item) return;
+      const draft = buildEmailDraft(item);
+      if (draft) window.location.href = draft;
     }));
     panel.querySelectorAll("[data-sway-tender-close]").forEach(button => button.addEventListener("click", () => {
       state.selectedId = null;
