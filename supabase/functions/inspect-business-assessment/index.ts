@@ -549,7 +549,8 @@ async function processInspection(inspectionId: string, assessmentId: string) {
                     title,
                     text: text.slice(0, 12000),
                     sourceType: candidate.source_type,
-                    sourceUrl: finalUrl
+                    sourceUrl: finalUrl,
+                    expectedPlatform: candidate.platform || undefined
                 });
                 const observations = buildPageObservations({
                     title,
