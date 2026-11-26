@@ -38,6 +38,12 @@ assert.match(page, /read-only review/i,
     "The viewer must disclose that it does not convert leads or change assessments");
 assert.match(nav, /Business assessments/,
     "A Business assessments destination must be injected into the CRM navigation");
+assert.match(nav, /sessionVerified/,
+    "Assessment navigation must wait for the verified administrator session");
+assert.match(nav, /embeddedAssessmentId/,
+    "Assessment-linked enquiry protection must inspect the embedded reference immediately");
+assert.match(nav, /directAssessmentId[\\s\\S]*attachAssessmentReviewAction/,
+    "The legacy enquiry conversion action must be removed before the asynchronous lookup");
 assert.match(nav, /data-enquiry-status\]\[data-status-next='contacted'\]/,
     "The generic Contacted-to-Lead action must be removed for assessment enquiries");
 assert.match(script, /convert_business_assessment_to_lead/, "The viewer must call the dedicated admin conversion RPC");
