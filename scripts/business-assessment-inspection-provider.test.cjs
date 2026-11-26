@@ -88,6 +88,17 @@ const assert = require("node:assert/strict");
     });
     assert.equal(officialSocial.status, "confirmed");
 
+    const redirectedSocial = provider.matchBusinessIdentity({
+        businessName: "Azande Hair & Beauty",
+        location: "Pretoria",
+        title: "Azande Hair & Beauty | Pretoria",
+        text: "Welcome to Azande Hair & Beauty in Pretoria.",
+        sourceType: "social_profile",
+        sourceUrl: "https://www.facebook.com/azandehair/",
+        expectedPlatform: "instagram"
+    });
+    assert.equal(redirectedSocial.status, "ambiguous");
+
     const unrelatedSocial = provider.matchBusinessIdentity({
         businessName: "Azande Hair & Beauty",
         location: "Pretoria",
