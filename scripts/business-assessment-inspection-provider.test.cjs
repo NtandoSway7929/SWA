@@ -3,7 +3,7 @@
 const assert = require("node:assert/strict");
 
 (async () => {
-    const provider = await import("../supabase/functions/inspect-business-assessment/provider.mjs");
+    const provider = await import("../supabase/functions/_shared/business-assessment-evidence.mjs");
 
     assert.equal(
         provider.normalisePublicUrl("https://www.example.co.za/path#section"),
