@@ -259,7 +259,8 @@ jobs:
             supabase/tests/yoco-source/202611110005_yoco_ledger_invariants.test.sql \
             supabase/tests/yoco-source/202611110010_yoco_admin_invoice_settings.test.sql \
             supabase/tests/yoco-source/202611110011_yoco_reconciliation_admin_workflow.test.sql \
-            supabase/tests/yoco-source/202611120002_bank_transfer_submissions.test.sql \\\n            supabase/tests/yoco-source/20261126190001_admin_archived_invoice_permanent_delete.test.sql
+            supabase/tests/yoco-source/202611120002_bank_transfer_submissions.test.sql \
+            supabase/tests/yoco-source/20261126190001_admin_archived_invoice_permanent_delete.test.sql
 
       - name: Run Yoco webhook lease transaction scenarios
         shell: bash
