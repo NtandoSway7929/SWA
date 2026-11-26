@@ -76,9 +76,11 @@ A valid contact request creates one `website_enquiries` row with source `Busines
 - The respondent can request contact only after the report is displayed. The request has a separate contact notice and consent checkbox; details are submitted to the linked enquiry path, not stored in the assessment JSON.
 - The page remains `noindex, nofollow`. The report and step disclosures explain that answers are stored and that independent website/social/Google Business Profile inspection has not yet occurred.
 - A separate `admin-dashboard/business-assessments.html` page uses the existing Swayphics admin access and refresh tokens, verifies the Supabase user and the `is_swayphics_admin` RPC, and reads assessment records under RLS.
-- The admin viewer is read-only. It shows the assessment, evidence classifications, recommendations, and linked enquiry contact details when a contact request exists. It does not expose the submission key.
-- The CRM navigation adds a Business assessments destination only after the existing admin session resolves successfully. Assessment-linked enquiry cards receive a Review assessment link, and their generic `Contacted → Lead` action is removed so they cannot be converted through the old Website/contacted conversion path.
-- Assessment-to-lead conversion, linked lead history, proposal snapshot handoff, and external digital-presence inspection remain separate follow-on work.
+- Assessment answers and report content are read-only in the admin viewer. It shows evidence classifications, recommendations and linked enquiry contact details when a contact request exists. It does not expose the submission key.
+- The CRM navigation adds a Business assessments destination only after the existing admin session resolves successfully. Assessment-linked enquiry cards have their generic `Contacted → Lead` action removed immediately and receive a Review assessment link, so they cannot be converted through the old Website/contacted conversion path.
+- A separate explicit conversion UI now checks for possible existing leads, lets an administrator link a confirmed match without modifying that lead, or deliberately create a separate new lead after confirmation.
+- The conversion UI calls the new `convert_business_assessment_to_lead` RPC defined in draft migration `20261126170200_business_assessment_lead_conversion.sql`. That migration has **not** been applied to production. The UI and migration must be reviewed and deployed together after approval.
+- Proposal snapshot handoff and external digital-presence inspection remain separate follow-on work.
 
 ## Rollout boundary
 
@@ -88,7 +90,7 @@ The database and Edge Function are deployed in production. The public assessment
 ## Draft: assessment-to-lead conversion (not deployed)
 
 A separate migration has been prepared on the feature branch:
-`20261126170200_business_assessment_lead_conversion.sql`.
+`20261126170200_business_assessment_lead_conversion.sql`. It is a draft and has **not** been applied to the production project.
 
 It introduces an admin-authorised, SECURITY DEFINER RPC with a fixed empty search path. The RPC has three explicit actions:
 
