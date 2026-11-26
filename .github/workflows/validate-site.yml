@@ -14,6 +14,35 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Test Business Opportunity Finder preview
+        run: |
+          set -e
+          node --check business-opportunity-finder/business-opportunity-finder.js
+          node scripts/business-opportunity-finder.test.cjs
+          node scripts/business-opportunity-finder-flow.test.cjs
+          node scripts/business-assessment-admin.test.cjs
+          node scripts/business-assessment-conversion.test.cjs
+          node scripts/business-assessment-lead-history.test.cjs
+          node scripts/business-assessment-proposal-snapshot.test.cjs
+          node --check admin-dashboard/business-assessment-lead-history.js
+          node scripts/business-assessment-conversion.test.cjs
+          node --check admin-dashboard/business-assessments.js
+          node --check admin-dashboard/business-assessments-nav.js
+          node --check supabase/functions/submit-business-assessment/rules.mjs
+          node --check supabase/functions/inspect-business-assessment/provider.mjs
+          node scripts/business-opportunity-rules.test.cjs
+          node scripts/business-assessment-inspection-provider.test.cjs
+          node scripts/business-assessment-inspection.test.cjs
+
+
+      - name: Type-check Business Opportunity Finder inspection function
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check Business Opportunity Finder inspection Edge Function
+        run: deno check supabase/functions/inspect-business-assessment/index.ts
+
       - name: Validate standalone JavaScript
         run: |
           set -e
