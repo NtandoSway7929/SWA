@@ -118,6 +118,37 @@
                             <span id="bof-progress-fill"></span>
                         </div>
                         <div id="bof-step-content" class="bof-step-content" aria-live="polite"></div>
+                        <section class="bof-presence-fields" id="bof-public-presence" hidden aria-labelledby="bof-public-presence-title">
+                            <div class="bof-presence-heading">
+                                <span class="bof-report-card-label">OPTIONAL / PUBLIC-SOURCE CHECK</span>
+                                <h3 id="bof-public-presence-title">Would you like Swayphics to check your public business presence?</h3>
+                                <p>This is separate from your five answers and from asking us to contact you. An authorised Swayphics administrator may use the public links below and discoverable public listings to check your website, Google Business Profile and public social pages. Private or login-only content will not be accessed.</p>
+                            </div>
+                            <div class="bof-presence-grid">
+                                <label>Business website <span>(optional)</span>
+                                    <input id="bof-presence-website" type="url" inputmode="url" maxlength="2048" placeholder="https://yourbusiness.co.za">
+                                </label>
+                                <label>Google Business Profile / Maps link <span>(optional)</span>
+                                    <input id="bof-presence-google" type="url" inputmode="url" maxlength="2048" placeholder="https://maps.app.goo.gl/...">
+                                </label>
+                                <label>Instagram profile <span>(optional)</span>
+                                    <input id="bof-presence-instagram" type="url" inputmode="url" maxlength="2048" placeholder="https://instagram.com/yourbusiness">
+                                </label>
+                                <label>Facebook page <span>(optional)</span>
+                                    <input id="bof-presence-facebook" type="url" inputmode="url" maxlength="2048" placeholder="https://facebook.com/yourbusiness">
+                                </label>
+                                <label>TikTok profile <span>(optional)</span>
+                                    <input id="bof-presence-tiktok" type="url" inputmode="url" maxlength="2048" placeholder="https://tiktok.com/@yourbusiness">
+                                </label>
+                                <label>LinkedIn page <span>(optional)</span>
+                                    <input id="bof-presence-linkedin" type="url" inputmode="url" maxlength="2048" placeholder="https://linkedin.com/company/yourbusiness">
+                                </label>
+                            </div>
+                            <label class="bof-presence-consent">
+                                <input id="bof-inspection-consent" type="checkbox">
+                                <span>I agree that Swayphics may inspect the public business links I provide and search for public website, Google Business Profile and social-profile information for this business, for the purpose of preparing this assessment. I understand this does not request contact from Swayphics and does not guarantee that a source can be accessed or verified. See the <a href="../privacy-policy/" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+                            </label>
+                        </section>
                         <p class="bof-step-error" id="bof-step-error" role="alert" hidden></p>
                         <div class="bof-step-actions">
                             <button class="bof-back-button" type="button" id="bof-back" hidden>← Back</button>
