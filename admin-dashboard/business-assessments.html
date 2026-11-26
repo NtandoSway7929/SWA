@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="description" content="Private Swayphics Business Opportunity Finder assessment records.">
+    <title>Business Assessments | Swayphics Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Raleway:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin-workspace.css?v=20261126-assessment-admin-1">
+    <link rel="stylesheet" href="business-assessments.css?v=20261126-1">
+</head>
+<body class="sway-business-assessments-page">
+    <div class="bfa-page-shell">
+        <header class="bfa-header">
+            <a class="bfa-brand" href="index.html" aria-label="Return to Swayphics admin workspace">
+                <span class="bfa-brand-mark">S</span>
+                <span><strong>Swayphics</strong><small>ADMINISTRATION</small></span>
+            </a>
+            <a class="bfa-back-link" href="index.html">← Back to workspace</a>
+        </header>
+
+        <main class="bfa-main">
+            <section class="bfa-hero">
+                <div>
+                    <span class="bfa-eyebrow">CLIENTS &amp; PIPELINE / BUSINESS OPPORTUNITY FINDER</span>
+                    <h1>Business assessments</h1>
+                    <p>Review submitted business assessments, their evidence-labelled findings and any optional contact request. Assessment records are private to authorised Swayphics administrators.</p>
+                </div>
+                <button class="bfa-refresh-button" id="bfa-refresh" type="button">Refresh records</button>
+            </section>
+
+            <div class="bfa-status" id="bfa-status" role="status" aria-live="polite">Verifying your Swayphics administrator session…</div>
+
+            <section class="bfa-app" id="bfa-app" hidden>
+                <div class="bfa-toolbar">
+                    <label class="bfa-search">
+                        <span>Search assessments</span>
+                        <input id="bfa-search" type="search" placeholder="Business name, industry or priority" autocomplete="off">
+                    </label>
+                    <div class="bfa-filters" role="group" aria-label="Filter assessments">
+                        <button type="button" data-bfa-filter="all" aria-pressed="true">All</button>
+                        <button type="button" data-bfa-filter="contact_requested" aria-pressed="false">Contact requested</button>
+                        <button type="button" data-bfa-filter="completed" aria-pressed="false">Completed</button>
+                        <button type="button" data-bfa-filter="converted" aria-pressed="false">Converted</button>
+                        <button type="button" data-bfa-filter="archived" aria-pressed="false">Archived</button>
+                    </div>
+                </div>
+
+                <div class="bfa-workspace">
+                    <section class="bfa-list-panel" aria-labelledby="bfa-list-title">
+                        <div class="bfa-panel-heading">
+                            <div><span class="bfa-eyebrow">ASSESSMENT HISTORY</span><h2 id="bfa-list-title">Submitted reports</h2></div>
+                            <span class="bfa-count" id="bfa-count">0 records</span>
+                        </div>
+                        <div class="bfa-record-list" id="bfa-record-list">
+                            <p class="bfa-empty">No assessment records have been loaded.</p>
+                        </div>
+                    </section>
+
+                    <section class="bfa-detail-panel" id="bfa-detail" aria-labelledby="bfa-detail-title" hidden>
+                        <div class="bfa-detail-placeholder" id="bfa-detail-placeholder">
+                            <span class="bfa-detail-placeholder-icon" aria-hidden="true">↖</span>
+                            <h2 id="bfa-detail-title">Select an assessment</h2>
+                            <p>Choose a report from the list to review its submitted context, findings and contact request.</p>
+                        </div>
+                        <div id="bfa-detail-content" hidden></div>
+                    </section>
+                </div>
+                <p class="bfa-security-note">Read-only review. This screen does not create leads, mark enquiries as contacted, or change assessment answers. A dedicated assessment-to-lead conversion action will be added separately.</p>
+            </section>
+        </main>
+        <footer class="bfa-footer"><span>© 2026 Swayphics</span><span>Private administration workspace</span></footer>
+    </div>
+    <script src="business-assessments.js?v=20261126-1" defer></script>
+</body>
+</html>
