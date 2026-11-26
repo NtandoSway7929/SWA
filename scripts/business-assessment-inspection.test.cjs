@@ -57,6 +57,18 @@ assert.match(provider, /export function normalisePublicUrl/,
     "User-supplied URLs must pass server-side public URL validation");
 assert.match(provider, /export function matchBusinessIdentity/,
     "Source identity matching must be explicit and testable");
+assert.match(provider, /sourceType === "website"/,
+    "A website must have an independent registered-domain identity signal");
+assert.match(provider, /sourceType === "social_profile"/,
+    "A social profile must have an independent profile-URL identity signal");
+assert.match(provider, /url\.search = ""/,
+    "Stored non-Google source URLs must not retain query tokens or tracking parameters");
+assert.match(functionSource, /missingSocialPlatforms/,
+    "Supplying one social URL must not disable discovery of missing supported platforms");
+assert.match(functionSource, /const candidateUrl = safePublicUrl\(item\.url\)/,
+    "Malformed search-result URLs must be skipped instead of aborting inspection");
+assert.match(functionSource, /sourceType: candidate\.source_type/,
+    "The source type and final URL must be used for identity validation");
 assert.match(provider, /export function sanitiseExcerpt/,
     "Stored evidence excerpts must be sanitised and bounded");
 assert.match(provider, /export function mapTinyFishFetchError/,
