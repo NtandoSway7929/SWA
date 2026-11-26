@@ -4,6 +4,7 @@ import {
     INSPECTION_VERSION,
     buildPageObservations,
     detectPlatform,
+    isGoogleMapsUrl,
     mapTinyFishFetchError,
     matchBusinessIdentity,
     normalisePublicUrl,
@@ -164,26 +165,7 @@ async function fetchJson(url: string, init: RequestInit, timeoutMs: number) {
     }
 }
 
-function hostOf(value: string) {
-    try {
-        return new URL(value).hostname.toLowerCase();
-    } catch {
-        return "";
-    }
-}
 
-function isGoogleMapsUrl(value: string) {
-    try {
-        const url = new URL(value);
-        const host = url.hostname.toLowerCase();
-        if (host === "maps.app.goo.gl" || host === "g.page") return true;
-        const isGoogleHost = /(^|\.)google\.[a-z.]+$/i.test(host);
-        return isGoogleHost &&
-            (host.startsWith("maps.") || /^\/maps(?:\/|$)/i.test(url.pathname));
-    } catch {
-        return false;
-    }
-}
 
 function isSocialUrl(value: string) {
     return Boolean(detectPlatform(value));
