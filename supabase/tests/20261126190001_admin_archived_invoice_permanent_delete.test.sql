@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(30);
+select extensions.plan(31);
 
 select extensions.has_function(
     'innerme_private',
@@ -100,6 +100,12 @@ select extensions.ok(
         'innerme_private.purge_archived_invoice_test_data(uuid,text)'::regprocedure
     )) > 0,
     'purge helper verifies the active Swayphics owner'
+);
+
+select extensions.ok(
+    (select prosecdef and proconfig @> array['search_path=""'] from pg_proc
+     where oid='public.is_swayphics_owner()'::regprocedure),
+    'owner predicate is SECURITY DEFINER with an empty search_path'
 );
 select extensions.ok(
     position('v_invoice.archived is distinct from true' in pg_get_functiondef(
