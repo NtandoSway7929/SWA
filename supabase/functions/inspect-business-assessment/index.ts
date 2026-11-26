@@ -24,6 +24,7 @@ const ALLOWED_ORIGINS = new Set([
     "https://www.swayphics.co.za"
 ]);
 const MAX_BODY_BYTES = 8000;
+const MAX_PROVIDER_RESPONSE_BYTES = 2_000_000;
 const MAX_FETCH_URLS = 8;
 const SEARCH_TIMEOUT_MS = 15000;
 const FETCH_TIMEOUT_MS = 45000;
@@ -107,7 +108,38 @@ async function fetchJson(url: string, init: RequestInit, timeoutMs: number) {
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
         const response = await fetch(url, { ...init, signal: controller.signal });
-        const bodyText = await response.text();
+        const announcedLength = Number(response.headers.get("content-length") || 0);
+        if (announcedLength > MAX_PROVIDER_RESPONSE_BYTES) {
+            throw Object.assign(new Error("TinyFish returned an oversized response."), {
+                providerCode: "response_too_large",
+                status: response.status
+            });
+        }
+        const reader = response.body?.getReader();
+        const chunks: Uint8Array[] = [];
+        let byteLength = 0;
+        if (reader) {
+            while (true) {
+                const part = await reader.read();
+                if (part.done) break;
+                byteLength += part.value.byteLength;
+                if (byteLength > MAX_PROVIDER_RESPONSE_BYTES) {
+                    await reader.cancel();
+                    throw Object.assign(new Error("TinyFish returned an oversized response."), {
+                        providerCode: "response_too_large",
+                        status: response.status
+                    });
+                }
+                chunks.push(part.value);
+            }
+        }
+        const merged = new Uint8Array(byteLength);
+        let offset = 0;
+        chunks.forEach((chunk) => {
+            merged.set(chunk, offset);
+            offset += chunk.byteLength;
+        });
+        const bodyText = new TextDecoder().decode(merged);
         let data: any = null;
         try {
             data = bodyText ? JSON.parse(bodyText) : null;
@@ -645,7 +677,20 @@ Deno.serve(async (request) => {
         .eq("assessment_id", body.assessment_id)
         .in("status", ["queued", "running"])
         .maybeSingle();
-    if (activeError) return jsonResponse({ error: "An active inspection could not be checked." }, 503, origin);
+    if (activeError) return jsonResponse({ error: "An active inspection could not be checked." }, 503, origin);    const rateWindowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: recentRuns, error: rateError } = await service
+        .from("business_assessment_inspections")
+        .select("id", { count: "exact", head: true })
+        .eq("requested_by", adminUserId)
+        .gte("created_at", rateWindowStart);
+    if (rateError) return jsonResponse({ error: "The inspection limit could not be checked." }, 503, origin);
+    if ((recentRuns || 0) >= 20) {
+        return jsonResponse({
+            error: "The inspection limit has been reached. Try again later."
+        }, 429, origin);
+    }
+
+
     if (active) {
         const started = Date.parse(active.created_at || "");
         const stale = Number.isFinite(started) && Date.now() - started > 5 * 60 * 1000;
@@ -690,6 +735,15 @@ Deno.serve(async (request) => {
                 .maybeSingle();
             if (replay) {
                 return jsonResponse({ ok: true, inspection_id: replay.id, status: replay.status, idempotent_replay: true }, 200, origin);
+            }
+            const { data: concurrent } = await service
+                .from("business_assessment_inspections")
+                .select("id, status")
+                .eq("assessment_id", body.assessment_id)
+                .in("status", ["queued", "running"])
+                .maybeSingle();
+            if (concurrent) {
+                return jsonResponse({ ok: true, inspection_id: concurrent.id, status: concurrent.status, existing_active_run: true }, 200, origin);
             }
         }
         return jsonResponse({ error: "The inspection could not be queued. Please retry." }, 503, origin);
