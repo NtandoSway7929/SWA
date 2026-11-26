@@ -10,6 +10,10 @@ const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "
 const script = fs.readFileSync(path.join(root, "admin-dashboard", "tender-corporate-groups.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "admin-dashboard", "tender-corporate-groups.css"), "utf8");
 const migration = fs.readFileSync(
+const evidenceMigration = fs.readFileSync(
+  path.join(root, "supabase", "migrations", "20261126153000_preserve_tender_workbook_detail.sql"),
+  "utf8"
+);
   path.join(root, "supabase", "migrations", "20261125110000_tender_corporate_groups_campaign.sql"),
   "utf8"
 );
@@ -30,6 +34,13 @@ for (const contract of [
   'data-sway-tender-mode="campaign"',
   'lead_campaigns',
   'lead_campaign_prospects',
+  'lead_campaign_tender_evidence',
+  'original_score',
+  'original_priority',
+  'contact_person',
+  'website_audit_problem',
+  'commercial_intelligence_assessment',
+  'renderTenderEvidence',
   'data-sway-tender-open',
   'data-sway-tender-save-workflow',
   'data-sway-tender-consent-request',
@@ -58,12 +69,22 @@ assert.match(migration, /alter table public\.lead_campaign_prospects enable row 
 assert.match(migration, /public\.is_swayphics_admin\(\)/i);
 assert.match(migration, /references public\.leads\(id\) on delete set null/i);
 assert.match(migration, /unique \(campaign_id, source_prospect_id\)/i);
+assert.match(evidenceMigration, /alter table public\\.lead_campaign_prospects/i);
+assert.match(evidenceMigration, /add column if not exists original_score/i);
+assert.match(evidenceMigration, /create table if not exists public\\.lead_campaign_tender_evidence/i);
+assert.match(evidenceMigration, /alter table public\\.lead_campaign_tender_evidence enable row level security/i);
+assert.match(evidenceMigration, /public\\.is_swayphics_admin\\(\\)/i);
+assert.match(script, /Original workbook qualification score/);
+assert.match(script, /lead_campaign_tender_evidence/);
 
 for (const selector of [
   ".sway-tender-tabs",
   ".sway-tender-panel",
   ".sway-tender-table-wrap",
   ".sway-tender-detail-grid",
+  ".sway-tender-detail-summary",
+  ".sway-tender-evidence-section",
+  ".sway-tender-evidence-record",
   "body.sway-dark-mode",
   "@media(max-width:680px)",
   "prefers-reduced-motion"
