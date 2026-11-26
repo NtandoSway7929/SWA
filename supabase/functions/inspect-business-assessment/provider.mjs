@@ -45,10 +45,10 @@ export function normalisePublicUrl(value) {
 export function detectPlatform(value) {
     try {
         const hostname = new URL(value).hostname.toLowerCase();
-        if (/(^|\\.)instagram\\.com$/i.test(hostname)) return "instagram";
-        if (/(^|\\.)facebook\\.com$/i.test(hostname)) return "facebook";
-        if (/(^|\\.)tiktok\\.com$/i.test(hostname)) return "tiktok";
-        if (/(^|\\.)linkedin\\.com$/i.test(hostname)) return "linkedin";
+        if (/(^|\.)instagram\.com$/i.test(hostname)) return "instagram";
+        if (/(^|\.)facebook\.com$/i.test(hostname)) return "facebook";
+        if (/(^|\.)tiktok\.com$/i.test(hostname)) return "tiktok";
+        if (/(^|\.)linkedin\.com$/i.test(hostname)) return "linkedin";
         return null;
     } catch {
         return null;
