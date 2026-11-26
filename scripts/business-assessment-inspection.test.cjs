@@ -16,6 +16,7 @@ const publicForm = read("business-opportunity-finder/index.html");
 const publicScript = read("business-opportunity-finder/business-opportunity-finder.js");
 const adminScript = read("admin-dashboard/business-assessments.js");
 const adminCss = read("admin-dashboard/business-assessments.css");
+const adminAssessmentsPage = read("admin-dashboard/business-assessments.html");
 
 new Function(publicScript);
 new Function(adminScript);
@@ -101,6 +102,8 @@ assert.match(publicScript, /inspection_consent: false/,
 assert.doesNotMatch(publicScript, /TINYFISH_API_KEY|SERVICE_ROLE_KEY/,
     "The public browser must not contain provider or service-role credentials");
 
+assert.match(adminAssessmentsPage, /business-assessments\\.css\\?v=20261126-phase4-inspection-1/);
+assert.match(adminAssessmentsPage, /business-assessments\\.js\\?v=20261126-phase4-inspection-1/);
 assert.match(adminScript, /functions\/v1\/inspect-business-assessment/,
     "The private admin viewer must trigger the inspection Edge Function");
 assert.match(adminScript, /window\.confirm/,
