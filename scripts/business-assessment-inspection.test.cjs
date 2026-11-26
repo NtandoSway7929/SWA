@@ -26,6 +26,14 @@ assert.match(config, /\[functions\.inspect-business-assessment\]\s*\nverify_jwt 
     "The inspection function must use Supabase gateway JWT verification");
 assert.match(functionSource, /TINYFISH_API_KEY/,
     "The server-side inspection worker must read the TinyFish API key from an environment secret");
+assert.match(functionSource, /Deno\\.env\\.get\\("TINYFISH_DATA_USE_APPROVED"\\) === "true"/,
+    "Live provider use must require a separately approved data-use gate");
+assert.match(functionSource, /code: "provider_data_use_not_approved"/,
+    "Unapproved provider data use must fail closed with an explicit internal status");
+const approvalGateIndex = functionSource.indexOf("if (!TINYFISH_DATA_USE_APPROVED)");
+const inspectionRunInsertIndex = functionSource.indexOf('.from("business_assessment_inspections")\\n        .insert({');
+assert.ok(approvalGateIndex >= 0 && approvalGateIndex < inspectionRunInsertIndex,
+    "The approval gate must run before an inspection record is created or provider work is scheduled");
 assert.match(functionSource, /X-API-Key/,
     "TinyFish REST calls must authenticate using the API key header");
 assert.match(functionSource, /auth\.getUser/,
