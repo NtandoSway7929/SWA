@@ -1,0 +1,67 @@
+.bfa-lead-history-content {
+    display: grid;
+    gap: 10px;
+}
+.bfa-lead-history-card {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid rgba(0, 32, 150, .11);
+    border-radius: 12px;
+    background: linear-gradient(145deg, #fff, #f7f9ff);
+}
+.bfa-lead-history-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.bfa-lead-history-title {
+    color: #11264f;
+    font: 800 .86rem "Raleway", sans-serif;
+}
+.bfa-lead-history-status {
+    color: #435b83;
+    font-size: .66rem;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+.bfa-lead-history-summary,
+.bfa-lead-history-meta,
+.bfa-lead-history-empty,
+.bfa-lead-history-loading {
+    margin: 0;
+    color: #5a6880;
+    font-size: .76rem;
+    line-height: 1.6;
+}
+.bfa-lead-history-meta {
+    color: #8290a6;
+    font-size: .68rem;
+}
+.bfa-lead-history-findings {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    border-left: 3px solid #7daaf9;
+    border-radius: 0 8px 8px 0;
+    background: #f2f6ff;
+}
+.bfa-lead-history-evidence-label {
+    color: #45639a;
+    font-size: .59rem;
+    font-weight: 800;
+    letter-spacing: .09em;
+}
+.bfa-lead-history-findings p {
+    margin: 0;
+    color: #40506d;
+    font-size: .72rem;
+    line-height: 1.45;
+}
+.bfa-lead-history-card .sway-workspace-button {
+    justify-self: start;
+    width: auto;
+    text-decoration: none;
+}
