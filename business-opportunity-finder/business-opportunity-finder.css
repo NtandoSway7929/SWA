@@ -515,7 +515,7 @@ body.bof-page {
     transform: translateY(-1px);
 }
 
-.bof-option[aria-checked="true"] {
+.bof-option[aria-pressed="true"] {
     border-color: var(--bof-accent);
     background: #F3F7FF;
     box-shadow: 0 0 0 2px rgba(1,82,244,.08);
@@ -538,7 +538,7 @@ body.bof-page {
     border-radius: 50%;
 }
 
-.bof-option[aria-checked="true"] .bof-option-indicator {
+.bof-option[aria-pressed="true"] .bof-option-indicator {
     border-color: var(--bof-accent);
     background: var(--bof-accent);
 }
