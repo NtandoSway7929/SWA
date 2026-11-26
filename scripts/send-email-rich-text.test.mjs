@@ -23,10 +23,11 @@ test("preserves approved formatting and removes executable or unsupported markup
 
 test("normalises Word RGB colours and preserves checklist semantics", () => {
   const safe = sanitizeEmailRichHtml(
-    '<ul class="sway-rich-checklist"><li>☐ First task</li></ul>' +
+    '<ul class="sway-rich-checklist"><li><span class="sway-rich-task-box">☐</span> First task</li></ul>' +
     '<p style="color:rgb(1, 2, 3);background-color:rgb(255, 242, 168)">Highlighted</p>'
   );
   assert.match(safe, /class="sway-rich-checklist"/);
+  assert.match(safe, /class="sway-rich-task-box"/);
   assert.match(safe, /color:#010203/);
   assert.match(safe, /background-color:#fff2a8/);
   assert.match(richHtmlToPlainText(safe), /☐ First task/);
