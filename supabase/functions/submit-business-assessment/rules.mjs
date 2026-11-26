@@ -3,7 +3,7 @@ import {
     detectPlatform,
     isGoogleMapsUrl as isGoogleBusinessUrl,
     normalisePublicUrl
-} from "../inspect-business-assessment/provider.mjs";
+} from "../_shared/business-assessment-evidence.mjs";
 
 export const ASSESSMENT_VERSION = "bof-2026-11-v1";
 export const CONTACT_NOTICE_VERSION = "bof-contact-v1";
