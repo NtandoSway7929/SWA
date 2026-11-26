@@ -30,6 +30,66 @@ const assert = require("node:assert/strict");
     assert.equal(firstReport.findings[0].evidence_classification, "self_reported");
     assert.ok(firstReport.recommendations.some((item) => item.service_id === "replies"));
     assert.ok(!firstReport.recommendations.some((item) => item.service_id === "website"));
+    assert.equal(first.businessProfile.public_presence.inspection_consent, false);
+
+    const consented = rules.normalizeAssessmentPayload(makePayload({
+        business_profile: {
+            public_presence: {
+                inspection_consent: true,
+                inspection_consent_version: "bof-public-presence-v1",
+                website_url: "https://example.co.za",
+                google_business_profile_url: "https://maps.app.goo.gl/example",
+                social_profile_urls: [
+                    { platform: "instagram", url: "https://www.instagram.com/example/" }
+                ]
+            }
+        }
+    }));
+    assert.equal(consented.businessProfile.public_presence.inspection_consent, true);
+    assert.equal(consented.businessProfile.public_presence.website_url, "https://example.co.za/");
+    assert.equal(consented.businessProfile.public_presence.social_profile_urls[0].platform, "instagram");
+
+    const unconsented = rules.normalizeAssessmentPayload(makePayload({
+        business_profile: {
+            public_presence: {
+                inspection_consent: false,
+                website_url: "https://example.co.za",
+                social_profile_urls: [{ platform: "instagram", url: "https://www.instagram.com/example/" }]
+            }
+        }
+    }));
+    assert.equal(unconsented.businessProfile.public_presence.inspection_consent, false);
+    assert.equal(unconsented.businessProfile.public_presence.website_url, undefined);
+
+    assert.throws(() => rules.normalizeAssessmentPayload(makePayload({
+        business_profile: {
+            public_presence: {
+                inspection_consent: true,
+                inspection_consent_version: "wrong",
+                website_url: "https://example.co.za"
+            }
+        }
+    })), /consent version is not supported/);
+    assert.throws(() => rules.normalizeAssessmentPayload(makePayload({
+        business_profile: {
+            public_presence: {
+                inspection_consent: true,
+                inspection_consent_version: "bof-public-presence-v1",
+                website_url: "http://127.0.0.1/private"
+            }
+        }
+    })), /public HTTP or HTTPS/);
+    assert.throws(() => rules.normalizeAssessmentPayload(makePayload({
+        business_profile: {
+            public_presence: {
+                inspection_consent: true,
+                inspection_consent_version: "bof-public-presence-v1",
+                social_profile_urls: [
+                    { platform: "instagram", url: "https://facebook.com/not-instagram" }
+                ]
+            }
+        }
+    })), /must match Instagram/);
 
     const noWebsiteAnswers = base.responses.map((entry) => {
         if (entry.question_id === "discovery") return { ...entry, answer: ["no_website", "instagram"] };
