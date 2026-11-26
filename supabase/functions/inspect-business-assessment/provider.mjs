@@ -8,13 +8,6 @@ const DISALLOWED_HOSTS = new Set([
     "169.254.169.254"
 ]);
 
-const PLATFORM_HOSTS = [
-    ["instagram", /(^|\.)instagram\.com$/i],
-    ["facebook", /(^|\.)facebook\.com$/i],
-    ["tiktok", /(^|\.)tiktok\.com$/i],
-    ["linkedin", /(^|\.)linkedin\.com$/i]
-];
-
 export function normalisePublicUrl(value) {
     if (typeof value !== "string" || !value.trim()) return null;
     let url;
@@ -124,9 +117,24 @@ export function sanitiseExcerpt(value, maxLength = 500) {
         .slice(0, maxLength);
 }
 
+function sanitisePublicLink(value) {
+    if (typeof value !== "string") return null;
+    try {
+        const normalised = normalisePublicUrl(value);
+        if (!normalised) return null;
+        const url = new URL(normalised);
+        // Public link query strings can contain tracking IDs, email addresses or booking tokens.
+        url.search = "";
+        url.hash = "";
+        return url.toString();
+    } catch {
+        return null;
+    }
+}
+
 export function buildPageObservations({ title, description, language, links, text }) {
     const safeLinks = Array.isArray(links)
-        ? links.filter((value) => typeof value === "string" && /^https?:\/\//i.test(value)).slice(0, 80)
+        ? links.map(sanitisePublicLink).filter(Boolean).slice(0, 80)
         : [];
     const contactLinks = safeLinks.filter((value) => /contact|enquir|reach-us|reach_us/i.test(value)).slice(0, 5);
     const bookingLinks = safeLinks.filter((value) => /book|booking|appointment|reservation|schedule/i.test(value)).slice(0, 5);
