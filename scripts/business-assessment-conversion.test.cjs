@@ -6,7 +6,7 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const migration = fs.readFileSync(
-    path.join(root, "supabase", "migrations", "20261126170200_business_assessment_lead_conversion.sql"),
+    path.join(root, "supabase", "migrations", "20261126181839_business_assessment_lead_conversion.sql"),
     "utf8"
 );
 const adminScript = fs.readFileSync(
