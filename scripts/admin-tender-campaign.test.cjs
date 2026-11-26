@@ -23,7 +23,7 @@ assert.doesNotThrow(() => new vm.Script(script), "campaign module must be valid 
 assert.doesNotThrow(() => new vm.Script(workspaceScript), "shared admin workspace must be valid JavaScript");
 
 assert.match(html, /tender-corporate-groups\.css\?v=20261126-email-action-1/);
-assert.match(html, /tender-corporate-groups\.js\?v=20261126-branded-composer-1/);
+assert.match(html, /tender-corporate-groups\.js\?v=20261126-branded-composer-2/);
 assert.match(html, /tender-mail=20261126-branded-composer-1/);
 assert.ok(
   html.indexOf("free-homepage-preview-campaign.js") < html.indexOf("tender-corporate-groups.js"),
@@ -66,6 +66,9 @@ assert.match(script, /qualification_status !== "qualified" \|\| dnc/);
 assert.match(script, /No email will be sent/);
 assert.match(script, /No email has been sent from this workspace/);
 assert.doesNotMatch(script, /mailto:/i, "campaign email actions must not open a third-party mail application");
+assert.doesNotMatch(script, /buildEmailDraft|window\.location\.href\s*=\s*draft/, "legacy email draft handler must be removed");
+assert.equal((script.match(/panel\.querySelectorAll\("\[data-sway-tender-email\]"\)/g) || []).length, 1,
+  "each tender prospect must have exactly one in-dashboard email click handler");
 assert.match(script, /consent === "declined"/);
 assert.match(script, /\["requested", "granted", "declined", "revoked"\]\.includes\(consentStatus\)/);
 assert.match(script, /Consent already granted/);

@@ -592,12 +592,9 @@
       const detail = panel.querySelector(".sway-tender-detail");
       if (detail) detail.scrollIntoView({ behavior: "smooth", block: "start" });
     }));
-    panel.querySelectorAll("[data-sway-tender-email]").forEach(button => button.addEventListener("click", () => {
-      const item = state.prospects.find(prospect => prospect.id === button.dataset.swayTenderEmail);
-      if (!item) return;
-      const draft = buildEmailDraft(item);
-      if (draft) window.location.href = draft;
-    }));
+    panel.querySelectorAll("[data-sway-tender-email]").forEach(button => button.addEventListener("click", () =>
+      openProspectEmailComposer(button.dataset.swayTenderEmail)
+    ));
     panel.querySelectorAll("[data-sway-tender-close]").forEach(button => button.addEventListener("click", () => {
       state.selectedId = null;
       renderCampaign();
@@ -629,9 +626,6 @@
     if (exportButton) exportButton.addEventListener("click", exportCsv);
     panel.querySelectorAll("[data-sway-tender-save-workflow]").forEach(button => button.addEventListener("click", () =>
       saveWorkflow(button.dataset.swayTenderSaveWorkflow)
-    ));
-    panel.querySelectorAll("[data-sway-tender-email]").forEach(button => button.addEventListener("click", () =>
-      openProspectEmailComposer(button.dataset.swayTenderEmail)
     ));
     panel.querySelectorAll("[data-sway-tender-consent-request]").forEach(button => button.addEventListener("click", () =>
       recordConsentRequest(button.dataset.swayTenderConsentRequest)
