@@ -15,7 +15,7 @@ assert.ok(workspaceScript >= 0 && accessibilityScript > workspaceScript,
     "accessibility enhancement must load after the workspace controller");
 assert.ok(html.includes('href="admin-quick-create-accessibility.css?v=20261126-remove-global-new-1"'),
     "the retired launcher stylesheet must be loaded with a fresh cache key");
-assert.ok(/#sway-admin-workspace\\s+\\.sway-quick-create\\s*\\{\\s*display:\\s*none\\s*!important;/s.test(css),
+assert.ok(css.includes("#sway-admin-workspace .sway-quick-create {\\n    display: none !important;"),
     "the persistent global + New launcher and its menu must be removed from the visible dashboard");
 
 assert.ok(script.includes('toggle.setAttribute("aria-label", "Quick-create actions")'),
