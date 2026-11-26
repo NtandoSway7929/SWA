@@ -86,20 +86,20 @@ function createServiceClient() {
     });
 }
 
-async function verifyAdmin(request: Request) {
+async function verifyAdmin(request: Request): Promise<string | null> {
     const authHeader = request.headers.get("authorization") || "";
     const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1] || "";
-    if (!bearer || !ANON_KEY) return false;
+    if (!bearer || !ANON_KEY) return null;
 
     const userClient = createClient(SUPABASE_URL, ANON_KEY, {
         auth: { autoRefreshToken: false, persistSession: false },
         global: { headers: { Authorization: "Bearer " + bearer } }
     });
     const { data: userData, error: userError } = await userClient.auth.getUser(bearer);
-    if (userError || !userData?.user?.id) return false;
+    if (userError || !userData?.user?.id) return null;
 
     const { data: isAdmin, error: adminError } = await userClient.rpc("is_swayphics_admin");
-    return !adminError && isAdmin === true;
+    return !adminError && isAdmin === true ? userData.user.id : null;
 }
 
 async function fetchJson(url: string, init: RequestInit, timeoutMs: number) {
@@ -152,7 +152,8 @@ function isSocialUrl(value: string) {
 }
 
 function addCandidate(target: Candidate[], seen: Set<string>, item: Candidate) {
-    const normalised = normalisePublicUrl(item.source_url);
+    let normalised: string | null = null;
+    try { normalised = normalisePublicUrl(item.source_url); } catch { return; }
     if (!normalised || seen.has(normalised) || target.length >= MAX_FETCH_URLS) return;
     seen.add(normalised);
     target.push({ ...item, source_url: normalised });
@@ -287,23 +288,24 @@ async function discoverCandidates(assessment: any): Promise<{
         });
     }
 
-    const socialPlatforms = ["instagram", "facebook", "tiktok", "linkedin"];
-    for (const platform of socialPlatforms) {
-        if (requestedPlatforms.has(platform) || socials.some((entry: any) => detectPlatform(entry?.url || "") === platform)) continue;
-        if (candidates.filter((item) => item.source_type === "social_profile").length >= 4) break;
+    if (!socials.length) {
         try {
-            const domain = platform + ".com";
             const search = await tinyfishSearch(
-                businessName + " " + location + " official " + platform + " profile",
-                domain
+                businessName + " " + location + " official business social profile",
+                "instagram.com,facebook.com,tiktok.com,linkedin.com"
             );
-            const match = search.results.find((item: any) => detectPlatform(item.url) === platform);
-            if (match) {
+            const socialSeen = new Set<string>();
+            for (const item of search.results) {
+                const platform = detectPlatform(item.url);
+                if (!platform || socialSeen.has(platform)) continue;
+                socialSeen.add(platform);
                 addCandidate(candidates, seen, {
                     source_type: "social_profile", platform, requested_url: null,
-                    source_url: match.url, source_title: match.title, search_snippet: match.snippet
+                    source_url: item.url, source_title: item.title, search_snippet: item.snippet
                 });
-            } else noResults.push("social_profile");
+                if (socialSeen.size >= 4 || candidates.length >= MAX_FETCH_URLS) break;
+            }
+            if (!socialSeen.size) noResults.push("social_profile");
         } catch (error) {
             searchErrors.push({
                 source_type: "social_profile",
@@ -403,29 +405,43 @@ async function processInspection(inspectionId: string, assessmentId: string) {
 
         const fetchedCandidates = candidates.slice(0, MAX_FETCH_URLS);
         if (fetchedCandidates.length) {
-            const fetchResponse = await fetchJson("https://api.fetch.tinyfish.ai", {
-                method: "POST",
-                headers: {
-                    "X-API-Key": TINYFISH_API_KEY,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    urls: fetchedCandidates.map((item) => item.source_url),
-                    format: "markdown",
-                    links: true,
-                    image_links: false,
-                    ttl: 0,
-                    include_etag_and_last_modified: true,
-                    per_url_timeout_ms: 25000
-                })
-            }, FETCH_TIMEOUT_MS);
+            let fetchResponse: any = null;
+            try {
+                fetchResponse = await fetchJson("https://api.fetch.tinyfish.ai", {
+                    method: "POST",
+                    headers: {
+                        "X-API-Key": TINYFISH_API_KEY,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        urls: fetchedCandidates.map((item) => item.source_url),
+                        purpose: "Inspect public business information for an evidence-labelled business assessment.",
+                        format: "markdown",
+                        links: true,
+                        image_links: false,
+                        ttl: 0,
+                        include_etag_and_last_modified: true,
+                        per_url_timeout_ms: 25000
+                    })
+                }, FETCH_TIMEOUT_MS);
+            } catch (error) {
+                const code = (error as any)?.name === "AbortError" ? "timeout" :
+                    String((error as any)?.providerCode || "fetch_error");
+                fetchedCandidates.forEach((candidate) => {
+                    evidenceRows.push(sourceRow(
+                        inspectionId, candidate, candidate.source_type,
+                        mapTinyFishFetchError(code),
+                        { provider_error_code: code.slice(0, 80) }
+                    ));
+                });
+            }
 
-            const results = Array.isArray(fetchResponse.data?.results) ? fetchResponse.data.results : [];
-            const errors = Array.isArray(fetchResponse.data?.errors) ? fetchResponse.data.errors : [];
+            const results = Array.isArray(fetchResponse?.data?.results) ? fetchResponse.data.results : [];
+            const errors = Array.isArray(fetchResponse?.data?.errors) ? fetchResponse.data.errors : [];
             const resultByUrl = new Map<string, any>();
             const errorByUrl = new Map<string, any>();
             results.forEach((item: any, index: number) => {
-                const original = item?.original_url || item?.requested_url || item?.url || fetchedCandidates[index]?.source_url;
+                const original = item?.url || item?.original_url || item?.requested_url || fetchedCandidates[index]?.source_url;
                 try { resultByUrl.set(normalisePublicUrl(original) || String(original), item); } catch { /* ignored */ }
             });
             errors.forEach((item: any) => {
@@ -446,7 +462,7 @@ async function processInspection(inspectionId: string, assessmentId: string) {
                         mapTinyFishFetchError(providerCode),
                         {
                             provider_error_code: providerCode.slice(0, 80),
-                            provider_request_id: fetchResponse.requestId || null
+                            provider_request_id: fetchResponse?.requestId || null
                         }
                     ));
                     continue;
@@ -465,7 +481,7 @@ async function processInspection(inspectionId: string, assessmentId: string) {
                         {
                             final_url: null,
                             provider_error_code: "invalid_redirect_url",
-                            provider_request_id: fetchResponse.requestId || null
+                            provider_request_id: fetchResponse?.requestId || null
                         }
                     ));
                     continue;
@@ -521,7 +537,7 @@ async function processInspection(inspectionId: string, assessmentId: string) {
                         evidence_excerpt: excerpt,
                         identity_match_status: identity.status,
                         identity_match_basis: identity.basis,
-                        provider_request_id: fetchResponse.requestId || null,
+                        provider_request_id: fetchResponse?.requestId || null,
                         content_sha256: contentHash,
                         observed_at: new Date().toISOString()
                     }
@@ -585,7 +601,8 @@ Deno.serve(async (request) => {
     if (!isUuid(body?.assessment_id) || !isUuid(body?.idempotency_key)) {
         return jsonResponse({ error: "A valid assessment and inspection reference are required." }, 400, origin);
     }
-    if (!await verifyAdmin(request)) {
+    const adminUserId = await verifyAdmin(request);
+    if (!adminUserId) {
         return jsonResponse({ error: "Swayphics administrator access is required." }, 403, origin);
     }
 
@@ -621,13 +638,24 @@ Deno.serve(async (request) => {
 
     const { data: active, error: activeError } = await service
         .from("business_assessment_inspections")
-        .select("id, status")
+        .select("id, status, created_at")
         .eq("assessment_id", body.assessment_id)
         .in("status", ["queued", "running"])
         .maybeSingle();
     if (activeError) return jsonResponse({ error: "An active inspection could not be checked." }, 503, origin);
     if (active) {
-        return jsonResponse({ ok: true, inspection_id: active.id, status: active.status, existing_active_run: true }, 200, origin);
+        const started = Date.parse(active.created_at || "");
+        const stale = Number.isFinite(started) && Date.now() - started > 5 * 60 * 1000;
+        if (!stale) {
+            return jsonResponse({ ok: true, inspection_id: active.id, status: active.status, existing_active_run: true }, 200, origin);
+        }
+        await service.from("business_assessment_inspections").update({
+            status: "failed",
+            failure_code: "stale_worker",
+            failure_summary: "The previous inspection did not finish. It can be retried safely.",
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }).eq("id", active.id);
     }
 
     const { data: run, error: insertError } = await service
@@ -642,10 +670,7 @@ Deno.serve(async (request) => {
                 "social_profile"
             ],
             idempotency_key: body.idempotency_key,
-            requested_by: (await createClient(SUPABASE_URL, ANON_KEY, {
-                global: { headers: { Authorization: request.headers.get("authorization") || "" } },
-                auth: { autoRefreshToken: false, persistSession: false }
-            }).auth.getUser()).data.user?.id || null,
+            requested_by: adminUserId,
             consent_version: CONSENT_VERSION,
             provider: "tinyfish"
         })
