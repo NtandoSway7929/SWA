@@ -49,6 +49,20 @@ const assert = require("node:assert/strict");
     assert.equal(consented.businessProfile.public_presence.website_url, "https://example.co.za/");
     assert.equal(consented.businessProfile.public_presence.social_profile_urls[0].platform, "instagram");
 
+    const googleZaConsent = rules.normalizeAssessmentPayload(makePayload({
+        business_profile: {
+            public_presence: {
+                inspection_consent: true,
+                inspection_consent_version: "bof-public-presence-v1",
+                google_business_profile_url: "https://maps.google.co.za/maps/place/Azande"
+            }
+        }
+    }));
+    assert.equal(
+        googleZaConsent.businessProfile.public_presence.google_business_profile_url,
+        "https://maps.google.co.za/maps/place/Azande"
+    );
+
     const unconsented = rules.normalizeAssessmentPayload(makePayload({
         business_profile: {
             public_presence: {
