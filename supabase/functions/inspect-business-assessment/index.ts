@@ -309,6 +309,7 @@ async function discoverCandidates(assessment: any): Promise<{
     for (const entry of socials) {
         if (!entry || typeof entry.url !== "string" || !entry.url.trim()) continue;
         const url = normalisePublicUrl(entry.url);
+        if (!url) continue;
         const platform = detectPlatform(url);
         if (!platform || (entry.platform && entry.platform !== platform)) {
             throw new Error("Each social profile URL must match its selected public platform.");
