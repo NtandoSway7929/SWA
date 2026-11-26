@@ -690,7 +690,7 @@
             ? findings.map((finding) => {
                 const evidence = finding.evidence_classification === "self_reported"
                     ? "Self-reported"
-                    : formatDisplayText(finding.evidence_classification || "Unverified");
+                    : String(finding.evidence_classification || "Unverified").replace(/_/g, " ");
                 return (
                     '<article class="bof-finding">' +
                         '<div class="bof-finding-top"><strong>' + escapeHtml(finding.title || "Opportunity") + '</strong>' +
@@ -833,7 +833,10 @@
         }
         if (restartButton) restartButton.addEventListener("click", resetAssessment);
 
-        copyButton.dataset.reportText = buildPlainTextReport(report);
+        const reportText = buildPlainTextReport(report);
+        const activeCopyButton = document.getElementById("bof-copy-report");
+        if (activeCopyButton) activeCopyButton.dataset.reportText = reportText;
+        copyButton.dataset.reportText = reportText;
         reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
@@ -947,7 +950,8 @@
     }
 
     async function copyLatestReport(event) {
-        const reportText = copyButton.dataset.reportText || "";
+        const activeButton = document.getElementById("bof-copy-report") || copyButton;
+        const reportText = activeButton.dataset.reportText || copyButton.dataset.reportText || "";
         if (!reportText) return;
 
         try {
