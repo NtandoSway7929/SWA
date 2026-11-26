@@ -299,7 +299,7 @@ async function discoverCandidates(assessment: any): Promise<{
         try {
             const search = await tinyfishSearch(
                 businessName + " " + location + " Google Maps business profile",
-                "google.com,maps.app.goo.gl,g.page"
+                "google.com,google.co.za,maps.app.goo.gl,g.page"
             );
             const match = search.results.find((item: any) => {
                 const url = safePublicUrl(item.url);
@@ -512,7 +512,11 @@ async function processInspection(inspectionId: string, assessmentId: string) {
                 const fetched = resultByUrl.get(key);
                 if (!fetched) {
                     const providerError = errorByUrl.get(key);
-                    const providerCode = String(providerError?.code || providerError?.error?.code || "empty_content");
+                    const providerCode = String(
+                        typeof providerError?.error === "string"
+                            ? providerError.error
+                            : providerError?.error?.code || providerError?.code || "empty_content"
+                    );
                     evidenceRows.push(sourceRow(
                         inspectionId,
                         candidate,
