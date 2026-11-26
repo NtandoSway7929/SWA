@@ -156,3 +156,105 @@
     .bfa-contact-grid { grid-template-columns: 1fr; }
     .bfa-footer { flex-direction: column; }
 }
+
+
+/* Explicit assessment-to-lead conversion controls */
+.bfa-conversion-status {
+    margin: 10px 0 13px;
+    color: #53627d;
+    font-size: .79rem;
+    line-height: 1.6;
+}
+.bfa-conversion-results {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+.bfa-match-card,
+.bfa-create-lead-panel {
+    display: grid;
+    gap: 9px;
+    padding: 14px;
+    border: 1px solid rgba(0,32,150,.12);
+    border-radius: 11px;
+    background: #fbfcff;
+}
+.bfa-match-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.bfa-match-heading strong,
+.bfa-create-lead-panel h4 {
+    color: #17294e;
+    font: 800 .88rem "Raleway", sans-serif;
+}
+.bfa-match-card p,
+.bfa-create-lead-panel p {
+    margin: 0;
+    color: #596780;
+    font-size: .76rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+.bfa-conversion-primary,
+.bfa-conversion-secondary {
+    justify-self: start;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid rgba(1,82,244,.2);
+    border-radius: 8px;
+    color: #063caa;
+    background: #eef4ff;
+    font: 800 .72rem "Plus Jakarta Sans", sans-serif;
+    cursor: pointer;
+}
+.bfa-conversion-secondary {
+    color: #324565;
+    border-color: rgba(0,32,150,.15);
+    background: #fff;
+}
+.bfa-conversion-primary:hover,
+.bfa-conversion-secondary:hover {
+    border-color: #0152F4;
+}
+.bfa-conversion-primary:disabled,
+.bfa-conversion-secondary:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}
+.bfa-business-name-field {
+    display: grid;
+    gap: 7px;
+    max-width: 470px;
+    color: #314160;
+    font-size: .74rem;
+    font-weight: 800;
+}
+.bfa-business-name-field input {
+    min-height: 42px;
+    border: 1px solid rgba(0,32,150,.17);
+    border-radius: 8px;
+    padding: 0 12px;
+    color: #102044;
+    background: #fff;
+    font: 500 .83rem "Plus Jakarta Sans", sans-serif;
+}
+.bfa-match-warning {
+    padding: 10px 12px;
+    border-left: 3px solid #c58d2d;
+    color: #78531c !important;
+    background: #fffaf0;
+}
+.bfa-conversion-success {
+    padding: 12px;
+    border: 1px solid rgba(31,112,81,.16);
+    border-radius: 9px;
+    color: #205a45;
+    background: #f2fbf7;
+    font-size: .8rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
