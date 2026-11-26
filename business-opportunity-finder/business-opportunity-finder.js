@@ -19,6 +19,70 @@
         return;
     }
 
+    const ASSESSMENT_VERSION = "bof-2026-11-v1";
+    const CONTACT_NOTICE_VERSION = "bof-contact-v1";
+    const SUPABASE_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaWZocmliZ3NxZmF4Z3RvYnNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0OTI5MjksImV4cCI6MjEwMzA2ODkyOX0.rtSO-xIG_kqyBKEz6UvFmxy_-6onh-S8a2OcGD0bGmo";
+    const SUBMISSION_ENDPOINT = SUPABASE_URL + "/functions/v1/submit-business-assessment";
+
+    let assessmentSubmissionKey = "";
+    let assessmentId = "";
+    let latestServerReport = null;
+    let contactRequestSent = false;
+
+    function createSubmissionUuid() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+            return window.crypto.randomUUID();
+        }
+        const bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0"));
+        return [
+            hex.slice(0, 4).join(""),
+            hex.slice(4, 6).join(""),
+            hex.slice(6, 8).join(""),
+            hex.slice(8, 10).join(""),
+            hex.slice(10, 16).join("")
+        ].join("-");
+    }
+
+    async function postAssessmentRequest(payload) {
+        const response = await fetch(SUBMISSION_ENDPOINT, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_PUBLISHABLE_KEY,
+                "Authorization": "Bearer " + SUPABASE_ANON_KEY
+            },
+            body: JSON.stringify(payload),
+            cache: "no-store"
+        });
+
+        let result = null;
+        try {
+            result = await response.json();
+        } catch (error) {
+            result = null;
+        }
+
+        if (!response.ok) {
+            const error = new Error(
+                result && typeof result.error === "string"
+                    ? result.error
+                    : "We could not submit your assessment. Please try again."
+            );
+            error.status = response.status;
+            error.retryAfter = Number(response.headers && response.headers.get
+                ? response.headers.get("Retry-After") || 0
+                : 0);
+            throw error;
+        }
+        return result;
+    }
+
     const industryOptions = [
         { value: "beauty_personal_care", label: "Beauty & personal care", description: "Salons, barbers, nail artists, spas and wellness services" },
         { value: "food_beverage", label: "Food & beverage", description: "Restaurants, caterers, bakeries and food businesses" },
@@ -381,6 +445,10 @@
         answers.contactMethods = [];
         answers.friction = [];
         answers.priority = "";
+        assessmentSubmissionKey = "";
+        assessmentId = "";
+        latestServerReport = null;
+        contactRequestSent = false;
         stepIndex = 0;
         reportSection.hidden = true;
         assessment.hidden = true;
@@ -538,7 +606,372 @@
         }));
     }
 
-    function renderReport() {
+    async function submitAssessment() {
+        if (!validateStep()) return;
+
+        if (!assessmentSubmissionKey) {
+            assessmentSubmissionKey = createSubmissionUuid();
+        }
+
+        continueButton.disabled = true;
+        continueButton.setAttribute("aria-busy", "true");
+        continueButton.textContent = "Preparing your report…";
+        stepError.hidden = false;
+        stepError.textContent = "Submitting your answers securely and preparing your report. Please keep this page open.";
+
+        const payload = {
+            action: "complete_assessment",
+            assessment_version: ASSESSMENT_VERSION,
+            submission_key: assessmentSubmissionKey,
+            business_profile: {
+                business_name: answers.businessName.trim(),
+                location: answers.location.trim()
+            },
+            responses: [
+                { question_id: "industry", answer: answers.industry },
+                { question_id: "discovery", answer: [...answers.discovery] },
+                { question_id: "contactMethods", answer: [...answers.contactMethods] },
+                { question_id: "friction", answer: [...answers.friction] },
+                { question_id: "priority", answer: answers.priority }
+            ],
+            website: ""
+        };
+
+        try {
+            const result = await postAssessmentRequest(payload);
+            if (!result || result.ok !== true || !result.assessment_id || !result.report) {
+                throw new Error("The assessment service returned an incomplete response. Please try again.");
+            }
+
+            assessmentId = result.assessment_id;
+            latestServerReport = result.report;
+            contactRequestSent = false;
+            renderReport(result.report);
+        } catch (error) {
+            stepError.hidden = false;
+            stepError.textContent = error && error.status === 429
+                ? "Too many submissions have been received. Please wait a little and try again."
+                : (error && error.message
+                    ? error.message
+                    : "We could not submit your assessment. Please check your connection and try again.");
+            continueButton.disabled = false;
+            continueButton.removeAttribute("aria-busy");
+            continueButton.innerHTML = 'Retry report <span aria-hidden="true">→</span>';
+        }
+    }
+
+    function renderReport(report) {
+        const industry = report && report.industry && report.industry.label
+            ? report.industry.label
+            : "Business assessment";
+        const priority = report && report.priority && report.priority.label
+            ? report.priority.label
+            : "Not established";
+        const findings = Array.isArray(report && report.findings) ? report.findings : [];
+        const strengths = Array.isArray(report && report.current_starting_point)
+            ? report.current_starting_point
+            : [];
+        const recommendations = Array.isArray(report && report.recommendations)
+            ? report.recommendations
+            : [];
+        const channels = Array.isArray(report && report.discovery_channels)
+            ? report.discovery_channels
+            : [];
+        const contactMethods = Array.isArray(report && report.contact_methods)
+            ? report.contact_methods
+            : [];
+        const locationMarkup = report.location
+            ? '<span class="bof-report-tag">' + escapeHtml(report.location) + '</span>'
+            : "";
+        const channelsMarkup = channels.length
+            ? channels.map((channel) => '<span class="bof-report-tag">' + escapeHtml(channel) + '</span>').join("")
+            : '<span class="bof-report-tag">Not established</span>';
+        const findingMarkup = findings.length
+            ? findings.map((finding) => {
+                const evidence = finding.evidence_classification === "self_reported"
+                    ? "Self-reported"
+                    : formatDisplayText(finding.evidence_classification || "Unverified");
+                return (
+                    '<article class="bof-finding">' +
+                        '<div class="bof-finding-top"><strong>' + escapeHtml(finding.title || "Opportunity") + '</strong>' +
+                            '<span class="bof-evidence-tag">' + escapeHtml(evidence) + '</span></div>' +
+                        '<p>' + escapeHtml(finding.explanation || "") + '</p>' +
+                        (finding.business_implication
+                            ? '<p class="bof-finding-implication"><strong>Why it matters:</strong> ' + escapeHtml(finding.business_implication) + '</p>'
+                            : "") +
+                        (finding.next_action
+                            ? '<p class="bof-finding-action"><strong>Suggested next step:</strong> ' + escapeHtml(finding.next_action) + '</p>'
+                            : "") +
+                    '</article>'
+                );
+            }).join("")
+            : '<p>Your answers do not yet support a specific opportunity. Mapping the customer journey is a useful first step.</p>';
+
+        const recommendationMarkup = recommendations.length
+            ? '<div class="bof-service-list">' + recommendations.map((item) =>
+                '<a class="bof-service-link" href="' + escapeHtml(item.href || "../#services") + '">' +
+                    '<span><strong>' + escapeHtml(item.title || "Suggested service") + '</strong><br><small>' +
+                        escapeHtml(item.recommended_action || item.description || "") +
+                    '</small></span>' +
+                    '<span aria-hidden="true">↗</span>' +
+                '</a>'
+            ).join("") + '</div>'
+            : '<p>Your answers do not yet support a specific Swayphics service recommendation. Start by mapping the customer journey and identifying the point where customers need the most help.</p>';
+
+        reportContent.innerHTML =
+            '<header class="bof-report-header">' +
+                '<span class="bof-step-eyebrow">BUSINESS OPPORTUNITY FINDER / YOUR REPORT</span>' +
+                '<h2>' + escapeHtml(report.title || "A clearer view of your business") + '</h2>' +
+                '<p>' + escapeHtml(report.disclaimer || "This summary is based on the information selected by the respondent. It is not a verified audit or a promise of business results.") + '</p>' +
+                '<div class="bof-report-tags"><span class="bof-report-tag">' + escapeHtml(industry) + '</span>' + locationMarkup +
+                    '<span class="bof-report-tag">Priority: ' + escapeHtml(priority) + '</span></div>' +
+            '</header>' +
+            '<div class="bof-report-grid">' +
+                '<section class="bof-report-card">' +
+                    '<span class="bof-report-card-label">01 / Current starting point</span>' +
+                    '<h3>Your current starting point</h3>' +
+                    '<p>These are the channels and availability details you reported. Their quality or performance has not been independently checked.</p>' +
+                    '<div class="bof-report-tags">' + channelsMarkup +
+                        '<span class="bof-report-tag">Website: ' + escapeHtml(report.website_status || "Not established from your answers") + '</span></div>' +
+                    '<ul class="bof-report-list">' + strengths.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ul>' +
+                '</section>' +
+                '<section class="bof-report-card">' +
+                    '<span class="bof-report-card-label">02 / Customer journey</span>' +
+                    '<h3>How customers take the next step</h3>' +
+                    '<p>' + escapeHtml(contactMethods.join(", ") || "Not established from your answers") + '</p>' +
+                    '<ul class="bof-report-list"><li>Make the transition from interest to action clear and easy to follow.</li>' +
+                        '<li>Keep the process suited to how customers already prefer to interact with the business.</li></ul>' +
+                '</section>' +
+                '<section class="bof-report-card bof-report-card--wide">' +
+                    '<span class="bof-report-card-label">03 / Opportunities identified</span>' +
+                    '<h3>Where attention may be most useful</h3>' +
+                    '<p>Each item below comes from the challenges you selected. The evidence classification shows what is self-reported rather than independently verified.</p>' +
+                    findingMarkup +
+                '</section>' +
+                '<section class="bof-report-card bof-report-card--wide">' +
+                    '<span class="bof-report-card-label">04 / Practical next steps</span>' +
+                    '<h3>Improvements worth exploring</h3>' +
+                    '<p>These are potential directions to discuss and scope. The right solution depends on the business process, platforms and requirements.</p>' +
+                    recommendationMarkup +
+                '</section>' +
+            '</div>';
+
+        reportSection.hidden = false;
+        assessment.hidden = true;
+        intro.hidden = true;
+        continueButton.disabled = false;
+        continueButton.removeAttribute("aria-busy");
+        continueButton.innerHTML = 'Create my summary <span aria-hidden="true">→</span>';
+
+        const actions = reportSection.querySelector(".bof-report-footer-actions");
+        if (actions) {
+            actions.innerHTML =
+                '<button class="sp-button" type="button" id="bof-copy-report">Copy report summary</button>' +
+                '<button class="sp-button sp-button--outline" type="button" id="bof-open-contact">Ask Swayphics to contact me</button>' +
+                '<button class="bof-restart-button" type="button" id="bof-restart">Start again</button>';
+        }
+
+        const reportFooter = reportSection.querySelector(".bof-preview-disclaimer");
+        if (reportFooter) {
+            reportFooter.innerHTML =
+                '<strong>Evidence and privacy:</strong> Your report is based on the answers you submitted and is stored by Swayphics for assessment administration. No independent website, social-media or Google Business Profile inspection has been performed. Requesting contact is optional and requires a separate confirmation.';
+        }
+
+        const existingContactPanel = reportSection.querySelector("#bof-contact-panel");
+        if (existingContactPanel) existingContactPanel.remove();
+
+        reportSection.insertAdjacentHTML("beforeend",
+            '<section class="bof-contact-panel" id="bof-contact-panel" hidden aria-labelledby="bof-contact-title">' +
+                '<div class="bof-contact-panel-heading"><span class="bof-report-card-label">OPTIONAL / NEXT STEP</span>' +
+                    '<h3 id="bof-contact-title">Would you like us to get in touch?</h3>' +
+                    '<p>Your report is complete. Share the best way to reach you only if you would like a Swayphics team member to follow up.</p></div>' +
+                '<form class="bof-contact-form" id="bof-contact-form" novalidate>' +
+                    '<div class="bof-contact-fields">' +
+                        '<label>Name<input name="name" type="text" autocomplete="name" maxlength="80" required></label>' +
+                        '<label>Email address <span>(optional if you provide a phone number)</span><input name="email" type="email" autocomplete="email" maxlength="120"></label>' +
+                        '<label>Phone / WhatsApp <span>(optional if you provide an email)</span><input name="phone" type="tel" autocomplete="tel" maxlength="30"></label>' +
+                        '<label>Preferred contact method<select name="preferred_contact_method" required><option value="email">Email</option><option value="phone">Phone call</option><option value="whatsapp">WhatsApp</option></select></label>' +
+                        '<label class="bof-contact-message">Anything else we should know? <span>(optional)</span><textarea name="message" rows="3" maxlength="1000"></textarea></label>' +
+                    '</div>' +
+                    '<label class="bof-contact-consent"><input name="notice_accepted" type="checkbox" required>' +
+                        '<span>I agree that Swayphics may use these details to contact me about this assessment, in line with its <a href="../privacy-policy/" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>' +
+                    '<div class="bof-contact-honeypot" aria-hidden="true"><label>Leave this field empty<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>' +
+                    '<p class="bof-contact-status" id="bof-contact-status" role="status" aria-live="polite"></p>' +
+                    '<div class="bof-contact-actions"><button class="sp-button" type="submit" id="bof-contact-submit">Send contact request</button>' +
+                        '<button class="bof-restart-button" type="button" id="bof-contact-cancel">Cancel</button></div>' +
+                '</form>' +
+            '</section>'
+        );
+
+        const copyReportButton = document.getElementById("bof-copy-report");
+        const openContactButton = document.getElementById("bof-open-contact");
+        const contactPanel = document.getElementById("bof-contact-panel");
+        const contactForm = document.getElementById("bof-contact-form");
+        const restartButton = document.getElementById("bof-restart");
+        const cancelContactButton = document.getElementById("bof-contact-cancel");
+
+        if (copyReportButton) {
+            copyReportButton.addEventListener("click", copyLatestReport);
+        }
+        if (openContactButton && contactPanel) {
+            openContactButton.addEventListener("click", () => {
+                contactPanel.hidden = false;
+                openContactButton.hidden = true;
+                const firstField = contactPanel.querySelector('[name="name"]');
+                if (firstField) firstField.focus();
+            });
+        }
+        if (cancelContactButton && contactPanel && openContactButton) {
+            cancelContactButton.addEventListener("click", () => {
+                contactPanel.hidden = true;
+                openContactButton.hidden = false;
+                openContactButton.focus();
+            });
+        }
+        if (contactForm) {
+            contactForm.addEventListener("submit", submitContactRequest);
+        }
+        if (restartButton) restartButton.addEventListener("click", resetAssessment);
+
+        copyButton.dataset.reportText = buildPlainTextReport(report);
+        reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function buildPlainTextReport(report) {
+        const lines = [
+            "SWAYPHICS BUSINESS OPPORTUNITY FINDER",
+            report.business_name ? "Business: " + report.business_name : "",
+            "Industry: " + (report.industry && report.industry.label || ""),
+            report.location ? "Location: " + report.location : "",
+            "Website status: " + (report.website_status || "Not established from your answers"),
+            "Priority: " + (report.priority && report.priority.label || ""),
+            "",
+            "CURRENT STARTING POINT",
+            ...(Array.isArray(report.current_starting_point) ? report.current_starting_point.map((item) => "- " + item) : []),
+            "",
+            "OPPORTUNITIES IDENTIFIED"
+        ];
+        (Array.isArray(report.findings) ? report.findings : []).forEach((finding) => {
+            const evidence = finding.evidence_classification === "self_reported" ? "Self-reported" : "Unverified";
+            lines.push("- " + finding.title + " [" + evidence + "]: " + (finding.explanation || ""));
+            if (finding.next_action) lines.push("  Next step: " + finding.next_action);
+        });
+        lines.push("", "POTENTIAL SERVICES TO EXPLORE");
+        (Array.isArray(report.recommendations) ? report.recommendations : []).forEach((item) => {
+            lines.push("- " + item.title + ": " + (item.recommended_action || item.description || ""));
+        });
+        lines.push("", report.disclaimer || "This summary is based on your submitted answers. No independent inspection has been performed.");
+        return lines.filter((line) => line !== undefined).join("\n");
+    }
+
+    async function submitContactRequest(event) {
+        event.preventDefault();
+        if (contactRequestSent || !assessmentId || !assessmentSubmissionKey) return;
+
+        const form = event.currentTarget;
+        const status = document.getElementById("bof-contact-status");
+        const submitButton = document.getElementById("bof-contact-submit");
+        if (!form || !status || !submitButton) return;
+
+        const formData = new FormData(form);
+        const name = String(formData.get("name") || "").trim();
+        const email = String(formData.get("email") || "").trim();
+        const phone = String(formData.get("phone") || "").trim();
+        const preferred = String(formData.get("preferred_contact_method") || "");
+        const message = String(formData.get("message") || "").trim();
+        const website = String(formData.get("website") || "");
+
+        if (website) return;
+        if (name.length < 2) {
+            status.textContent = "Please enter your name.";
+            return;
+        }
+        if (!email && !phone) {
+            status.textContent = "Please provide an email address or phone number.";
+            return;
+        }
+        if (preferred === "email" && !email) {
+            status.textContent = "Enter an email address or choose phone or WhatsApp.";
+            return;
+        }
+        if (["phone", "whatsapp"].includes(preferred) && !phone) {
+            status.textContent = "Enter a phone number or choose email.";
+            return;
+        }
+        if (!formData.get("notice_accepted")) {
+            status.textContent = "Please confirm that Swayphics may contact you.";
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.setAttribute("aria-busy", "true");
+        submitButton.textContent = "Sending request…";
+        status.textContent = "Submitting your contact request securely.";
+
+        try {
+            const result = await postAssessmentRequest({
+                action: "request_contact",
+                assessment_id: assessmentId,
+                submission_key: assessmentSubmissionKey,
+                contact_request: {
+                    name,
+                    email,
+                    phone,
+                    preferred_contact_method: preferred,
+                    message,
+                    notice_accepted: true,
+                    notice_version: CONTACT_NOTICE_VERSION
+                },
+                website: ""
+            });
+            if (!result || result.ok !== true || result.contact_requested !== true) {
+                throw new Error("We could not confirm receipt of your contact request. Please try again.");
+            }
+
+            contactRequestSent = true;
+            status.textContent = "Your contact request has been received. The Swayphics team can now follow up using your preferred contact method.";
+            submitButton.textContent = "Request received";
+            form.querySelectorAll("input, select, textarea, button").forEach((control) => {
+                if (control.name !== "website") control.disabled = true;
+            });
+        } catch (error) {
+            status.textContent = error && error.status === 429
+                ? "Too many contact requests have been received. Please wait before trying again."
+                : (error && error.message
+                    ? error.message
+                    : "We could not submit your contact request. Please check your connection and try again.");
+            submitButton.disabled = false;
+            submitButton.removeAttribute("aria-busy");
+            submitButton.textContent = "Retry contact request";
+        }
+    }
+
+    async function copyLatestReport(event) {
+        const reportText = copyButton.dataset.reportText || "";
+        if (!reportText) return;
+
+        try {
+            await navigator.clipboard.writeText(reportText);
+            event.currentTarget.textContent = "Report summary copied";
+        } catch (error) {
+            const temporary = document.createElement("textarea");
+            temporary.value = reportText;
+            temporary.setAttribute("readonly", "");
+            temporary.style.position = "fixed";
+            temporary.style.opacity = "0";
+            document.body.appendChild(temporary);
+            temporary.select();
+            const copied = document.execCommand("copy");
+            temporary.remove();
+            event.currentTarget.textContent = copied ? "Report summary copied" : "Copy unavailable";
+        }
+        window.setTimeout(() => {
+            const button = document.getElementById("bof-copy-report");
+            if (button) button.textContent = "Copy report summary";
+        }, 2200);
+    }
+
+
         const industry = getOptionLabel(industryOptions, answers.industry);
         const findings = buildFindings();
         const strengths = buildStrengths();
@@ -669,36 +1102,11 @@
             renderStep();
             stepContent.scrollIntoView({ behavior: "smooth", block: "nearest" });
         } else {
-            renderReport();
+            submitAssessment();
         }
     });
 
     document.getElementById("bof-restart").addEventListener("click", resetAssessment);
 
-    copyButton.addEventListener("click", async () => {
-        const reportText = copyButton.dataset.reportText || "";
-        if (!reportText) return;
-
-        try {
-            await navigator.clipboard.writeText(reportText);
-            copyButton.textContent = "Report summary copied";
-            window.setTimeout(() => {
-                copyButton.textContent = "Copy report summary";
-            }, 2200);
-        } catch (error) {
-            const temporary = document.createElement("textarea");
-            temporary.value = reportText;
-            temporary.setAttribute("readonly", "");
-            temporary.style.position = "fixed";
-            temporary.style.opacity = "0";
-            document.body.appendChild(temporary);
-            temporary.select();
-            const copied = document.execCommand("copy");
-            temporary.remove();
-            copyButton.textContent = copied ? "Report summary copied" : "Copy unavailable";
-            window.setTimeout(() => {
-                copyButton.textContent = "Copy report summary";
-            }, 2200);
-        }
-    });
+    copyButton.addEventListener("click", copyLatestReport);
 })();
