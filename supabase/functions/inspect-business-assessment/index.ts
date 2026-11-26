@@ -539,7 +539,9 @@ async function processInspection(inspectionId: string, assessmentId: string) {
                     businessName: profile.business_name || assessment.business_name,
                     location: profile.location,
                     title,
-                    text: text.slice(0, 12000)
+                    text: text.slice(0, 12000),
+                    sourceType: candidate.source_type,
+                    sourceUrl: finalUrl
                 });
                 const observations = buildPageObservations({
                     title,
