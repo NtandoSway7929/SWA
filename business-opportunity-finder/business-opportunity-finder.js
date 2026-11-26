@@ -196,7 +196,6 @@
 
     function renderOption(option, mode, selected) {
         const isSelected = selected.includes(option.value);
-        const role = mode === "single" ? "radio" : "checkbox";
         const indicator = isSelected ? "✓" : "";
         const detail = option.description
             ? '<small>' + escapeHtml(option.description) + '</small>'
@@ -204,13 +203,13 @@
 
         return '<button class="bof-option" type="button" role="' + role +
             '" data-mode="' + mode + '" data-select-option="' + escapeHtml(option.value) +
-            '" aria-checked="' + (isSelected ? "true" : "false") + '">' +
+            '" aria-pressed="' + (isSelected ? "true" : "false") + '">' +
             '<span class="bof-option-indicator" aria-hidden="true">' + indicator + '</span>' +
             '<span class="bof-option-text"><strong>' + escapeHtml(option.label) + '</strong>' + detail + '</span>' +
             '</button>';
     }
 
-    function renderStep() {
+    function renderStep(focusOptionValue) {
         const step = steps[stepIndex];
         const value = answers[step.key];
         const selected = Array.isArray(value) ? value : (value ? [value] : []);
@@ -274,6 +273,15 @@
                 answers.location = locationInput.value.slice(0, 100);
             });
         }
+
+        const focusTarget = focusOptionValue
+            ? Array.from(stepContent.querySelectorAll("[data-select-option]"))
+                .find((optionButton) => optionButton.dataset.selectOption === focusOptionValue)
+            : stepContent.querySelector(".bof-step-title");
+
+        if (focusTarget && typeof focusTarget.focus === "function") {
+            focusTarget.focus({ preventScroll: true });
+        }
     }
 
     function toggleOption(value, mode) {
@@ -336,7 +344,7 @@
             answers[key] = selected;
         }
 
-        renderStep();
+        renderStep(value);
     }
 
     function showError(message) {
@@ -363,8 +371,6 @@
         stepIndex = 0;
         renderStep();
         assessment.scrollIntoView({ behavior: "smooth", block: "start" });
-        const firstOption = stepContent.querySelector("[data-select-option]");
-        if (firstOption) firstOption.focus({ preventScroll: true });
     }
 
     function resetAssessment() {
