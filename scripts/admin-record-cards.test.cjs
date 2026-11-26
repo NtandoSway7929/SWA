@@ -146,22 +146,35 @@ assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\
 assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHandler.indexOf("swayConfirm(confirmMessage)"),
     "financial-history checks must run before asking to confirm client deletion");
 
-assert.ok(workspace.includes("Archive this invoice first. Sent, paid and overdue invoice records should be retained"),
-    "issued, paid and overdue invoices must be protected from permanent deletion");
+assert.ok(workspace.includes("Only draft invoices can be deleted directly. Archive issued, paid and overdue invoices first."),
+    "only drafts or archived owner-approved invoices may be deleted");
 const invoiceActionStart = workspace.indexOf('.querySelectorAll("[data-invoice-action]")');
 const invoiceDeleteStart = workspace.indexOf('if (action === "delete")', invoiceActionStart);
-const invoiceDeleteEnd = workspace.indexOf("await logActivity(", invoiceDeleteStart);
+const invoiceDeleteEnd = workspace.indexOf("\n                        } catch (error)", invoiceDeleteStart);
 assert.ok(invoiceActionStart >= 0 && invoiceDeleteStart > invoiceActionStart && invoiceDeleteEnd > invoiceDeleteStart,
     "invoice delete action handler must exist");
 const invoiceDeleteHandler = workspace.slice(invoiceDeleteStart, invoiceDeleteEnd);
 assert.match(invoiceDeleteHandler, /state\.payments\.filter/);
 assert.match(invoiceDeleteHandler, /state\.paymentAttempts\.filter/);
+assert.match(invoiceDeleteHandler, /if \(invoice\.archived\)/);
+assert.match(invoiceDeleteHandler, /state\.currentAdmin\.role !== "owner"/);
+assert.match(invoiceDeleteHandler, /window\.prompt/);
+assert.match(invoiceDeleteHandler, /admin_permanently_delete_archived_invoice/);
+assert.match(invoiceDeleteHandler, /p_invoice_id/);
+assert.match(invoiceDeleteHandler, /p_confirmation/);
 assert.match(invoiceDeleteHandler, /invoicePayments\.length \|\| invoiceAttempts\.length/);
 assert.match(invoiceDeleteHandler, /\/rest\/v1\/invoices\?id=eq\./);
-assert.doesNotMatch(invoiceDeleteHandler, /\/rest\/v1\/invoice_items\?invoice_id=eq\./,
-    "invoice items must not be deleted before the invoice; the database cascade runs only after successful invoice deletion");
-assert.ok(workspace.includes("Permanently delete this archived invoice?"),
-    "archived invoices must have an explicit permanent-delete confirmation");
+assert.doesNotMatch(
+    invoiceDeleteHandler.slice(invoiceDeleteHandler.indexOf('if (invoice.archived)'), invoiceDeleteHandler.indexOf('} else {')),
+    /\/rest\/v1\/invoices\?id=eq\./,
+    "archived invoices must use the protected RPC, not a direct table DELETE"
+);
+assert.ok(workspace.includes("payment_attempts?select=id,invoice_id,payment_id,provider,environment,status"),
+    "invoice actions must load invoice_id so linked provider attempts are visible");
+assert.ok(workspace.includes("Only continue when the invoice and all linked records are test data"),
+    "permanent deletion must remind the owner to confirm test-only financial data");
+assert.ok(workspace.includes('item.archived && state.currentAdmin && state.currentAdmin.role === "owner"'),
+    "only the owner should see permanent deletion for archived invoices");
 
 const invoiceRenderer = section(
     workspace, "    function renderInvoices(", "invoice card renderer"
@@ -188,7 +201,7 @@ assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-record-card/);
 assert.match(css, /@media \(max-width: 620px\)/);
 assert.match(css, /prefers-reduced-motion/);
 
-assert.match(html, /admin-workspace\.js\?v=20261121-safe-record-deletion-1/,
+assert.match(html, /admin-workspace\.js\?v=20261126-archived-invoice-purge-1/,
     "the communication viewer workspace script must use a refreshed cache key");
 
 console.log("Admin record-card contract tests passed for 15 dashboard views and communication viewing.");

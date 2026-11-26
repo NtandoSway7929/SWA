@@ -11,8 +11,16 @@ from pglast import parse_sql
 
 
 ROOT = Path(__file__).resolve().parents[2]
-MIGRATIONS = sorted((ROOT / "supabase" / "migrations").glob("*_yoco_*.sql")) + sorted((ROOT / "supabase" / "migrations").glob("*_bank_transfer_*.sql"))
-TESTS = sorted((ROOT / "supabase" / "tests").glob("*yoco*.sql")) + sorted((ROOT / "supabase" / "tests").glob("*bank_transfer*.sql"))
+MIGRATIONS = (
+    sorted((ROOT / "supabase" / "migrations").glob("*_yoco_*.sql"))
+    + sorted((ROOT / "supabase" / "migrations").glob("*_bank_transfer_*.sql"))
+    + sorted((ROOT / "supabase" / "migrations").glob("*_archived_invoice_permanent_delete.sql"))
+)
+TESTS = (
+    sorted((ROOT / "supabase" / "tests").glob("*yoco*.sql"))
+    + sorted((ROOT / "supabase" / "tests").glob("*bank_transfer*.sql"))
+    + sorted((ROOT / "supabase" / "tests").glob("*archived_invoice_permanent_delete.test.sql"))
+)
 
 
 def main() -> int:

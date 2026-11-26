@@ -4497,7 +4497,7 @@
             optionalApi("/rest/v1/budget_entries?select=*&order=transaction_date.desc,created_at.desc", []),
             optionalApi("/rest/v1/budget_category_allocations?select=*&order=period_month.desc,category.asc", []),
             optionalApi("/rest/v1/payment_refunds?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/payment_attempts?select=id,payment_id,provider,environment,status&order=created_at.desc", [])
+            optionalApi("/rest/v1/payment_attempts?select=id,invoice_id,payment_id,provider,environment,status&order=created_at.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -18451,7 +18451,7 @@ function simpleBars(items, color) {
                                     ? '<button class="sway-row-action" data-invoice-action="send" data-id="' + esc(item.id) + '">' + (item.email_status === "sent" ? "Resend" : "Send") + '</button>'
                                     : "") +
                                 (!item.archived ? '<button class="sway-row-action" data-invoice-action="archive" data-id="' + esc(item.id) + '">Archive</button>' : "") +
-                                (item.status === "draft" || item.archived ? '<button class="sway-row-action danger" data-invoice-action="delete" data-id="' + esc(item.id) + '">Delete</button>' : "") +
+                                (item.status === "draft" || (item.archived && state.currentAdmin && state.currentAdmin.role === "owner") ? '<button class="sway-row-action danger" data-invoice-action="delete" data-id="' + esc(item.id) + '">' + (item.archived ? "Permanently delete" : "Delete") + '</button>' : "") +
                             '</div>' +
                         '</details>' +
                     '</div>' +
@@ -29034,64 +29034,98 @@ function simpleBars(items, color) {
                                         return String(attempt.invoice_id || "") === String(id);
                                     });
 
-                                if (invoicePayments.length || invoiceAttempts.length) {
-                                    swayAlert(
-                                        "This invoice has payment or payment-attempt records. They must be retained for financial history, so the invoice cannot be permanently deleted."
+                                if (invoice.archived) {
+                                    if (!state.currentAdmin || state.currentAdmin.role !== "owner") {
+                                        swayAlert("Only the Swayphics owner can permanently delete archived invoices.");
+                                        return;
+                                    }
+
+                                    const confirmation = window.prompt(
+                                        "This permanently deletes invoice " +
+                                        String(invoice.invoice_number || "") +
+                                        " and all linked payment attempts, payments, receipts, refunds and webhook records. " +
+                                        "Only continue when the invoice and all linked records are test data with no genuine customer funds or outstanding obligations. " +
+                                        "Type the invoice number exactly to confirm:"
                                     );
-                                    return;
-                                }
 
-                                if (
-                                    invoice.status !== "draft" &&
-                                    !invoice.archived
-                                ) {
-                                    swayAlert(
-                                        "Archive this invoice first. Sent, paid and overdue invoice records should be retained in the archive rather than permanently deleted."
-                                    );
-                                    return;
-                                }
+                                    if (confirmation === null) {
+                                        return;
+                                    }
 
-                                const warning =
-                                    invoice.archived
-                                        ? "Permanently delete this archived invoice? This cannot be undone."
-                                        : "Delete this draft invoice? This cannot be undone.";
+                                    if (
+                                        String(confirmation).trim() !==
+                                        String(invoice.invoice_number || "").trim()
+                                    ) {
+                                        swayAlert("The invoice number did not match. No records were deleted.");
+                                        return;
+                                    }
 
-                                if (!(await swayConfirm(warning))) {
-                                    return;
-                                }
-
-                                // invoice_items use ON DELETE CASCADE. Delete the invoice first so a
-                                // restrictive financial FK cannot leave an empty invoice behind.
-
-                                const deletedInvoices =
-                                    await api(
-                                        "/rest/v1/invoices?id=eq." +
-                                        encodeURIComponent(id),
+                                    const purgeResult = await api(
+                                        "/rest/v1/rpc/admin_permanently_delete_archived_invoice",
                                         {
-                                            method: "DELETE",
-                                            headers: headers({
-                                                "Prefer":
-                                                    "return=representation"
+                                            method: "POST",
+                                            body: JSON.stringify({
+                                                p_invoice_id: id,
+                                                p_confirmation: String(confirmation).trim()
                                             })
                                         }
                                     );
 
-                                if (
-                                    !Array.isArray(deletedInvoices) ||
-                                    deletedInvoices.length === 0
-                                ) {
-                                    throw new Error(
-                                        "The invoice was not deleted. Your current Supabase permissions or RLS policy may be blocking invoice deletion."
+                                    if (!purgeResult || purgeResult.deleted !== true) {
+                                        throw new Error("The database did not confirm that the archived invoice was permanently deleted.");
+                                    }
+
+                                    await logActivity(
+                                        "Permanently purged archived test invoice",
+                                        "invoices",
+                                        id
+                                    );
+                                } else {
+                                    if (invoicePayments.length || invoiceAttempts.length) {
+                                        swayAlert(
+                                            "This draft is linked to payment or online checkout records. Archive it instead of deleting it so its financial history remains intact."
+                                        );
+                                        return;
+                                    }
+
+                                    if (invoice.status !== "draft") {
+                                        swayAlert(
+                                            "Only draft invoices can be deleted directly. Archive issued, paid and overdue invoices first."
+                                        );
+                                        return;
+                                    }
+
+                                    if (!(await swayConfirm("Delete this draft invoice? This cannot be undone."))) {
+                                        return;
+                                    }
+
+                                    const deletedInvoices =
+                                        await api(
+                                            "/rest/v1/invoices?id=eq." +
+                                            encodeURIComponent(id),
+                                            {
+                                                method: "DELETE",
+                                                headers: headers({
+                                                    "Prefer": "return=representation"
+                                                })
+                                            }
+                                        );
+
+                                    if (
+                                        !Array.isArray(deletedInvoices) ||
+                                        deletedInvoices.length === 0
+                                    ) {
+                                        throw new Error(
+                                            "The draft invoice was not deleted. Your current Supabase permissions or RLS policy may be blocking invoice deletion."
+                                        );
+                                    }
+
+                                    await logActivity(
+                                        "Deleted invoice draft",
+                                        "invoices",
+                                        id
                                     );
                                 }
-
-                                await logActivity(
-                                    invoice.archived
-                                        ? "Permanently deleted archived invoice"
-                                        : "Deleted invoice draft",
-                                    "invoices",
-                                    id
-                                );
 
                                 await refreshData();
                                 renderShell();
