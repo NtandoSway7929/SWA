@@ -109,7 +109,12 @@
 
   function plainTextFromHTML(value) {
     const template = document.createElement("template");
-    template.innerHTML = sanitizeHTML(value);
+    const safe = sanitizeHTML(value)
+      .replace(/<br\s*\/?\s*>/gi, "\n")
+      .replace(/<li\b[^>]*>/gi, "\n• ")
+      .replace(/<\/(?:p|div|li|h[1-4]|blockquote|ul|ol)>/gi, "\n")
+      .replace(/<[^>]*>/g, "");
+    template.innerHTML = safe;
     const text = String(template.content.textContent || "").replace(/\u00a0/g, " ");
     return text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   }
