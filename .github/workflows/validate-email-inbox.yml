@@ -19,6 +19,9 @@ on:
       - "scripts/sent-email-recipient-preview.test.mjs"
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
+      - "admin-dashboard/admin-rich-text.js"
+      - "admin-dashboard/admin-rich-text.css"
+      - "scripts/send-email-rich-text.test.mjs"
       - "admin-dashboard/index.html"
       - "supabase/migrations/**"
       - ".github/workflows/validate-email-inbox.yml"
@@ -39,6 +42,9 @@ on:
       - "scripts/sent-email-recipient-preview.test.mjs"
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
+      - "admin-dashboard/admin-rich-text.js"
+      - "admin-dashboard/admin-rich-text.css"
+      - "scripts/send-email-rich-text.test.mjs"
       - "admin-dashboard/index.html"
       - "supabase/migrations/**"
       - ".github/workflows/validate-email-inbox.yml"
@@ -65,15 +71,21 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Check admin workspace JavaScript syntax
-        run: node --check admin-dashboard/admin-workspace.js
+      - name: Check admin workspace and rich-text editor JavaScript syntax
+        run: |
+          node --check admin-dashboard/admin-workspace.js
+          node --check admin-dashboard/admin-rich-text.js
+          node --check supabase/functions/send-email/rich-text-helpers.mjs
+          node --check scripts/send-email-rich-text.test.mjs
 
       - name: Run pure inbox helper tests
         run: |
           node --check supabase/functions/sync-email-inbox/inbox-helpers.mjs
           node --check supabase/functions/sync-email-inbox/email-mime-helpers.mjs
           node --check scripts/email-viewer-rendering.test.mjs
+          node --check scripts/send-email-rich-text.test.mjs
           node --check scripts/sent-email-recipient-preview.test.mjs
+          node --test scripts/send-email-rich-text.test.mjs
           node --test scripts/sent-email-recipient-preview.test.mjs
           node --test scripts/email-viewer-rendering.test.mjs
           node --check scripts/email-inbox-sync.test.mjs
