@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  looksLikeRichEmailHtml,
+  richHtmlToPlainText,
+  sanitizeEmailRichHtml,
+} from "./rich-text-helpers.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://swayphics.co.za",
@@ -34,7 +39,12 @@ function cleanEmailHeader(value: unknown, maxLength = 1800) {
     .slice(0, maxLength);
 }
 
-function emailParagraphs(value: string) {
+function emailParagraphs(value: string, richHtml: string | null = null) {
+  if (richHtml) {
+    return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.8;color:#56627A;">' +
+      richHtml +
+    "</div>";
+  }
   return String(value || "")
     .trim()
     .split(/\n\s*\n/)
@@ -60,6 +70,7 @@ function brandedEmailHtml(
   businessName: string,
   message: string,
   proposalType: "improv-website" | "no-website" | "not-website-related",
+  messageHtml: string | null = null,
 ) {
   const normalizedBusinessName = cleanRecipientName(businessName);
 
@@ -116,7 +127,7 @@ function brandedEmailHtml(
 
   const messageMarkup =
     '<div style="font-family:Arial,Helvetica,sans-serif;">' +
-      emailParagraphs(message) +
+      emailParagraphs(message, messageHtml) +
     "</div>";
 
   const signatureMarkup =
@@ -358,8 +369,25 @@ Deno.serve(async (req) => {
         .trim()
         .toLowerCase();
 
-    const message =
+    const rawMessage =
       String(body.message || "").trim();
+
+    if (rawMessage.length > 60000) {
+      return Response.json(
+        { error: "Email message is too long." },
+        { status: 400, headers: corsHeaders },
+      );
+    }
+
+    const messageHtml =
+      looksLikeRichEmailHtml(rawMessage)
+        ? sanitizeEmailRichHtml(rawMessage)
+        : null;
+
+    const message =
+      messageHtml
+        ? richHtmlToPlainText(messageHtml)
+        : rawMessage;
 
     const proposalType =
       body.proposal_type === "improv-website"
@@ -725,6 +753,7 @@ Deno.serve(async (req) => {
       recipientBusinessName,
       message,
       proposalType,
+      messageHtml,
     );
     const dashboardPreviewHtml = await buildDashboardEmailPreview(
       htmlBody,
