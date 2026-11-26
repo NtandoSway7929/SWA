@@ -47,6 +47,10 @@ assert.match(functionSource, /api\.fetch\.tinyfish\.ai/,
     "The worker must use the TinyFish Fetch REST endpoint");
 assert.match(functionSource, /not_found_in_search/,
     "A search miss must be represented as a source status, not a factual absence claim");
+assert.match(functionSource, /typeof providerError\\?\.error === "string"/,
+    "TinyFish per-URL error strings must be read from the documented error field");
+assert.match(functionSource, /google\\.co\\.za/,
+    "South African Google Maps URLs must be included in profile discovery");
 assert.match(functionSource, /needs_admin_review/,
     "Ambiguous source identities must be flagged for administrator review");
 assert.match(functionSource, /stale_worker/,
