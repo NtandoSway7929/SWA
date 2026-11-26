@@ -511,7 +511,7 @@
         if (has("discovery", "website")) {
             return "Website reported; not inspected";
         }
-        return "Website status not established";
+        return "Not established from your answers";
     }
 
     function buildRecommendations(findings) {
