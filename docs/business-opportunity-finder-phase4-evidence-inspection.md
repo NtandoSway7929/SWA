@@ -81,6 +81,14 @@ The application must call TinyFish's **REST API from a Supabase Edge Function**.
 - Fail closed with `provider_not_configured` when the secret is absent. Do not fall back to a public client-side request.
 - The current connected Supabase tools do not expose a secrets-list or secret-write action, so availability of this key has not been verified. Configure it through the Supabase project's secret manager before enabling the worker.
 
+### Provider data-use approval gate
+
+- The Edge Function also requires the server-side environment secret `TINYFISH_DATA_USE_APPROVED=true`.
+- The gate is default-off: a missing value or anything other than the exact string `true` blocks the inspection request before an inspection run is created and before any provider call is made.
+- Configure this secret only after an authorised Swayphics decision to accept the applicable TinyFish terms or after a suitable written agreement is in force. Record the decision and the terms/agreement version outside the code repository.
+- This gate is separate from respondent inspection consent and from the API key. Respondent consent does not itself authorise Swayphics to accept a provider contract.
+- Do not set this value in production as part of technical deployment. It is a separate governance approval.
+
 TinyFish REST API authentication is API-key based and is separate from TinyFish MCP authentication. See [TinyFish Authentication](https://docs.tinyfish.ai/authentication).
 
 ### Search
