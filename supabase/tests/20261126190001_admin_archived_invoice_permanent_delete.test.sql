@@ -267,7 +267,7 @@ insert into public.payments (
     '10000000-0000-4000-8000-000000000001',
     2.00,
     'paid',
-    'card',
+    'Card',
     'PURGE-QA-PAYMENT',
     current_date,
     '10000000-0000-4000-8000-000000000002',
