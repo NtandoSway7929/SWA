@@ -6,10 +6,12 @@
     const API_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
     const API_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
     let assessmentEnquiryIds = new Map();
+    let sessionVerified = false;
     let lastLinkLoad = 0;
     let linkLoadPromise = null;
 
     function injectBusinessAssessmentLink() {
+        if (!sessionVerified) return;
         const crmMenu = document.querySelector('[data-nav-menu="crm"]');
         if (!crmMenu || crmMenu.querySelector("[data-business-assessments-nav]")) return;
 
@@ -92,6 +94,7 @@
     }
 
     async function protectAssessmentEnquiryActions() {
+        if (!sessionVerified) return;
         const main = document.getElementById("sway-workspace-main");
         if (!main || !main.querySelector('[data-ai-record^="enquiries:"]')) return;
 
@@ -137,19 +140,21 @@
             protectAssessmentEnquiryActions();
         });
         observer.observe(root, { childList: true, subtree: true });
-        injectBusinessAssessmentLink();
-
         const sessionReady = window.swayphicsAdminSessionReady;
         if (sessionReady && typeof sessionReady.then === "function") {
             sessionReady.then((verified) => {
-                if (verified === true) {
+                sessionVerified = verified === true;
+                if (sessionVerified) {
                     injectBusinessAssessmentLink();
                     protectAssessmentEnquiryActions();
                 }
-            }).catch(() => {});
+            }).catch(() => {
+                sessionVerified = false;
+            });
         }
 
         window.addEventListener("focus", () => {
+            if (!sessionVerified) return;
             loadAssessmentEnquiryIds(true).then(protectAssessmentEnquiryActions);
         });
     }
