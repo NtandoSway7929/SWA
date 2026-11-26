@@ -386,6 +386,7 @@ async function persistEvidence(service: any, rows: any[]) {
 async function processInspection(inspectionId: string, assessmentId: string) {
     const service = createServiceClient();
     let evidenceRows: any[] = [];
+    let evidencePersisted = false;
     let searchErrors: Array<{ source_type: SourceType; code: string; request_id: string | null }> = [];
     try {
         const { data: run, error: runError } = await service
@@ -420,11 +421,15 @@ async function processInspection(inspectionId: string, assessmentId: string) {
             throw new Error("inspection_consent_unavailable");
         }
 
-        await service.from("business_assessment_inspections").update({
-            status: "running",
-            started_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        }).eq("id", inspectionId);
+        const { error: runningUpdateError } = await service
+            .from("business_assessment_inspections")
+            .update({
+                status: "running",
+                started_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", inspectionId);
+        if (runningUpdateError) throw new Error("inspection_status_update_failed");
 
         const { candidates, noResults, searchErrors: foundSearchErrors } = await discoverCandidates(assessment);
         searchErrors = foundSearchErrors;
@@ -593,6 +598,7 @@ async function processInspection(inspectionId: string, assessmentId: string) {
         }
 
         await persistEvidence(service, evidenceRows);
+        evidencePersisted = true;
         const failures = evidenceRows.filter((row) =>
             ["blocked", "unreachable", "timeout", "fetch_error"].includes(row.source_status)
         );
@@ -600,19 +606,28 @@ async function processInspection(inspectionId: string, assessmentId: string) {
         const status = failures.length
             ? (observed || evidenceRows.length > failures.length ? "partial" : "failed")
             : "completed";
-        await service.from("business_assessment_inspections").update({
-            status,
-            failure_code: failures.length ? "one_or_more_sources_unavailable" : null,
-            failure_summary: failures.length
-                ? "Some public sources could not be checked. Review the source-specific results and limitations."
-                : null,
-            completed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        }).eq("id", inspectionId);
+        const { error: completionUpdateError } = await service
+            .from("business_assessment_inspections")
+            .update({
+                status,
+                failure_code: failures.length ? "one_or_more_sources_unavailable" : null,
+                failure_summary: failures.length
+                    ? "Some public sources could not be checked. Review the source-specific results and limitations."
+                    : null,
+                completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", inspectionId);
+        if (completionUpdateError) throw new Error("inspection_status_update_failed");
     } catch (error) {
         const message = String((error as Error)?.message || "inspection_failed").slice(0, 120);
-        if (evidenceRows.length) {
-            try { await persistEvidence(service, evidenceRows); } catch { /* failure summary remains */ }
+        if (evidenceRows.length && !evidencePersisted) {
+            try {
+                await persistEvidence(service, evidenceRows);
+                evidencePersisted = true;
+            } catch {
+                // Preserve the run failure even when evidence persistence also fails.
+            }
         }
         await service.from("business_assessment_inspections").update({
             status: "failed",
