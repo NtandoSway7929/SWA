@@ -54,7 +54,7 @@ assert.match(js, /class="bof-step-title" tabindex="-1"/,
     "Question headings must be available for managed keyboard focus");
 assert.match(js, /evidence: "Self-reported"/,
     "Findings must retain their evidence classification");
-assert.match(js, /Website status not established/,
+assert.match(js, /Not established from your answers/,
     "The report must keep an unreported website status distinct from no website");
 assert.match(js, /No website reported/,
     "A stated lack of a website must be reported as self-reported");
