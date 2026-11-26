@@ -21,6 +21,17 @@ test("preserves approved formatting and removes executable or unsupported markup
   assert.doesNotMatch(safe, /onclick|script|iframe|img|onerror/i);
 });
 
+test("normalises Word RGB colours and preserves checklist semantics", () => {
+  const safe = sanitizeEmailRichHtml(
+    '<ul class="sway-rich-checklist"><li>☐ First task</li></ul>' +
+    '<p style="color:rgb(1, 2, 3);background-color:rgb(255, 242, 168)">Highlighted</p>'
+  );
+  assert.match(safe, /class="sway-rich-checklist"/);
+  assert.match(safe, /color:#010203/);
+  assert.match(safe, /background-color:#fff2a8/);
+  assert.match(richHtmlToPlainText(safe), /☐ First task/);
+});
+
 test("rejects unsafe hyperlink protocols and retains safe HTTPS links", () => {
   const safe = sanitizeEmailRichHtml(
     '<p><a href="javascript:alert(1)">unsafe</a> <a href="https://example.com/path">safe</a></p>'
