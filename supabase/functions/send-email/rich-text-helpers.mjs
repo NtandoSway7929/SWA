@@ -23,8 +23,13 @@ function decodeEntities(value) {
 
 function safeColor(value) {
   const color = String(value || "").trim();
-  return /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(color) ||
-    /^(black|white|red|blue|green|navy|gray|grey|orange|yellow)$/i.test(color) ? color : "";
+  if (/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(color) ||
+    /^(black|white|red|blue|green|navy|gray|grey|orange|yellow)$/i.test(color)) return color;
+  const rgb = color.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(1(?:\.0+)?))?\s*\)$/i);
+  if (!rgb) return "";
+  const channels = rgb.slice(1, 4).map(Number);
+  if (channels.some((channel) => channel < 0 || channel > 255)) return "";
+  return "#" + channels.map((channel) => channel.toString(16).padStart(2, "0")).join("");
 }
 
 function cleanStyle(value) {
@@ -87,6 +92,7 @@ export function sanitizeEmailRichHtml(value) {
     if (tag === "br") return "<br>";
     let style = "";
     let href = "";
+    let taskList = false;
     const attributePattern = /([a-zA-Z_:][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<> \x60]+))/g;
     for (const attribute of String(rawAttributes || "").matchAll(attributePattern)) {
       const name = String(attribute[1] || "").toLowerCase();
@@ -94,9 +100,11 @@ export function sanitizeEmailRichHtml(value) {
       const setting = quoted !== undefined ? quoted : (attribute[5] || "");
       if (name === "style") style = cleanStyle(setting);
       if (tag === "a" && name === "href") href = safeHref(setting);
+      if (tag === "ul" && name === "class" && setting.split(/\s+/).includes("sway-rich-checklist")) taskList = true;
     }
     const attributes = [];
     if (style) attributes.push('style="' + style.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '"');
+    if (taskList) attributes.push('class="sway-rich-checklist"');
     if (tag === "a" && href) {
       attributes.push('href="' + href.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '"');
       attributes.push('target="_blank"', 'rel="noopener noreferrer"');
