@@ -155,6 +155,7 @@ function brandedEmailHtml(
     }
     .sway-rich-checklist { list-style:none !important; padding-left:0 !important; }
     .sway-rich-checklist li { list-style:none !important; }
+    .sway-rich-task-box { color:#0152F4; font-size:16px; }
   </style>
 </head>
 <body style="margin:0;padding:0;background:#F4F7FC;">
