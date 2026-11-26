@@ -21674,32 +21674,6 @@ function simpleBars(items, color) {
             return;
         }
 
-        const assessment = {
-            business_assessment: lead.business_assessment || "",
-            research_findings: lead.research_findings || "",
-            swayphics_solution: lead.swayphics_solution || "",
-            recommended_services: lead.recommended_services || "",
-            research_sources: lead.research_sources || "",
-            service_interest: lead.service_interest || "",
-            estimated_value: lead.estimated_value || 0
-        };
-
-        const populated = [
-            assessment.business_assessment,
-            assessment.research_findings,
-            assessment.swayphics_solution,
-            assessment.recommended_services
-        ].filter(function (value) {
-            return String(value || "").trim();
-        }).length;
-
-        if (populated < 2) {
-            swayAlert(
-                "This lead's assessment is not complete enough for InnerMe to draft a reliable proposal. Complete the assessment first."
-            );
-            return;
-        }
-
         const button = document.querySelector(
             '[data-draft-lead-proposal="' + CSS.escape(leadId) + '"]'
         );
@@ -21707,10 +21681,175 @@ function simpleBars(items, color) {
         if (button) {
             button.disabled = true;
             button.dataset.originalText = button.textContent;
-            button.textContent = "Drafting…";
+            button.textContent = "Preparing assessment…";
         }
 
         try {
+            const linkedRows = await api(
+                "/rest/v1/business_assessments?select=id,assessment_version,report,findings,submitted_at&lead_id=eq." +
+                    encodeURIComponent(lead.id) +
+                    "&order=submitted_at.desc&limit=1"
+            );
+            let opportunityAssessment = null;
+
+            if (Array.isArray(linkedRows) && linkedRows.length) {
+                const row = linkedRows[0];
+                opportunityAssessment = {
+                    source: "Business Opportunity Finder",
+                    assessment_id: row.id,
+                    assessment_version: row.assessment_version,
+                    submitted_at: row.submitted_at,
+                    report: row.report || {},
+                    findings: Array.isArray(row.findings) ? row.findings : []
+                };
+            }
+
+            const legacyAssessment = {
+                business_assessment: lead.business_assessment || "",
+                research_findings: lead.research_findings || "",
+                swayphics_solution: lead.swayphics_solution || "",
+                recommended_services: lead.recommended_services || "",
+                research_sources: lead.research_sources || ""
+            };
+
+            const legacyPopulated = [
+                legacyAssessment.business_assessment,
+                legacyAssessment.research_findings,
+                legacyAssessment.swayphics_solution,
+                legacyAssessment.recommended_services
+            ].filter(function (value) {
+                return String(value || "").trim();
+            }).length;
+
+            if (opportunityAssessment) {
+                const report = opportunityAssessment.report || {};
+                const findings = opportunityAssessment.findings;
+                const recommendations = Array.isArray(report.recommendations)
+                    ? report.recommendations
+                    : [];
+
+                const findingText = findings.slice(0, 8).map(function (finding) {
+                    return [
+                        "[Self-reported] " + String(finding.title || "Opportunity"),
+                        String(finding.explanation || "").trim(),
+                        finding.business_implication
+                            ? "Business implication: " + String(finding.business_implication)
+                            : "",
+                        finding.next_action
+                            ? "Suggested next action: " + String(finding.next_action)
+                            : ""
+                    ].filter(Boolean).join("\n");
+                }).join("\n\n").slice(0, 4200);
+
+                const recommendationText = recommendations.slice(0, 6).map(function (item) {
+                    return [
+                        String(item.title || item.service_id || "Recommended next step"),
+                        String(item.recommended_action || item.description || "").trim()
+                    ].filter(Boolean).join(": ");
+                }).join("\n\n").slice(0, 3000);
+
+                const contextText = [
+                    "Source: Business Opportunity Finder.",
+                    "Assessment reference: " + opportunityAssessment.assessment_id,
+                    "Assessment version: " + opportunityAssessment.assessment_version,
+                    report.industry && report.industry.label
+                        ? "Industry: " + report.industry.label
+                        : "",
+                    report.location ? "Location: " + report.location : "",
+                    report.website_status ? "Website status: " + report.website_status : "",
+                    report.priority && report.priority.label
+                        ? "Respondent priority: " + report.priority.label
+                        : "",
+                    Array.isArray(report.discovery_channels)
+                        ? "Respondent-reported discovery channels: " + report.discovery_channels.join(", ")
+                        : "",
+                    Array.isArray(report.contact_methods)
+                        ? "Respondent-reported contact methods: " + report.contact_methods.join(", ")
+                        : "",
+                    Array.isArray(report.current_starting_point)
+                        ? "Current starting point reported by respondent: " + report.current_starting_point.join(" ")
+                        : ""
+                ].filter(Boolean).join("\n");
+
+                const appendContext = function (existing, label, addition) {
+                    const base = String(existing || "").trim();
+                    if (!addition) return base;
+                    const labelled = label + "\n" + addition;
+                    return base ? base + "\n\n" + labelled : labelled;
+                };
+
+                legacyAssessment.business_assessment = appendContext(
+                    legacyAssessment.business_assessment,
+                    "Business Opportunity Finder context",
+                    contextText
+                );
+                legacyAssessment.research_findings = appendContext(
+                    legacyAssessment.research_findings,
+                    "Business Opportunity Finder findings (self-reported, not independently verified)",
+                    findingText
+                );
+                legacyAssessment.swayphics_solution = appendContext(
+                    legacyAssessment.swayphics_solution,
+                    "Potential Swayphics next steps from the submitted report",
+                    recommendationText
+                );
+                legacyAssessment.recommended_services = appendContext(
+                    legacyAssessment.recommended_services,
+                    "Services identified by the submitted report",
+                    recommendations.map(function (item) {
+                        return String(item.title || item.service_id || "").trim();
+                    }).filter(Boolean).join("; ")
+                );
+                legacyAssessment.research_sources = appendContext(
+                    legacyAssessment.research_sources,
+                    "Assessment evidence and limitations",
+                    "Respondent-submitted Business Opportunity Finder assessment " +
+                        opportunityAssessment.assessment_id +
+                        " (version " + opportunityAssessment.assessment_version +
+                        "). These findings are self-reported. No independent website, social-media, Google Business Profile or operational inspection was performed."
+                );
+
+                if (legacyPopulated < 2 &&
+                    (findings.length === 0 || recommendations.length === 0)) {
+                    throw new Error(
+                        "This linked assessment does not contain a specific finding and recommended next step that can support a reliable proposal yet."
+                    );
+                }
+            }
+
+            const reportRecommendations = opportunityAssessment &&
+                Array.isArray(opportunityAssessment.report.recommendations)
+                ? opportunityAssessment.report.recommendations
+                : [];
+            const assessment = {
+                ...legacyAssessment,
+                service_interest: lead.service_interest || reportRecommendations
+                    .map(function (item) {
+                        return String(item.title || item.service_id || "").trim();
+                    })
+                    .filter(Boolean)
+                    .join("; "),
+                estimated_value: lead.estimated_value || 0,
+                business_opportunity_assessment: opportunityAssessment
+            };
+
+            const populated = [
+                assessment.business_assessment,
+                assessment.research_findings,
+                assessment.swayphics_solution,
+                assessment.recommended_services
+            ].filter(function (value) {
+                return String(value || "").trim();
+            }).length;
+
+            if (populated < 2) {
+                throw new Error(
+                    "This lead's assessment is not complete enough for InnerMe to draft a reliable proposal. Complete the assessment first."
+                );
+            }
+
+            if (button) button.textContent = "Drafting…";
+
             const result = await api(
                 "/functions/v1/swayphics-ai",
                 {
@@ -21725,7 +21864,7 @@ function simpleBars(items, color) {
                             business_name: lead.business_name || "",
                             contact_name: lead.contact_name || "",
                             email: lead.email || "",
-                            service_interest: lead.service_interest || "",
+                            service_interest: assessment.service_interest,
                             estimated_value: lead.estimated_value || 0
                         },
                         assessment: assessment
@@ -21734,12 +21873,14 @@ function simpleBars(items, color) {
             );
 
             if (!result || !result.proposal) {
-                throw new Error(
-                    "InnerMe did not return a proposal draft."
-                );
+                throw new Error("InnerMe did not return a proposal draft.");
             }
 
             const proposal = result.proposal;
+            const assessmentSnapshot = {
+                ...assessment,
+                snapshot_created_at: new Date().toISOString()
+            };
 
             const saved = await api(
                 "/rest/v1/lead_proposals",
@@ -21759,7 +21900,7 @@ function simpleBars(items, color) {
                             ("Swayphics | Proposal for " + (lead.business_name || "Your business")),
                         content: proposal.content || "",
                         status: "draft",
-                        assessment_snapshot: assessment,
+                        assessment_snapshot: assessmentSnapshot,
                         created_by:
                             state.currentUser &&
                             state.currentUser.id
