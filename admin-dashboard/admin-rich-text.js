@@ -165,9 +165,9 @@
         button("↗ Link", "createLink", "Insert link") +
       "</div><span class=\"sway-rich-tool-divider\" aria-hidden=\"true\"></span>" +
       '<div class="sway-rich-tool-group">' +
-        button("≡", "justifyLeft", "Align left") +
-        button("≡", "justifyCenter", "Align centre") +
-        button("≡", "justifyRight", "Align right") +
+        button("↤", "justifyLeft", "Align left") +
+        button("↔", "justifyCenter", "Align centre") +
+        button("↦", "justifyRight", "Align right") +
         button("Tx", "removeFormat", "Clear formatting") +
         button("↶", "undo", "Undo") +
         button("↷", "redo", "Redo") +
@@ -188,9 +188,11 @@
       const span = document.createElement("span");
       const face = font.getAttribute("face");
       const size = font.getAttribute("size");
+      const color = safeColor(font.getAttribute("color"));
       if (face && FONTS.some(function (item) { return item.toLowerCase() === face.toLowerCase(); })) {
         span.style.fontFamily = face;
       }
+      if (color) span.style.color = color;
       const mapped = { "1": 10, "2": 12, "3": 14, "4": 16, "5": 18, "6": 24, "7": 32 }[size];
       if (mapped) span.style.fontSize = mapped + "px";
       while (font.firstChild) span.appendChild(font.firstChild);
@@ -225,6 +227,7 @@
     source.setAttribute("aria-hidden", "true");
     source.setAttribute("tabindex", "-1");
     source.required = false;
+    source.removeAttribute("maxlength");
 
     let lastRange = null;
     let silent = false;
@@ -283,8 +286,8 @@
     }
 
     actualToolbar.addEventListener("mousedown", function (event) {
-      if (event.target.closest("button")) event.preventDefault();
       rememberSelection();
+      if (event.target.closest("button")) event.preventDefault();
     });
     actualToolbar.addEventListener("click", function (event) {
       const control = event.target.closest("[data-rich-command]");
@@ -307,6 +310,19 @@
       runCommand("hiliteColor", event.target.value);
     });
 
+    surface.addEventListener("paste", function (event) {
+      const clipboard = event.clipboardData;
+      if (!clipboard) return;
+      event.preventDefault();
+      const pastedHTML = clipboard.getData("text/html");
+      const pastedText = clipboard.getData("text/plain");
+      if (pastedHTML) {
+        document.execCommand("insertHTML", false, sanitizeHTML(pastedHTML));
+      } else {
+        document.execCommand("insertText", false, pastedText);
+      }
+      syncSource();
+    });
     surface.addEventListener("input", syncSource);
     surface.addEventListener("keyup", rememberSelection);
     surface.addEventListener("mouseup", rememberSelection);
@@ -327,8 +343,6 @@
         if (form) { event.preventDefault(); form.requestSubmit(); }
       }
     });
-    document.addEventListener("selectionchange", rememberSelection);
-
     const editor = {
       root: root,
       toolbar: actualToolbar,
