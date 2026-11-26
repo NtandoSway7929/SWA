@@ -204,7 +204,7 @@ export function matchBusinessIdentity({
 
 export function mapTinyFishFetchError(error) {
     const code = String(error || "").toLowerCase();
-    if (code === "bot_blocked") return "blocked";
+    if (code === "bot_blocked" || code === "login_required") return "blocked";
     if (code === "timeout") return "timeout";
     if (code === "page_not_found" || code === "target_unreachable" ||
         code === "invalid_redirect_url" || code === "invalid_url" || code === "proxy_error") {
