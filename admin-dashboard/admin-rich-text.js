@@ -25,8 +25,13 @@
 
   function safeColor(value) {
     const color = String(value || "").trim();
-    return /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(color) ||
-      /^(black|white|red|blue|green|navy|gray|grey|orange|yellow)$/i.test(color) ? color : "";
+    if (/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(color) ||
+      /^(black|white|red|blue|green|navy|gray|grey|orange|yellow)$/i.test(color)) return color;
+    const rgb = color.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(1(?:\.0+)?))?\s*\)$/i);
+    if (!rgb) return "";
+    const channels = rgb.slice(1, 4).map(Number);
+    if (channels.some(function (channel) { return channel < 0 || channel > 255; })) return "";
+    return "#" + channels.map(function (channel) { return channel.toString(16).padStart(2, "0"); }).join("");
   }
 
   function cleanStyle(value) {
