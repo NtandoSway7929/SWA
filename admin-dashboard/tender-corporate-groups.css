@@ -68,7 +68,7 @@
 .sway-tender-results-head strong { color:#182b50; font:800 .72rem 'Montserrat',sans-serif; }
 .sway-tender-results-head span { color:#8490a4; font-size:.61rem; text-align:right; }
 .sway-tender-table-wrap { width:100%; overflow:auto; border:1px solid rgba(0,32,150,.085); border-radius:15px; background:#fff; }
-.sway-tender-table { width:100%; min-width:1080px; border-collapse:separate; border-spacing:0; }
+.sway-tender-table { width:100%; min-width:1150px; border-collapse:separate; border-spacing:0; }
 .sway-tender-table th { padding:12px 12px; border-bottom:1px solid rgba(0,32,150,.08); background:#f8faff; color:#73819a; font:800 .57rem 'Montserrat',sans-serif; text-align:left; white-space:nowrap; }
 .sway-tender-table td { padding:13px 12px; border-bottom:1px solid rgba(0,32,150,.055); vertical-align:top; color:#2f4160; font-size:.63rem; line-height:1.5; }
 .sway-tender-table tr:last-child td { border-bottom:0; }
@@ -84,8 +84,11 @@
 .sway-tender-chip.warning { border-color:rgba(183,126,28,.2); background:#fffaf0; color:#8a611a; }
 .sway-tender-chip.success { border-color:rgba(30,130,88,.18); background:#f1faf5; color:#26744f; }
 .sway-tender-chip.muted { color:#60728e; }
-.sway-tender-open { padding:7px 10px; border:1px solid rgba(1,82,244,.15); border-radius:8px; background:#fff; color:#1453bb; font:800 .6rem 'Montserrat',sans-serif; cursor:pointer; }
-.sway-tender-open:hover { background:#f3f7ff; }
+.sway-tender-row-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:116px; }
+.sway-tender-open,.sway-tender-email { min-height:31px; padding:0 9px; border:1px solid rgba(1,82,244,.15); border-radius:8px; background:#fff; color:#1453bb; font:800 .59rem 'Montserrat',sans-serif; cursor:pointer; white-space:nowrap; }
+.sway-tender-open:hover,.sway-tender-email:hover { background:#f3f7ff; border-color:rgba(1,82,244,.3); }
+.sway-tender-email { border-color:rgba(0,32,150,.14); color:#19325f; }
+.sway-tender-email:disabled { opacity:.42; cursor:not-allowed; background:#f7f8fa; color:#8390a4; }
 .sway-tender-empty { padding:24px !important; color:#8692a6 !important; text-align:center; }
 .sway-tender-empty-state { display:flex; flex-direction:column; gap:5px; margin-top:14px; padding:17px; border:1px dashed rgba(0,32,150,.16); border-radius:13px; background:rgba(255,255,255,.6); }
 .sway-tender-empty-state strong { color:#52617a; font:800 .68rem 'Montserrat',sans-serif; }
@@ -219,3 +222,8 @@ body.sway-dark-mode .sway-tender-evidence-record>p { color:#b9c7dd; }
   .sway-tender-evidence-record dl { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .sway-tender-evidence-heading { align-items:flex-start; }
 }
+
+/* Per-prospect email actions remain manual and respect the campaign consent state. */
+body.sway-dark-mode .sway-tender-open,
+body.sway-dark-mode .sway-tender-email { background:#142442; border-color:rgba(151,180,235,.2); color:#dce8fb; }
+body.sway-dark-mode .sway-tender-email:disabled { background:#172239; color:#8796af; opacity:.55; }
