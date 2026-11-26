@@ -93,6 +93,7 @@ export function sanitizeEmailRichHtml(value) {
     let style = "";
     let href = "";
     let taskList = false;
+    let taskBox = false;
     const attributePattern = /([a-zA-Z_:][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<> \x60]+))/g;
     for (const attribute of String(rawAttributes || "").matchAll(attributePattern)) {
       const name = String(attribute[1] || "").toLowerCase();
@@ -101,10 +102,12 @@ export function sanitizeEmailRichHtml(value) {
       if (name === "style") style = cleanStyle(setting);
       if (tag === "a" && name === "href") href = safeHref(setting);
       if (tag === "ul" && name === "class" && setting.split(/\s+/).includes("sway-rich-checklist")) taskList = true;
+      if (tag === "span" && name === "class" && setting.split(/\s+/).includes("sway-rich-task-box")) taskBox = true;
     }
     const attributes = [];
     if (style) attributes.push('style="' + style.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '"');
     if (taskList) attributes.push('class="sway-rich-checklist"');
+    if (taskBox) attributes.push('class="sway-rich-task-box"');
     if (tag === "a" && href) {
       attributes.push('href="' + href.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '"');
       attributes.push('target="_blank"', 'rel="noopener noreferrer"');
