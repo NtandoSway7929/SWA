@@ -54,6 +54,12 @@ assert.match(js, /class="bof-step-title" tabindex="-1"/,
     "Question headings must be available for managed keyboard focus");
 assert.match(js, /evidence: "Self-reported"/,
     "Findings must retain their evidence classification");
+assert.match(js, /Website status not established/,
+    "The report must keep an unreported website status distinct from no website");
+assert.match(js, /No website reported/,
+    "A stated lack of a website must be reported as self-reported");
+assert.match(js, /"website", "no_website", "directories"/,
+    "Selecting no online presence must clear a separate no-website answer");
 assert.match(html, /no independent website, social-media or Google Business Profile checks have been performed/i,
     "The report must disclose that external inspection has not occurred");
 assert.doesNotMatch(js, /fetch\s*\(|supabase|localStorage|sessionStorage/i,
