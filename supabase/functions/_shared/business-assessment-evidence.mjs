@@ -96,7 +96,8 @@ export function matchBusinessIdentity({
     title,
     text,
     sourceType,
-    sourceUrl
+    sourceUrl,
+    expectedPlatform
 }) {
     const name = normaliseWords(businessName);
     const area = normaliseWords(location);
@@ -162,8 +163,9 @@ export function matchBusinessIdentity({
 
     if (sourceType === "social_profile" && businessNameMatch && locationMatch && sourceUrl) {
         try {
-            if (!detectPlatform(sourceUrl)) {
-                basis.push("The resolved destination is not on a supported public social platform.");
+            const resolvedPlatform = detectPlatform(sourceUrl);
+            if (!resolvedPlatform || (expectedPlatform && resolvedPlatform !== expectedPlatform)) {
+                basis.push("The resolved destination is not the same supported social platform as the submitted or discovered candidate.");
                 return { status: "ambiguous", basis };
             }
             const slug = normaliseWords(new URL(sourceUrl).pathname);
