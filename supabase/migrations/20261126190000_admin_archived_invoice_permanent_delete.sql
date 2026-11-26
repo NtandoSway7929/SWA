@@ -3,6 +3,28 @@
 
 begin;
 
+-- This helper already exists in the live Swayphics schema. Reassert its exact
+-- owner predicate with a pinned search_path so this migration is self-contained
+-- in disposable schema fixtures as well.
+create or replace function public.is_swayphics_owner()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+    select exists (
+        select 1
+          from public.admin_users au
+         where au.user_id = auth.uid()
+           and au.active is true
+           and au.role = 'owner'
+    );
+$function$;
+
+revoke all on function public.is_swayphics_owner() from public, anon;
+grant execute on function public.is_swayphics_owner() to authenticated;
+
 create or replace function innerme_private.guard_yoco_financial_ledger()
 returns trigger
 language plpgsql
@@ -257,10 +279,16 @@ begin
      where pa.id = any(v_attempt_ids);
     get diagnostics v_deleted_attempts = row_count;
 
-    delete from public.manual_payment_record_requests mpr
-     where mpr.invoice_id = p_invoice_id
-        or mpr.payment_id = any(v_payment_ids);
-    get diagnostics v_deleted_manual_requests = row_count;
+    -- This operational idempotency table was added after the original
+    -- Yoco baseline. It is present in the live schema, but optional in older
+    -- disposable fixtures, so resolve it at runtime.
+    if to_regclass('public.manual_payment_record_requests') is not null then
+        execute
+            'delete from public.manual_payment_record_requests ' ||
+            'where invoice_id = $1 or payment_id = any($2)'
+        using p_invoice_id, v_payment_ids;
+        get diagnostics v_deleted_manual_requests = row_count;
+    end if;
 
     delete from public.payments p
      where p.id = any(v_payment_ids);
