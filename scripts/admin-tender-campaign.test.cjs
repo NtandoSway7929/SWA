@@ -20,8 +20,8 @@ const evidenceMigration = fs.readFileSync(
 
 assert.doesNotThrow(() => new vm.Script(script), "campaign module must be valid JavaScript");
 
-assert.match(html, /tender-corporate-groups\.css\?v=20261125-1/);
-assert.match(html, /tender-corporate-groups\.js\?v=20261125-1/);
+assert.match(html, /tender-corporate-groups\.css\?v=20261126-email-action-1/);
+assert.match(html, /tender-corporate-groups\.js\?v=20261126-email-action-1/);
 assert.ok(
   html.indexOf("free-homepage-preview-campaign.js") < html.indexOf("tender-corporate-groups.js"),
   "campaign workspace should load after the existing CRM and campaign controllers"
@@ -42,6 +42,9 @@ for (const contract of [
   'commercial_intelligence_assessment',
   'renderTenderEvidence',
   'data-sway-tender-open',
+  'data-sway-tender-email',
+  'function buildEmailDraft(item)',
+  'function emailActionState(item)',
   'data-sway-tender-save-workflow',
   'data-sway-tender-consent-request',
   'data-sway-tender-consent-granted',
@@ -58,6 +61,10 @@ assert.match(script, /email_consent_status: "revoked"/);
 assert.match(script, /qualification_status !== "qualified" \|\| dnc/);
 assert.match(script, /No email will be sent/);
 assert.match(script, /No email has been sent from this workspace/);
+assert.match(script, /mailto:/);
+assert.match(script, /This message is only a request for permission/);
+assert.match(script, /consent === "requested"/);
+assert.match(script, /item\.do_not_contact \|\| item\.stage === "do_not_contact"/);
 assert.match(script, /business_name: item\.business_name/);
 assert.match(script, /source: "Tender & Corporate Groups"/);
 assert.match(script, /lead_id/);
@@ -82,6 +89,8 @@ for (const selector of [
   ".sway-tender-tabs",
   ".sway-tender-panel",
   ".sway-tender-table-wrap",
+  ".sway-tender-row-actions",
+  ".sway-tender-email",
   ".sway-tender-detail-grid",
   ".sway-tender-detail-summary",
   ".sway-tender-evidence-section",
