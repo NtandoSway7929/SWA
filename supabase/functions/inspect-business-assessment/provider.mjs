@@ -41,11 +41,15 @@ export function normalisePublicUrl(value) {
     return url.toString();
 }
 
+/** @returns {string | null} */
 export function detectPlatform(value) {
     try {
         const hostname = new URL(value).hostname.toLowerCase();
-        const found = PLATFORM_HOSTS.find(([, pattern]) => pattern.test(hostname));
-        return found ? found[0] : null;
+        if (/(^|\\.)instagram\\.com$/i.test(hostname)) return "instagram";
+        if (/(^|\\.)facebook\\.com$/i.test(hostname)) return "facebook";
+        if (/(^|\\.)tiktok\\.com$/i.test(hostname)) return "tiktok";
+        if (/(^|\\.)linkedin\\.com$/i.test(hostname)) return "linkedin";
+        return null;
     } catch {
         return null;
     }
