@@ -12,7 +12,7 @@
 
     function injectBusinessAssessmentLink() {
         if (!sessionVerified) return;
-        const crmMenu = document.querySelector('[data-nav-menu="crm"]');
+        const crmMenu = document.getElementById("sway-nav-menu-crm");
         if (!crmMenu || crmMenu.querySelector("[data-business-assessments-nav]")) return;
 
         const link = document.createElement("a");
