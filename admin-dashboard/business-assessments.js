@@ -700,8 +700,7 @@
         refresh.addEventListener("click", async () => {
             refresh.disabled = true;
             try {
-                await renderInspectionSection(parent, item);
-                section.remove();
+                await replaceInspectionSection(parent, section, item);
             } catch (error) {
                 message.textContent = error.message || "Inspection status could not be refreshed.";
             } finally {
@@ -731,6 +730,7 @@
                 message.textContent = "Submitting the inspection request.";
                 try {
                     await triggerPublicPresenceInspection(item.id, inspect, message);
+                    await replaceInspectionSection(parent, section, item);
                 } catch (error) {
                     message.textContent = error.message || "The inspection request failed.";
                 } finally {
@@ -743,6 +743,17 @@
             message.textContent = "An inspection is currently " + run.status + ". Use Refresh inspection status to check for results.";
         }
         section.appendChild(controls);
+    }
+
+    async function replaceInspectionSection(parent, oldSection, item) {
+        const nextSibling = oldSection.nextSibling;
+        await renderInspectionSection(parent, item);
+        const replacement = parent.lastElementChild;
+        if (!replacement || replacement === oldSection) {
+            throw new Error("The inspection panel could not be refreshed.");
+        }
+        parent.insertBefore(replacement, nextSibling);
+        oldSection.remove();
     }
 
     async function showAssessment(id) {
@@ -846,7 +857,13 @@
         disclaimer.appendChild(element("p", "", report.disclaimer ||
             "This assessment is based on respondent answers. No independent website, social-media or Google Business Profile inspection has been performed."));
 
-        await renderInspectionSection(detailContent, item);
+        try {
+            await renderInspectionSection(detailContent, item);
+        } catch (error) {
+            const inspectionError = addSection(detailContent, "Independent public-presence inspection");
+            inspectionError.appendChild(element("p", "bfa-inspection-notice",
+                "Inspection history could not be loaded. " + (error.message || "Refresh the assessment to try again.")));
+        }
         renderConversionSection(detailContent, item, report);
 
         const actions = element("div", "bfa-detail-actions");
