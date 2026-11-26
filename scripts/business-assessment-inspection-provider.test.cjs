@@ -115,6 +115,7 @@ const assert = require("node:assert/strict");
     assert.equal(rejected.status, "rejected");
 
     assert.equal(provider.mapTinyFishFetchError("bot_blocked"), "blocked");
+    assert.equal(provider.mapTinyFishFetchError("login_required"), "blocked");
     assert.equal(provider.mapTinyFishFetchError("timeout"), "timeout");
     assert.equal(provider.mapTinyFishFetchError("page_not_found"), "unreachable");
     assert.equal(provider.mapTinyFishFetchError("unexpected_error"), "fetch_error");
