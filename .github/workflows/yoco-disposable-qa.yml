@@ -176,9 +176,9 @@ jobs:
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
-            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' \) \
+            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' -o -name '20261126190000_admin_archived_invoice_permanent_delete.sql' \) \
             | sort)
-          test "${#migrations[@]}" -eq 15
+          test "${#migrations[@]}" -eq 16
           for migration in "${migrations[@]}"; do
             echo "Applying $migration"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
@@ -259,7 +259,7 @@ jobs:
             supabase/tests/yoco-source/202611110005_yoco_ledger_invariants.test.sql \
             supabase/tests/yoco-source/202611110010_yoco_admin_invoice_settings.test.sql \
             supabase/tests/yoco-source/202611110011_yoco_reconciliation_admin_workflow.test.sql \
-            supabase/tests/yoco-source/202611120002_bank_transfer_submissions.test.sql
+            supabase/tests/yoco-source/202611120002_bank_transfer_submissions.test.sql \\\n            supabase/tests/yoco-source/20261126190001_admin_archived_invoice_permanent_delete.test.sql
 
       - name: Run Yoco webhook lease transaction scenarios
         shell: bash
