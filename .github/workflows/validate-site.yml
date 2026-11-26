@@ -14,6 +14,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Test Business Opportunity Finder preview
+        run: |
+          set -e
+          node --check business-opportunity-finder/business-opportunity-finder.js
+          node scripts/business-opportunity-finder.test.cjs
+
       - name: Validate standalone JavaScript
         run: |
           set -e
