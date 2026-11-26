@@ -406,6 +406,7 @@ async function processInspection(inspectionId: string, assessmentId: string) {
         const fetchedCandidates = candidates.slice(0, MAX_FETCH_URLS);
         if (fetchedCandidates.length) {
             let fetchResponse: any = null;
+            let fetchBatchErrorCode = "";
             try {
                 fetchResponse = await fetchJson("https://api.fetch.tinyfish.ai", {
                     method: "POST",
@@ -425,15 +426,8 @@ async function processInspection(inspectionId: string, assessmentId: string) {
                     })
                 }, FETCH_TIMEOUT_MS);
             } catch (error) {
-                const code = (error as any)?.name === "AbortError" ? "timeout" :
+                fetchBatchErrorCode = (error as any)?.name === "AbortError" ? "timeout" :
                     String((error as any)?.providerCode || "fetch_error");
-                fetchedCandidates.forEach((candidate) => {
-                    evidenceRows.push(sourceRow(
-                        inspectionId, candidate, candidate.source_type,
-                        mapTinyFishFetchError(code),
-                        { provider_error_code: code.slice(0, 80) }
-                    ));
-                });
             }
 
             const results = Array.isArray(fetchResponse?.data?.results) ? fetchResponse.data.results : [];
@@ -450,6 +444,15 @@ async function processInspection(inspectionId: string, assessmentId: string) {
             });
 
             for (const candidate of fetchedCandidates) {
+                if (!fetchResponse) {
+                    const code = fetchBatchErrorCode || "fetch_error";
+                    evidenceRows.push(sourceRow(
+                        inspectionId, candidate, candidate.source_type,
+                        mapTinyFishFetchError(code),
+                        { provider_error_code: code.slice(0, 80) }
+                    ));
+                    continue;
+                }
                 const key = normalisePublicUrl(candidate.source_url) || candidate.source_url;
                 const fetched = resultByUrl.get(key);
                 if (!fetched) {
