@@ -23,6 +23,7 @@ jobs:
           node scripts/business-assessment-admin.test.cjs
           node scripts/business-assessment-conversion.test.cjs
           node scripts/business-assessment-lead-history.test.cjs
+          node scripts/business-assessment-proposal-snapshot.test.cjs
           node --check admin-dashboard/business-assessment-lead-history.js
           node scripts/business-assessment-conversion.test.cjs
           node --check admin-dashboard/business-assessments.js
