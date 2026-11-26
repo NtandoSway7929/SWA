@@ -172,7 +172,7 @@
         const section = create("section", "sway-lead-profile-section bfa-lead-history");
         const heading = create("div", "sway-lead-profile-section-heading");
         const headingCopy = create("div");
-        headingCopy.appendChild(create("span", "", "05 · BUSINESS OPPORTUNITY FINDER"));
+        headingCopy.appendChild(create("span", "", "BUSINESS OPPORTUNITY FINDER"));
         headingCopy.appendChild(create("h4", "", "Linked assessment history"));
         heading.appendChild(headingCopy);
         section.appendChild(heading);
