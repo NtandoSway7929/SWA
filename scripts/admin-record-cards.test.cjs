@@ -157,6 +157,10 @@ const invoiceDeleteHandler = workspace.slice(invoiceDeleteStart, invoiceDeleteEn
 assert.match(invoiceDeleteHandler, /state\.payments\.filter/);
 assert.match(invoiceDeleteHandler, /state\.paymentAttempts\.filter/);
 assert.match(invoiceDeleteHandler, /invoicePayments\.length \|\| invoiceAttempts\.length/);
+assert.match(invoiceDeleteHandler, /online payment attempt/);
+assert.match(invoiceDeleteHandler, /payment record/);
+assert.ok(workspace.includes("payment_attempts?select=id,invoice_id,payment_id,provider,environment,status"),
+    "invoice deletion checks must load invoice_id so linked provider attempts are detected before DELETE");
 assert.match(invoiceDeleteHandler, /\/rest\/v1\/invoices\?id=eq\./);
 assert.doesNotMatch(invoiceDeleteHandler, /\/rest\/v1\/invoice_items\?invoice_id=eq\./,
     "invoice items must not be deleted before the invoice; the database cascade runs only after successful invoice deletion");
