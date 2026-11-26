@@ -42,7 +42,7 @@ assert.match(nav, /sessionVerified/,
     "Assessment navigation must wait for the verified administrator session");
 assert.match(nav, /embeddedAssessmentId/,
     "Assessment-linked enquiry protection must inspect the embedded reference immediately");
-assert.match(nav, /directAssessmentId[\\s\\S]*attachAssessmentReviewAction/,
+assert.match(nav, /directAssessmentId[\s\S]*attachAssessmentReviewAction/,
     "The legacy enquiry conversion action must be removed before the asynchronous lookup");
 assert.match(nav, /data-enquiry-status\]\[data-status-next='contacted'\]/,
     "The generic Contacted-to-Lead action must be removed for assessment enquiries");
