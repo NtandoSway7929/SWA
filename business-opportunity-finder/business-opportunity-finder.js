@@ -1098,7 +1098,7 @@
         }
     });
 
-    continueButton.addEventListener("click", () => {
+    continueButton.addEventListener("click", async () => {
         if (!validateStep()) return;
 
         if (stepIndex < stepCount - 1) {
@@ -1106,7 +1106,7 @@
             renderStep();
             stepContent.scrollIntoView({ behavior: "smooth", block: "nearest" });
         } else {
-            submitAssessment();
+            await submitAssessment();
         }
     });
 
