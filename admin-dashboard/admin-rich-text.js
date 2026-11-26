@@ -97,9 +97,15 @@
         const href = tag === "A" ? safeLink(node.getAttribute("href")) : "";
         const taskClass = tag === "UL" && node.classList.contains("sway-rich-checklist")
           ? "sway-rich-checklist" : "";
+        const taskBoxClass = tag === "SPAN" && node.classList.contains("sway-rich-task-box")
+          ? "sway-rich-task-box" : "";
         Array.from(node.attributes).forEach(function (attribute) { node.removeAttribute(attribute.name); });
         if (style) node.setAttribute("style", style);
         if (taskClass) node.setAttribute("class", taskClass);
+        if (taskBoxClass) {
+          node.setAttribute("class", taskBoxClass);
+          node.setAttribute("contenteditable", "false");
+        }
         if (href) {
           node.setAttribute("href", href);
           node.setAttribute("target", "_blank");
@@ -266,7 +272,7 @@
       restoreSelection();
       if (command === "checklist") {
         document.execCommand("insertHTML", false,
-          '<ul class="sway-rich-checklist"><li>☐ </li></ul><p><br></p>');
+          '<ul class="sway-rich-checklist"><li><span class="sway-rich-task-box" contenteditable="false">☐</span>&nbsp;New task</li></ul><p><br></p>');
       } else if (command === "createLink") {
         const href = safeLink(window.prompt("Enter a web or email link:"));
         if (href) document.execCommand("createLink", false, href);
@@ -333,14 +339,11 @@
     surface.addEventListener("mouseup", rememberSelection);
     surface.addEventListener("focus", rememberSelection);
     surface.addEventListener("click", function (event) {
-      const item = event.target.closest("li");
-      if (!item || !item.parentElement || !item.parentElement.classList.contains("sway-rich-checklist")) return;
-      const selection = window.getSelection();
-      if (selection && selection.isCollapsed && event.target === item) {
-        item.firstChild && item.firstChild.nodeType === 3 && (item.firstChild.nodeValue =
-          item.firstChild.nodeValue.replace(/^[☐☑]/, function (mark) { return mark === "☐" ? "☑" : "☐"; }));
-        syncSource();
-      }
+      const box = event.target.closest(".sway-rich-task-box");
+      const item = box && box.closest("li");
+      if (!box || !item || !item.parentElement || !item.parentElement.classList.contains("sway-rich-checklist")) return;
+      box.textContent = box.textContent.trim() === "☑" ? "☐" : "☑";
+      syncSource();
     });
     surface.addEventListener("keydown", function (event) {
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
