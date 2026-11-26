@@ -1,0 +1,260 @@
+:root {
+    --bfa-ink: #081533;
+    --bfa-muted: #63708a;
+    --bfa-blue: #0152F4;
+    --bfa-deep: #002096;
+    --bfa-border: rgba(0, 32, 150, .11);
+}
+.sway-business-assessments-page {
+    min-height: 100vh;
+    margin: 0;
+    color: var(--bfa-ink);
+    background:
+        radial-gradient(circle at 85% 0%, rgba(1, 82, 244, .08), transparent 28rem),
+        linear-gradient(135deg, #f5f8ff 0%, #fff 58%, #eef4ff 100%);
+    font-family: "Plus Jakarta Sans", sans-serif;
+}
+.bfa-page-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.bfa-header {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 20px; padding: 18px clamp(20px, 4vw, 58px);
+    border-bottom: 1px solid var(--bfa-border); background: rgba(255,255,255,.84);
+}
+.bfa-brand { display: inline-flex; align-items: center; gap: 11px; color: inherit; text-decoration: none; }
+.bfa-brand-mark {
+    display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px;
+    color: white; font: 800 1.3rem "Raleway", sans-serif;
+    background: linear-gradient(145deg, #0152F4, #002096);
+}
+.bfa-brand strong { display: block; font: 800 1rem "Raleway", sans-serif; letter-spacing: .01em; }
+.bfa-brand small { display: block; margin-top: 2px; color: var(--bfa-muted); font-size: .59rem; font-weight: 800; letter-spacing: .16em; }
+.bfa-back-link { color: #21417f; font-size: .86rem; font-weight: 700; text-decoration: none; }
+.bfa-back-link:hover { color: var(--bfa-blue); }
+.bfa-main { width: min(1480px, 100%); margin: 0 auto; padding: clamp(24px, 4vw, 52px); flex: 1; }
+.bfa-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 30px; }
+.bfa-eyebrow { color: #4263a4; font-size: .67rem; font-weight: 800; letter-spacing: .15em; }
+.bfa-hero h1 { margin: 9px 0 8px; font: 800 clamp(2rem, 4vw, 3.1rem)/1.1 "Raleway", sans-serif; letter-spacing: -.045em; }
+.bfa-hero p { max-width: 760px; margin: 0; color: var(--bfa-muted); font-size: .94rem; line-height: 1.7; }
+.bfa-refresh-button {
+    flex: 0 0 auto; min-height: 44px; padding: 0 17px; border: 1px solid rgba(1,82,244,.2);
+    border-radius: 10px; color: #09358e; background: #fff; font: 700 .82rem inherit; cursor: pointer;
+}
+.bfa-refresh-button:hover { border-color: #0152F4; background: #f7faff; }
+.bfa-status {
+    margin: 0 0 22px; padding: 14px 17px; border: 1px solid var(--bfa-border);
+    border-radius: 12px; color: #334361; background: rgba(255,255,255,.85); font-size: .86rem; line-height: 1.5;
+}
+.bfa-status[data-state="error"] { border-color: rgba(177, 55, 55, .22); color: #8e2d35; background: #fff8f8; }
+.bfa-app { display: block; }
+.bfa-toolbar {
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 20px;
+    margin-bottom: 18px; padding: 16px; border: 1px solid var(--bfa-border);
+    border-radius: 15px; background: rgba(255,255,255,.9);
+}
+.bfa-search { display: grid; gap: 7px; width: min(420px, 100%); color: #314160; font-size: .74rem; font-weight: 800; }
+.bfa-search input {
+    min-height: 43px; width: 100%; border: 1px solid rgba(0,32,150,.15); border-radius: 9px;
+    padding: 0 13px; color: var(--bfa-ink); background: #fff; font: 500 .85rem "Plus Jakarta Sans", sans-serif;
+}
+.bfa-filters { display: flex; flex-wrap: wrap; gap: 7px; }
+.bfa-filters button {
+    min-height: 36px; padding: 0 12px; border: 1px solid transparent; border-radius: 8px;
+    color: #53627d; background: #f2f5fb; font: 700 .72rem "Plus Jakarta Sans", sans-serif; cursor: pointer;
+}
+.bfa-filters button[aria-pressed="true"] { border-color: rgba(1,82,244,.2); color: #0031C5; background: #eaf1ff; }
+.bfa-workspace { display: grid; grid-template-columns: minmax(310px, .86fr) minmax(0, 1.5fr); align-items: start; gap: 18px; }
+.bfa-list-panel, .bfa-detail-panel {
+    min-width: 0; border: 1px solid var(--bfa-border); border-radius: 16px;
+    background: rgba(255,255,255,.94); box-shadow: 0 12px 45px rgba(0,32,150,.055);
+}
+.bfa-panel-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; padding: 20px; border-bottom: 1px solid rgba(0,32,150,.08); }
+.bfa-panel-heading h2 { margin: 5px 0 0; font: 800 1.28rem "Raleway", sans-serif; }
+.bfa-count { color: var(--bfa-muted); font-size: .73rem; font-weight: 700; white-space: nowrap; }
+.bfa-record-list { display: grid; gap: 0; }
+.bfa-record {
+    display: grid; gap: 10px; width: 100%; padding: 17px 20px; border: 0;
+    border-bottom: 1px solid rgba(0,32,150,.07); text-align: left; color: inherit;
+    background: transparent; cursor: pointer; font-family: inherit;
+}
+.bfa-record:last-child { border-bottom: 0; }
+.bfa-record:hover { background: #f8faff; }
+.bfa-record[aria-current="true"] { background: #eff4ff; box-shadow: inset 3px 0 0 #0152F4; }
+.bfa-record-top, .bfa-record-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.bfa-record-title { font-size: .89rem; font-weight: 800; line-height: 1.4; }
+.bfa-record-sub { color: var(--bfa-muted); font-size: .74rem; }
+.bfa-record-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.bfa-tag {
+    display: inline-flex; align-items: center; padding: 5px 8px; border: 1px solid rgba(0,32,150,.09);
+    border-radius: 6px; color: #445575; background: #f7f9fd; font-size: .64rem; font-weight: 800;
+}
+.bfa-tag-contact { border-color: rgba(1,82,244,.18); color: #0341ad; background: #eef4ff; }
+.bfa-empty { margin: 0; padding: 25px 20px; color: var(--bfa-muted); font-size: .84rem; line-height: 1.6; }
+.bfa-detail-panel { min-height: 440px; padding: clamp(20px, 3vw, 30px); }
+.bfa-detail-placeholder { display: grid; justify-items: center; align-content: center; min-height: 390px; text-align: center; }
+.bfa-detail-placeholder-icon {
+    display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 15px;
+    border-radius: 13px; color: #0341ad; background: #edf3ff; font-size: 1.3rem;
+}
+.bfa-detail-placeholder h2 { margin: 0 0 8px; font: 800 1.3rem "Raleway", sans-serif; }
+.bfa-detail-placeholder p { max-width: 350px; margin: 0; color: var(--bfa-muted); font-size: .82rem; line-height: 1.65; }
+.bfa-detail-header { padding-bottom: 20px; border-bottom: 1px solid rgba(0,32,150,.09); }
+.bfa-detail-header h2 { margin: 7px 0 10px; font: 800 clamp(1.45rem, 3vw, 2rem) "Raleway", sans-serif; letter-spacing: -.025em; }
+.bfa-detail-tags { display: flex; flex-wrap: wrap; gap: 7px; }
+.bfa-detail-section { padding: 19px 0; border-bottom: 1px solid rgba(0,32,150,.08); }
+.bfa-detail-section:last-child { border-bottom: 0; }
+.bfa-detail-section h3 { margin: 0 0 10px; font: 800 1rem "Raleway", sans-serif; }
+.bfa-detail-section p { margin: 0 0 9px; color: #596780; font-size: .82rem; line-height: 1.65; }
+.bfa-detail-list { display: grid; gap: 8px; margin: 0; padding-left: 19px; color: #33415d; font-size: .81rem; line-height: 1.6; }
+.bfa-finding {
+    margin-top: 10px; padding: 14px; border: 1px solid rgba(0,32,150,.09); border-radius: 10px; background: #fbfcff;
+}
+.bfa-finding-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.bfa-finding-title strong { font-size: .85rem; line-height: 1.45; }
+.bfa-finding p { margin: 7px 0 0; }
+.bfa-finding strong { color: #1c315a; }
+.bfa-evidence { flex: 0 0 auto; color: #24518f; font-size: .65rem; font-weight: 800; }
+.bfa-contact-card {
+    margin-top: 12px; padding: 16px; border: 1px solid rgba(1,82,244,.16);
+    border-radius: 12px; background: #f5f8ff;
+}
+.bfa-contact-card h4 { margin: 0 0 10px; font: 800 .92rem "Raleway", sans-serif; }
+.bfa-contact-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px 16px; }
+.bfa-contact-grid div { min-width: 0; }
+.bfa-contact-grid span { display: block; margin-bottom: 3px; color: var(--bfa-muted); font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.bfa-contact-grid strong { display: block; overflow-wrap: anywhere; color: #1c2c4a; font-size: .79rem; font-weight: 700; line-height: 1.5; }
+.bfa-readonly-note {
+    margin-top: 14px; padding: 12px 14px; border-left: 3px solid #7ba7f7;
+    color: #4d5d78; background: #f5f8ff; font-size: .75rem; line-height: 1.6;
+}
+.bfa-detail-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 17px; }
+.bfa-detail-actions button {
+    min-height: 38px; padding: 0 12px; border: 1px solid rgba(0,32,150,.16); border-radius: 8px;
+    color: #153e8d; background: #fff; font: 700 .74rem "Plus Jakarta Sans", sans-serif; cursor: pointer;
+}
+.bfa-detail-actions button:hover { border-color: #0152F4; background: #f7faff; }
+.bfa-security-note {
+    margin: 18px 0 0; color: #6a7690; font-size: .73rem; line-height: 1.6;
+}
+.bfa-footer {
+    display: flex; justify-content: space-between; gap: 15px; padding: 18px clamp(20px, 4vw, 58px);
+    border-top: 1px solid var(--bfa-border); color: #74809a; background: rgba(255,255,255,.75); font-size: .7rem;
+}
+@media (max-width: 980px) {
+    .bfa-toolbar { align-items: stretch; flex-direction: column; }
+    .bfa-search { width: 100%; }
+    .bfa-workspace { grid-template-columns: minmax(0,1fr); }
+    .bfa-detail-panel { min-height: 320px; }
+    .bfa-detail-placeholder { min-height: 260px; }
+}
+@media (max-width: 640px) {
+    .bfa-header { align-items: flex-start; flex-direction: column; }
+    .bfa-hero { align-items: flex-start; flex-direction: column; }
+    .bfa-refresh-button { width: 100%; }
+    .bfa-main { padding: 22px 14px 35px; }
+    .bfa-filters { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .bfa-filters button { text-align: center; }
+    .bfa-contact-grid { grid-template-columns: 1fr; }
+    .bfa-footer { flex-direction: column; }
+}
+
+
+/* Explicit assessment-to-lead conversion controls */
+.bfa-conversion-status {
+    margin: 10px 0 13px;
+    color: #53627d;
+    font-size: .79rem;
+    line-height: 1.6;
+}
+.bfa-conversion-results {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+.bfa-match-card,
+.bfa-create-lead-panel {
+    display: grid;
+    gap: 9px;
+    padding: 14px;
+    border: 1px solid rgba(0,32,150,.12);
+    border-radius: 11px;
+    background: #fbfcff;
+}
+.bfa-match-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.bfa-match-heading strong,
+.bfa-create-lead-panel h4 {
+    color: #17294e;
+    font: 800 .88rem "Raleway", sans-serif;
+}
+.bfa-match-card p,
+.bfa-create-lead-panel p {
+    margin: 0;
+    color: #596780;
+    font-size: .76rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+.bfa-conversion-primary,
+.bfa-conversion-secondary {
+    justify-self: start;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid rgba(1,82,244,.2);
+    border-radius: 8px;
+    color: #063caa;
+    background: #eef4ff;
+    font: 800 .72rem "Plus Jakarta Sans", sans-serif;
+    cursor: pointer;
+}
+.bfa-conversion-secondary {
+    color: #324565;
+    border-color: rgba(0,32,150,.15);
+    background: #fff;
+}
+.bfa-conversion-primary:hover,
+.bfa-conversion-secondary:hover {
+    border-color: #0152F4;
+}
+.bfa-conversion-primary:disabled,
+.bfa-conversion-secondary:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}
+.bfa-business-name-field {
+    display: grid;
+    gap: 7px;
+    max-width: 470px;
+    color: #314160;
+    font-size: .74rem;
+    font-weight: 800;
+}
+.bfa-business-name-field input {
+    min-height: 42px;
+    border: 1px solid rgba(0,32,150,.17);
+    border-radius: 8px;
+    padding: 0 12px;
+    color: #102044;
+    background: #fff;
+    font: 500 .83rem "Plus Jakarta Sans", sans-serif;
+}
+.bfa-match-warning {
+    padding: 10px 12px;
+    border-left: 3px solid #c58d2d;
+    color: #78531c !important;
+    background: #fffaf0;
+}
+.bfa-conversion-success {
+    padding: 12px;
+    border: 1px solid rgba(31,112,81,.16);
+    border-radius: 9px;
+    color: #205a45;
+    background: #f2fbf7;
+    font-size: .8rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
