@@ -67,6 +67,8 @@ assert.match(script, /No email will be sent/);
 assert.match(script, /No email has been sent from this workspace/);
 assert.doesNotMatch(script, /mailto:/i, "campaign email actions must not open a third-party mail application");
 assert.match(script, /consent === "declined"/);
+assert.match(script, /\["requested", "granted", "declined", "revoked"\]\.includes\(consentStatus\)/);
+assert.match(script, /Consent already granted/);
 assert.match(script, /Swayphics Mail with a one-time permission request/);
 assert.match(workspaceScript, /window\.swayphicsOpenCampaignEmailComposer = function/);
 assert.match(workspaceScript, /contactType === "campaign-prospect"/);

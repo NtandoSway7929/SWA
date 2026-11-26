@@ -331,6 +331,8 @@
       ? "Permission to contact " + business + " | Swayphics"
       : "Swayphics | " + business;
     const message = permissionRequest ? [
+      "Good day,",
+      "",
       "We are reaching out from Swayphics. We came across " + business + " while reviewing organisations in your sector and would like to ask for your permission to send one follow-up email outlining a digital presence or website opportunity that may be relevant to your organisation.",
       "",
       "This is a one-time permission request only. We will not send further marketing emails unless you explicitly agree.",
@@ -536,8 +538,12 @@
         '</select></label><button type="button" class="sway-tender-primary" data-sway-tender-save-workflow="' + escapeHtml(item.id) + '">Save qualification &amp; stage</button></div>' +
         '<div><h4>Email permission</h4><span class="sway-tender-chip ' + (item.email_consent_status === "granted" ? "success" : "neutral") + '">' +
           escapeHtml(item.email_consent_status.replace(/_/g, " ")) + '</span><p>Marketing email remains unavailable until explicit consent is recorded with supporting evidence.</p>' +
-          '<button type="button" class="sway-tender-secondary" data-sway-tender-consent-request="' + escapeHtml(item.id) + '"' + (dnc || item.email_consent_status === "requested" ? " disabled" : "") + '>' +
-            (item.email_consent_status === "requested" ? "Consent request sent" : "Record consent request sent") +
+          '<button type="button" class="sway-tender-secondary" data-sway-tender-consent-request="' + escapeHtml(item.id) + '"' +
+            (dnc || ["requested", "granted", "declined", "revoked"].includes(String(item.email_consent_status || "not_requested").toLowerCase()) ? " disabled" : "") + '>' +
+            (item.email_consent_status === "requested" ? "Consent request sent" :
+              item.email_consent_status === "granted" ? "Consent already granted" :
+              item.email_consent_status === "declined" ? "Consent declined" :
+              item.email_consent_status === "revoked" ? "Consent revoked" : "Record consent request sent") +
           '</button>' +
           '<button type="button" class="sway-tender-secondary" data-sway-tender-consent-granted="' + escapeHtml(item.id) + '"' + (dnc || item.email_consent_status !== "requested" ? " disabled" : "") + '>Record consent received</button>' +
         '</div>' +
@@ -722,6 +728,8 @@
   async function recordConsentRequest(id) {
     const item = state.prospects.find(p => p.id === id);
     if (!item || item.do_not_contact) return;
+    const consentStatus = String(item.email_consent_status || "not_requested").toLowerCase();
+    if (["requested", "granted", "declined", "revoked"].includes(consentStatus)) return;
     if (!meaningful(item.email)) {
       window.alert("This prospect has no business email address recorded. Verify the correct contact address first.");
       return;
