@@ -305,7 +305,7 @@
                     selected = selected.filter((item) => {
                         return key !== "discovery" || ![
                             "instagram", "facebook", "tiktok", "google_business",
-                            "website", "directories"
+                            "website", "no_website", "directories"
                         ].includes(item);
                     });
                 } else {
@@ -490,10 +490,28 @@
         if (has("contactMethods", "online_checkout")) {
             strengths.push("Customers have an online checkout route available.");
         }
+        if (has("discovery", "no_online_presence")) {
+            strengths.push("You indicated that the business does not currently have an online presence.");
+        } else if (has("discovery", "no_website")) {
+            strengths.push("You indicated that the business does not currently have a website. That alone does not establish that a website should be the next investment.");
+        }
         if (!strengths.length) {
             strengths.push("The answers do not yet establish which customer channels are working well. Confirming the channels customers actually use would be a useful starting point.");
         }
         return strengths;
+    }
+
+    function getWebsiteStatus() {
+        if (has("discovery", "no_online_presence")) {
+            return "No online presence reported";
+        }
+        if (has("discovery", "no_website")) {
+            return "No website reported";
+        }
+        if (has("discovery", "website")) {
+            return "Website reported; not inspected";
+        }
+        return "Website status not established";
     }
 
     function buildRecommendations(findings) {
@@ -555,6 +573,9 @@
         const channelsMarkup = channels.length
             ? channels.map((channel) => '<span class="bof-report-tag">' + escapeHtml(channel) + '</span>').join("")
             : '<span class="bof-report-tag">Not established</span>';
+        const websiteStatusMarkup =
+            '<span class="bof-report-tag">Website status: ' +
+            escapeHtml(getWebsiteStatus()) + '</span>';
 
         reportContent.innerHTML =
             '<header class="bof-report-header">' +
@@ -565,10 +586,10 @@
             '</header>' +
             '<div class="bof-report-grid">' +
                 '<section class="bof-report-card">' +
-                    '<span class="bof-report-card-label">01 / What is already in place</span>' +
+                    '<span class="bof-report-card-label">01 / Current starting point</span>' +
                     '<h3>Your current starting point</h3>' +
-                    '<p>These channels and methods were selected in your answers. Their quality or performance has not been independently checked.</p>' +
-                    '<div class="bof-report-tags">' + channelsMarkup + '</div>' +
+                    '<p>These are the channels and availability details you reported. Their quality or performance has not been independently checked.</p>' +
+                    '<div class="bof-report-tags">' + channelsMarkup + websiteStatusMarkup + '</div>' +
                     '<ul class="bof-report-list">' + strengths.map((item) => '<li>' + escapeHtml(item) + '</li>').join("") + '</ul>' +
                 '</section>' +
                 '<section class="bof-report-card">' +
@@ -606,6 +627,7 @@
             answers.businessName.trim() ? "Business: " + answers.businessName.trim() : "",
             "Industry: " + industry,
             answers.location.trim() ? "Location: " + answers.location.trim() : "",
+            "Website status: " + getWebsiteStatus(),
             "Priority: " + getOptionLabel(priorityOptions, priority),
             "",
             "CURRENT STARTING POINT",
