@@ -36,6 +36,8 @@ assert.doesNotMatch(script, /SUPABASE_SERVICE_ROLE_KEY|service_role/i,
     "The admin browser must not use a service-role credential");
 assert.match(page, /Assessment answers and reports are read-only/i,
     "The viewer must disclose that assessment answers and reports remain read-only");
+assert.match(nav, /getElementById\("sway-nav-menu-crm"\)/,
+    "The destination must target the actual CRM dropdown container in the dashboard");
 assert.match(nav, /Business assessments/,
     "A Business assessments destination must be injected into the CRM navigation");
 assert.match(nav, /sessionVerified/,
