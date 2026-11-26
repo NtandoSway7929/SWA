@@ -48,12 +48,36 @@ const leads = [
   }
 ];
 
+const campaignTenderEvidence = [
+  {
+    id: "tender-evidence-ui-test-1", prospect_id: "prospect-ui-test-1",
+    tender_record_id: "TND-UI-001", source_prospect_id: "SWP-UI-001",
+    company_name: "Tender Workspace Test Holdings",
+    tender_reference: "TEST/PROC/001", procuring_institution: "Synthetic Municipality",
+    tender_description: "Synthetic construction and infrastructure panel record.",
+    award_value: "Not disclosed", award_date: "2025/2026",
+    procurement_role: "Panel Appointee", company_award_count: 1,
+    evidence_url: "https://example.invalid/tender-evidence"
+  },
+  {
+    id: "tender-evidence-ui-test-2", prospect_id: "prospect-ui-test-1",
+    tender_record_id: "TND-UI-002", source_prospect_id: "SWP-UI-001",
+    company_name: "Tender Workspace Test Holdings",
+    tender_reference: "TEST/PROC/002", procuring_institution: "Synthetic Department",
+    tender_description: "Synthetic tender award fixture; test only.",
+    award_value: "R250,000.00", award_date: "2025-10-01",
+    procurement_role: "Confirmed Awardee", company_award_count: 1,
+    evidence_url: "https://example.invalid/award-evidence"
+  }
+];
+
 const campaignProspects = [
   {
     id: "prospect-ui-test-1", campaign_id: "campaign-ui-test",
     source_prospect_id: "SWP-UI-001", business_name: "Tender Workspace Test Holdings",
     business_category: "Emerging Holding Company", industry: "Construction & Civil Engineering",
     province: "Gauteng", city: "Pretoria", website_url: null,
+    original_score: 85, original_priority: "HIGH", score_breakdown: "Synthetic score breakdown",
     website_status: "No website found", website_issues: "No official website located in synthetic test data.",
     email: "prospect@example.invalid", additional_email: null, phone: "0100000000",
     whatsapp: null, physical_address: null, linkedin_url: null, facebook_url: null,
@@ -311,6 +335,7 @@ function dataFor(url) {
       name: "Tender & Corporate Groups", status: "active" }];
   }
   if (url.pathname === "/rest/v1/lead_campaign_prospects") return campaignProspects;
+  if (url.pathname === "/rest/v1/lead_campaign_tender_evidence") return campaignTenderEvidence;
   if (url.pathname === "/rest/v1/admin_users") {
     return [
       {
@@ -831,6 +856,19 @@ async function main() {
     await prospectDetail.waitFor({ state: "visible", timeout: 5000 });
     assert.ok((await prospectDetail.innerText()).includes("Synthetic Municipality"),
       "the prospect profile should show the recorded procuring institution");
+    assert.ok((await prospectDetail.innerText()).includes("Original workbook qualification score"),
+      "the prospect profile should explain the original workbook score");
+    assert.ok((await prospectDetail.innerText()).includes("85/100"),
+      "the prospect profile should show the original workbook qualification score");
+    assert.equal(await prospectDetail.locator(".sway-tender-evidence-record").count(), 2,
+      "the prospect profile should list all linked individual tender records");
+    assert.ok((await prospectDetail.innerText()).includes("Confirmed Awardee"),
+      "individual tender evidence should preserve the procurement role");
+    assert.equal(
+      await prospectDetail.locator(".sway-tender-evidence-record a").first().getAttribute("href"),
+      "https://example.invalid/tender-evidence",
+      "the tender record should expose its evidence source link"
+    );
     assert.equal(
       await prospectDetail.locator(".sway-tender-source-list a").first().getAttribute("href"),
       "https://example.invalid/source",
