@@ -31,6 +31,8 @@ Create credible, polished, client-specific website demos that help Swayphics win
 
 ### 2. Research the design system before coding
 
+**Mandatory shared standard:** Read and apply `.agents/skills/swayphics-art-direction/SKILL.md` before making visual decisions or writing frontend code. Its 15 banned design tropes, positive design standards and mandatory self-audit apply to every client demo. Reuse the design discipline, not Swayphics' brand identity: each prospect must receive a visual direction based on that client's verified brand, audience and approved project brief. Never apply Swayphics' palette, fonts, voice or logo to a client by default.
+
 1. If UI/UX Pro Max is installed, read its local `SKILL.md` and follow the provided design-system search workflow. Locate the installed search script from the actual filesystem; do not assume its path.
 2. Search for relevant industry, business type, target audience, and design direction. Use the results to make explicit decisions about:
    - visual style and information hierarchy;
@@ -40,7 +42,7 @@ Create credible, polished, client-specific website demos that help Swayphics win
    - responsive behavior, navigation and conversion patterns.
 3. If the skill is unavailable, say that the design-system tool is not installed and make a clearly labelled best-effort design decision. Do not claim to have run its search scripts.
 4. Verify the client's actual branding from supplied assets or credible public sources. Use the client's logo unchanged unless permission and a specific requirement say otherwise. Do not redraw, recolor, stretch or substitute an official logo.
-5. Choose the design because it suits the business and audience, not because glassmorphism, gradients, animation or a particular trend is fashionable. Use these effects only when they serve hierarchy or interaction.
+5. Choose the design because it suits the client's business and audience. Follow the universal art-direction skill's prohibitions; do not reintroduce a banned visual trope as a trend or decorative shortcut. Motion and other visual effects must have a clear purpose, respect accessibility and remain within the approved project identity.
 
 ### 3. Use 21st MCP selectively
 
