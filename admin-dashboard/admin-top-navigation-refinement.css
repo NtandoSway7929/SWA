@@ -1,0 +1,52 @@
+/* Swayphics admin top-navigation refinement.
+   Kept as a separately named asset so browsers/CDNs cannot reuse the
+   pre-refinement stylesheet response for the existing shared path. */
+
+#sway-admin-workspace .sway-workspace-nav-scroll {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    column-gap: 8px !important;
+    row-gap: 8px !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 2px 1px 5px !important;
+    overflow: visible !important;
+    scrollbar-width: none;
+}
+
+#sway-admin-workspace .sway-workspace-nav-group-toggle,
+#sway-admin-workspace .sway-settings-direct-nav {
+    flex: 0 0 auto !important;
+    padding: 0 13px !important;
+    border: 1px solid #E5EAF2 !important;
+    border-radius: 11px !important;
+    background: #F8FAFD !important;
+    box-shadow: 0 1px 2px rgba(10, 30, 70, 0.025) !important;
+    white-space: nowrap !important;
+}
+
+body.sway-dark-mode #sway-admin-workspace .sway-workspace-nav-group-toggle,
+body.sway-dark-mode #sway-admin-workspace .sway-settings-direct-nav {
+    border-color: rgba(151, 176, 214, 0.17) !important;
+    background: rgba(255, 255, 255, 0.035) !important;
+    box-shadow: none !important;
+}
+
+@media (max-width: 980px) {
+    #sway-admin-workspace .sway-workspace-nav-scroll {
+        flex-wrap: nowrap !important;
+        column-gap: 6px !important;
+        row-gap: 0 !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding-bottom: 7px !important;
+        scrollbar-width: none;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+}
