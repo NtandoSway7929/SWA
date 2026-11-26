@@ -80,8 +80,8 @@ assert.match(submissionRules, /detectPlatform/,
 
 assert.match(publicForm, /bof-inspection-consent/,
     "The public assessment must present a separate inspection permission control");
-assert.match(publicForm, /No contact request|does not request contact|does not request contact/i,
-    "The public notice must distinguish inspection consent from contact permission");
+assert.match(publicForm, /separate from any request for Swayphics to contact me/i,
+    "The public notice must explicitly separate inspection consent from contact permission");
 assert.match(publicScript, /buildPublicPresencePayload/,
     "The public page must only submit the optional public-presence payload through the assessment flow");
 assert.match(publicScript, /inspection_consent: false/,
