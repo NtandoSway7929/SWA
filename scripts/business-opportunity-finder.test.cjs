@@ -9,6 +9,10 @@ const feature = path.join(root, "business-opportunity-finder");
 const html = fs.readFileSync(path.join(feature, "index.html"), "utf8");
 const css = fs.readFileSync(path.join(feature, "business-opportunity-finder.css"), "utf8");
 const js = fs.readFileSync(path.join(feature, "business-opportunity-finder.js"), "utf8");
+const serverRules = fs.readFileSync(
+    path.join(root, "supabase", "functions", "submit-business-assessment", "rules.mjs"),
+    "utf8"
+);
 
 new Function(js);
 
@@ -65,8 +69,8 @@ assert.match(js, /Not established from your answers/,
     "An unreported website status must remain distinct from no website");
 assert.match(js, /No website reported/,
     "A stated lack of a website must be reflected in the report");
-assert.match(js, /No online presence cannot be combined with online discovery channels/,
-    "The report rules must not treat an online presence as absent when online channels are selected");
+assert.match(serverRules, /No online presence cannot be combined with online discovery channels/,
+    "The server must reject a contradictory no-online-presence answer when online discovery channels are selected");
 assert.match(js, /action: "complete_assessment"/,
     "Completed answers must be submitted to the dedicated backend");
 assert.match(js, /action: "request_contact"/,
