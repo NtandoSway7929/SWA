@@ -201,8 +201,8 @@
             ? '<small>' + escapeHtml(option.description) + '</small>'
             : "";
 
-        return '<button class="bof-option" type="button" role="' + role +
-            '" data-mode="' + mode + '" data-select-option="' + escapeHtml(option.value) +
+        return '<button class="bof-option" type="button" data-mode="' + mode +
+            '" data-select-option="' + escapeHtml(option.value) +
             '" aria-pressed="' + (isSelected ? "true" : "false") + '">' +
             '<span class="bof-option-indicator" aria-hidden="true">' + indicator + '</span>' +
             '<span class="bof-option-text"><strong>' + escapeHtml(option.label) + '</strong>' + detail + '</span>' +
@@ -244,7 +244,7 @@
 
         stepContent.innerHTML =
             '<div class="bof-step-eyebrow">' + step.eyebrow + '</div>' +
-            '<h3 class="bof-step-title">' + step.title + '</h3>' +
+            '<h3 class="bof-step-title" tabindex="-1">' + step.title + '</h3>' +
             '<p class="bof-step-description">' + escapeHtml(description) + '</p>' +
             optionalFields +
             '<div class="bof-options" role="group" aria-label="' + groupLabel + '">' + options + '</div>' +
