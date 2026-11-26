@@ -21,23 +21,58 @@
         crmMenu.appendChild(link);
     }
 
+    async function refreshAdminToken() {
+        const refreshToken = localStorage.getItem(REFRESH_KEY) || "";
+        if (!refreshToken) return "";
+        try {
+            const response = await fetch(
+                API_URL + "/auth/v1/token?grant_type=refresh_token",
+                {
+                    method: "POST",
+                    headers: {
+                        "apikey": API_KEY,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        grant_type: "refresh_token",
+                        refresh_token: refreshToken
+                    })
+                }
+            );
+            if (!response.ok) return "";
+            const session = await response.json();
+            if (!session || !session.access_token) return "";
+            localStorage.setItem(ACCESS_KEY, session.access_token);
+            if (session.refresh_token) localStorage.setItem(REFRESH_KEY, session.refresh_token);
+            return session.access_token;
+        } catch (error) {
+            return "";
+        }
+    }
+
     async function loadAssessmentEnquiryIds(force = false) {
         if (linkLoadPromise) return linkLoadPromise;
         if (!force && Date.now() - lastLinkLoad < 60000) return assessmentEnquiryIds;
 
         linkLoadPromise = (async () => {
             try {
-                const accessToken = localStorage.getItem(ACCESS_KEY) || "";
-                const response = await fetch(
-                    API_URL + "/rest/v1/website_enquiries?select=id,assessment_id&assessment_id=not.is.null",
-                    {
-                        headers: {
-                            "apikey": API_KEY,
-                            "Authorization": "Bearer " + accessToken
-                        },
-                        cache: "no-store"
+                let accessToken = localStorage.getItem(ACCESS_KEY) || "";
+                const endpoint = API_URL + "/rest/v1/website_enquiries?select=id,assessment_id&assessment_id=not.is.null";
+                const requestOptions = {
+                    headers: {
+                        "apikey": API_KEY,
+                        "Authorization": "Bearer " + accessToken
+                    },
+                    cache: "no-store"
+                };
+                let response = await fetch(endpoint, requestOptions);
+                if (response.status === 401) {
+                    accessToken = await refreshAdminToken();
+                    if (accessToken) {
+                        requestOptions.headers.Authorization = "Bearer " + accessToken;
+                        response = await fetch(endpoint, requestOptions);
                     }
-                );
+                }
                 if (!response.ok) return assessmentEnquiryIds;
                 const rows = await response.json();
                 assessmentEnquiryIds = new Map(
@@ -64,7 +99,15 @@
         main.querySelectorAll('[data-ai-record^="enquiries:"]').forEach((card) => {
             const record = String(card.getAttribute("data-ai-record") || "");
             const enquiryId = record.slice("enquiries:".length);
-            const assessmentId = assessmentEnquiryIds.get(enquiryId);
+            let assessmentId = assessmentEnquiryIds.get(enquiryId) || "";
+
+            if (!assessmentId) {
+                const message = card.querySelector(".sway-record-card-detail-wide strong");
+                const match = String(message ? message.textContent : "")
+                    .match(/Business Opportunity Finder assessment reference:\\s*([0-9a-f-]{36})/i);
+                assessmentId = match ? match[1] : "";
+            }
+
             if (!assessmentId) return;
 
             const legacyConvertButton = card.querySelector("[data-enquiry-status][data-status-next='contacted']");
