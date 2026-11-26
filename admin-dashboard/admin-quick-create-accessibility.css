@@ -19,3 +19,8 @@ body.sway-dark-mode #sway-admin-workspace .sway-quick-create-item:focus-visible 
         transition: none !important;
     }
 }
+
+/* Retire the persistent global + New launcher; keep create actions in their own workspace views. */
+#sway-admin-workspace .sway-quick-create {
+    display: none !important;
+}

@@ -13,8 +13,10 @@ const workspaceScript = html.indexOf('src="admin-workspace.js');
 const accessibilityScript = html.indexOf('src="admin-quick-create-accessibility.js');
 assert.ok(workspaceScript >= 0 && accessibilityScript > workspaceScript,
     "accessibility enhancement must load after the workspace controller");
-assert.ok(html.includes('href="admin-quick-create-accessibility.css?v=20261118-quick-create-accessibility-1"'),
-    "focus stylesheet must be loaded with a cache key");
+assert.ok(html.includes('href="admin-quick-create-accessibility.css?v=20261126-remove-global-new-1"'),
+    "the retired launcher stylesheet must be loaded with a fresh cache key");
+assert.ok(css.includes("#sway-admin-workspace .sway-quick-create {\n    display: none !important;"),
+    "the persistent global + New launcher and its menu must be removed from the visible dashboard");
 
 assert.ok(script.includes('toggle.setAttribute("aria-label", "Quick-create actions")'),
     "toggle must have an accessible name");
