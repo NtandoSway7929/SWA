@@ -8,6 +8,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "admin-dashboard", "index.html"), "utf8");
 const script = fs.readFileSync(path.join(root, "admin-dashboard", "tender-corporate-groups.js"), "utf8");
+const workspaceScript = fs.readFileSync(path.join(root, "admin-dashboard", "admin-workspace.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "admin-dashboard", "tender-corporate-groups.css"), "utf8");
 const migration = fs.readFileSync(
   path.join(root, "supabase", "migrations", "20261125110000_tender_corporate_groups_campaign.sql"),
@@ -21,7 +22,8 @@ const evidenceMigration = fs.readFileSync(
 assert.doesNotThrow(() => new vm.Script(script), "campaign module must be valid JavaScript");
 
 assert.match(html, /tender-corporate-groups\.css\?v=20261126-email-action-1/);
-assert.match(html, /tender-corporate-groups\.js\?v=20261126-email-action-1/);
+assert.match(html, /tender-corporate-groups\.js\?v=20261126-branded-composer-1/);
+assert.match(html, /tender-mail=20261126-branded-composer-1/);
 assert.ok(
   html.indexOf("free-homepage-preview-campaign.js") < html.indexOf("tender-corporate-groups.js"),
   "campaign workspace should load after the existing CRM and campaign controllers"
@@ -43,7 +45,8 @@ for (const contract of [
   'renderTenderEvidence',
   'data-sway-tender-open',
   'data-sway-tender-email',
-  'function buildEmailDraft(item)',
+  'function openProspectEmailComposer(id)',
+  'window.swayphicsOpenCampaignEmailComposer',
   'function emailActionState(item)',
   'data-sway-tender-save-workflow',
   'data-sway-tender-consent-request',
@@ -61,9 +64,18 @@ assert.match(script, /email_consent_status: "revoked"/);
 assert.match(script, /qualification_status !== "qualified" \|\| dnc/);
 assert.match(script, /No email will be sent/);
 assert.match(script, /No email has been sent from this workspace/);
-assert.match(script, /mailto:/);
-assert.match(script, /This message is only a request for permission/);
+assert.doesNotMatch(script, /mailto:/i, "campaign email actions must not open a third-party mail application");
+assert.match(script, /consent === "declined"/);
+assert.match(script, /Swayphics Mail with a one-time permission request/);
+assert.match(workspaceScript, /window\.swayphicsOpenCampaignEmailComposer = function/);
+assert.match(workspaceScript, /contactType === "campaign-prospect"/);
+assert.match(workspaceScript, /\/functions\/v1\/send-email/);
+assert.match(workspaceScript, /campaignOptions\.onSent/);
+assert.match(workspaceScript, /Your greeting, Swayphics branding and signature are handled automatically/);
+assert.match(script, /This is a one-time permission request only/);
 assert.match(script, /consent === "requested"/);
+assert.match(script, /email_consent_requested_at: sentAt/);
+assert.match(script, /last_outreach_at: sentAt/);
 assert.match(script, /item\.do_not_contact \|\| item\.stage === "do_not_contact"/);
 assert.match(script, /business_name: item\.business_name/);
 assert.match(script, /source: "Tender & Corporate Groups"/);

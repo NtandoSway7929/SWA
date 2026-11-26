@@ -297,6 +297,9 @@
     if (item.do_not_contact || item.stage === "do_not_contact" || consent === "revoked") {
       return { disabled: true, reason: "This prospect is marked Do Not Contact." };
     }
+    if (consent === "declined") {
+      return { disabled: true, reason: "This prospect has declined email contact." };
+    }
     if (consent === "requested") {
       return { disabled: true, reason: "A permission request is already recorded. Await the prospect's response." };
     }
@@ -307,32 +310,65 @@
     };
   }
 
-  function buildEmailDraft(item) {
+  function openProspectEmailComposer(id) {
+    const item = state.prospects.find(prospect => prospect.id === id);
+    if (!item) return;
+
     const action = emailActionState(item);
-    if (action.disabled) return "";
+    if (action.disabled) {
+      window.alert(action.reason || "This prospect is not eligible for email.");
+      return;
+    }
+
+    if (typeof window.swayphicsOpenCampaignEmailComposer !== "function") {
+      window.alert("Swayphics Mail is unavailable. Refresh the dashboard and try again.");
+      return;
+    }
 
     const business = String(item.business_name || "your organisation").trim();
-    const subject = action.permissionRequest
+    const permissionRequest = action.permissionRequest;
+    const subject = permissionRequest
       ? "Permission to contact " + business + " | Swayphics"
       : "Swayphics | " + business;
-    const body = action.permissionRequest ? [
-      "Good day,",
+    const message = permissionRequest ? [
+      "We are reaching out from Swayphics. We came across " + business + " while reviewing organisations in your sector and would like to ask for your permission to send one follow-up email outlining a digital presence or website opportunity that may be relevant to your organisation.",
       "",
-      "I am reaching out on behalf of Swayphics. We came across " + business + " while researching businesses in your sector and would like to ask whether you would be willing to receive one follow-up email outlining a digital or website opportunity that may be relevant to your organisation.",
+      "This is a one-time permission request only. We will not send further marketing emails unless you explicitly agree.",
       "",
-      "This message is only a request for permission. We will not send further marketing emails unless you give clear consent.",
-      "",
-      "Please reply YES if you consent to receiving that one follow-up email, or NO if you do not.",
-      "",
-      "Kind Regards,",
-      "",
-      "Lesego Gumede",
-      "Swayphics"
+      "Please reply YES if you are happy to receive that one follow-up email, or NO if you would prefer not to."
     ].join("\n") : "";
 
-    return "mailto:" + action.email +
-      "?subject=" + encodeURIComponent(subject) +
-      (body ? "&body=" + encodeURIComponent(body) : "");
+    window.swayphicsOpenCampaignEmailComposer({
+      recipientEmail: action.email,
+      recipientName: meaningful(item.contact_person) || business,
+      businessName: business,
+      leadId: item.lead_id && String(item.email || "").trim().toLowerCase() === action.email.toLowerCase()
+        ? item.lead_id
+        : "",
+      subject,
+      message,
+      allowProposalTypes: !permissionRequest,
+      onSent: async function () {
+        const sentAt = new Date().toISOString();
+        const patch = { last_outreach_at: sentAt };
+
+        if (permissionRequest) {
+          patch.email_consent_status = "requested";
+          patch.email_consent_requested_at = sentAt;
+          patch.email_consent_channel = "Email";
+          patch.email_consent_evidence =
+            "One-time permission request sent through Swayphics Mail to " +
+            action.email +
+            " on " +
+            sentAt +
+            ". Subject: " +
+            subject;
+          patch.stage = "consent_requested";
+        }
+
+        await updateProspect(id, patch);
+      }
+    });
   }
 
   function renderProspectRow(item) {
@@ -343,8 +379,8 @@
     const priority = meaningful(item.original_priority) || "Unranked";
     const emailAction = emailActionState(item);
     const emailTitle = emailAction.reason || (emailAction.permissionRequest
-      ? "Opens a one-time permission-request draft. Send manually, then record the request in Review."
-      : "Opens an email draft in your default mail application. Nothing is sent automatically.");
+      ? "Opens Swayphics Mail with a one-time permission request."
+      : "Opens the branded Swayphics Mail composer. Review the message before sending.");
     return '<tr data-sway-tender-row="' + escapeHtml(item.id) + '">' +
       '<td><div class="sway-tender-company"><strong>' + escapeHtml(item.business_name) + '</strong><span>' +
         escapeHtml(item.business_category || item.source_prospect_id) + '</span><span class="sway-tender-score-line">' +
@@ -500,7 +536,9 @@
         '</select></label><button type="button" class="sway-tender-primary" data-sway-tender-save-workflow="' + escapeHtml(item.id) + '">Save qualification &amp; stage</button></div>' +
         '<div><h4>Email permission</h4><span class="sway-tender-chip ' + (item.email_consent_status === "granted" ? "success" : "neutral") + '">' +
           escapeHtml(item.email_consent_status.replace(/_/g, " ")) + '</span><p>Marketing email remains unavailable until explicit consent is recorded with supporting evidence.</p>' +
-          '<button type="button" class="sway-tender-secondary" data-sway-tender-consent-request="' + escapeHtml(item.id) + '"' + (dnc ? " disabled" : "") + '>Record consent request sent</button>' +
+          '<button type="button" class="sway-tender-secondary" data-sway-tender-consent-request="' + escapeHtml(item.id) + '"' + (dnc || item.email_consent_status === "requested" ? " disabled" : "") + '>' +
+            (item.email_consent_status === "requested" ? "Consent request sent" : "Record consent request sent") +
+          '</button>' +
           '<button type="button" class="sway-tender-secondary" data-sway-tender-consent-granted="' + escapeHtml(item.id) + '"' + (dnc || item.email_consent_status !== "requested" ? " disabled" : "") + '>Record consent received</button>' +
         '</div>' +
       '</div>' +
@@ -585,6 +623,9 @@
     if (exportButton) exportButton.addEventListener("click", exportCsv);
     panel.querySelectorAll("[data-sway-tender-save-workflow]").forEach(button => button.addEventListener("click", () =>
       saveWorkflow(button.dataset.swayTenderSaveWorkflow)
+    ));
+    panel.querySelectorAll("[data-sway-tender-email]").forEach(button => button.addEventListener("click", () =>
+      openProspectEmailComposer(button.dataset.swayTenderEmail)
     ));
     panel.querySelectorAll("[data-sway-tender-consent-request]").forEach(button => button.addEventListener("click", () =>
       recordConsentRequest(button.dataset.swayTenderConsentRequest)
