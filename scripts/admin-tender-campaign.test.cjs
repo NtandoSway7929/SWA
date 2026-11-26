@@ -20,6 +20,7 @@ const evidenceMigration = fs.readFileSync(
 );
 
 assert.doesNotThrow(() => new vm.Script(script), "campaign module must be valid JavaScript");
+assert.doesNotThrow(() => new vm.Script(workspaceScript), "shared admin workspace must be valid JavaScript");
 
 assert.match(html, /tender-corporate-groups\.css\?v=20261126-email-action-1/);
 assert.match(html, /tender-corporate-groups\.js\?v=20261126-branded-composer-1/);
@@ -74,7 +75,7 @@ assert.match(workspaceScript, /campaignOptions\.onSent/);
 assert.match(workspaceScript, /Your greeting, Swayphics branding and signature are handled automatically/);
 assert.match(script, /This is a one-time permission request only/);
 assert.match(script, /consent === "requested"/);
-assert.match(script, /email_consent_requested_at: sentAt/);
+assert.match(script, /patch\.email_consent_requested_at = sentAt/);
 assert.match(script, /last_outreach_at: sentAt/);
 assert.match(script, /item\.do_not_contact \|\| item\.stage === "do_not_contact"/);
 assert.match(script, /business_name: item\.business_name/);
