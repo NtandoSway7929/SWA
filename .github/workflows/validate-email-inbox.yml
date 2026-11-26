@@ -19,6 +19,7 @@ on:
       - "scripts/sent-email-recipient-preview.test.mjs"
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
+      - "admin-dashboard/admin-notes.js"
       - "admin-dashboard/admin-rich-text.js"
       - "admin-dashboard/admin-rich-text.css"
       - "scripts/send-email-rich-text.test.mjs"
@@ -42,6 +43,7 @@ on:
       - "scripts/sent-email-recipient-preview.test.mjs"
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
+      - "admin-dashboard/admin-notes.js"
       - "admin-dashboard/admin-rich-text.js"
       - "admin-dashboard/admin-rich-text.css"
       - "scripts/send-email-rich-text.test.mjs"
@@ -71,9 +73,10 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Check admin workspace and rich-text editor JavaScript syntax
+      - name: Check admin workspace, Notes and rich-text editor JavaScript syntax
         run: |
           node --check admin-dashboard/admin-workspace.js
+          node --check admin-dashboard/admin-notes.js
           node --check admin-dashboard/admin-rich-text.js
           node --check supabase/functions/send-email/rich-text-helpers.mjs
           node --check scripts/send-email-rich-text.test.mjs
