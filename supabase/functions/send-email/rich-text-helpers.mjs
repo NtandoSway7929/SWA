@@ -110,12 +110,14 @@ export function richHtmlToPlainText(value) {
   return decodeEntities(
     safe
       .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/?(?:ul|ol)\b[^>]*>/gi, "")
       .replace(/<li\b[^>]*>/gi, "\n• ")
-      .replace(/<\/(?:p|div|li|h[1-4]|blockquote|ul|ol)>/gi, "\n")
+      .replace(/<\/li>/gi, "")
+      .replace(/<\/(?:p|div|h[1-4]|blockquote)>/gi, "\n")
       .replace(/<[^>]*>/g, "")
   )
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
+    .replace(/\n{2,}/g, "\n")
     .trim();
 }
