@@ -173,10 +173,16 @@ function hostOf(value: string) {
 }
 
 function isGoogleMapsUrl(value: string) {
-    const host = hostOf(value);
-    return host === "google.com" || host.endsWith(".google.com") ||
-        /^google\.[a-z.]+$/i.test(host) ||
-        host === "maps.app.goo.gl" || host === "g.page";
+    try {
+        const url = new URL(value);
+        const host = url.hostname.toLowerCase();
+        if (host === "maps.app.goo.gl" || host === "g.page") return true;
+        const isGoogleHost = /(^|\.)google\.[a-z.]+$/i.test(host);
+        return isGoogleHost &&
+            (host.startsWith("maps.") || /^\/maps(?:\/|$)/i.test(url.pathname));
+    } catch {
+        return false;
+    }
 }
 
 function isSocialUrl(value: string) {
