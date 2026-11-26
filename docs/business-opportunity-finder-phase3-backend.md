@@ -83,3 +83,17 @@ A valid contact request creates one `website_enquiries` row with source `Busines
 ## Rollout boundary
 
 The database and Edge Function are deployed in production. The public assessment and admin viewer code is committed only to the unmerged feature branch / draft PR; neither page has been deployed to the public website or production admin dashboard. A positive live HTTP submission against the new endpoint and a signed-in browser review of the new admin page have not yet been performed. Keep the page noindex until those checks, conversion-path implementation, privacy review and launch review are complete.
+
+
+## Draft: assessment-to-lead conversion (not deployed)
+
+A separate migration has been prepared on the feature branch:
+`20261126170200_business_assessment_lead_conversion.sql`.
+
+It introduces an admin-authorised, SECURITY DEFINER RPC with a fixed empty search path. The RPC has three explicit actions:
+
+- `preview`: checks exact email, normalised phone and business-name matches and returns possible candidates without changing records.
+- `link_existing`: links the assessment and enquiry to a selected matching lead without changing that lead's details, source, stage or contact history.
+- `create_new`: creates a new lead only after explicit confirmation. The new lead uses source `Business Opportunity Finder`, status `new`, and the converting administrator as assignee. It does not set `last_contacted_at` or a follow-up date. The linked enquiry moves to its supported `converted` status; its `contacted_at` remains unchanged.
+
+The admin viewer now contains the matching and conversion controls, but they are not production-ready until this separate migration is approved, applied and tested against real assessment/contact records. This draft migration has not been applied to production.
