@@ -5,7 +5,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(19);
+select extensions.plan(20);
 
 select extensions.has_function(
     'public', 'admin_cleanup_yoco_test_payment',
@@ -156,6 +156,14 @@ insert into public.payments (
     null, 'ZAR'
 );
 
+-- Cache the generated ID before switching to the restricted role.
+select set_config(
+    'test.yoco_cleanup_payment_id',
+    (select payment_id::text from public.payment_attempts
+      where idempotency_key='yoco-cleanup-qa-idempotency-0001'),
+    true
+);
+
 -- Authenticated non-owner is rejected even with the correct confirmation.
 set local role authenticated;
 select set_config(
@@ -166,10 +174,8 @@ select set_config(
 select extensions.throws_ok(
     format(
         'select public.admin_cleanup_yoco_test_payment(%L::uuid, %L, %L)',
-        (select payment_id::text from public.payment_attempts
-          where idempotency_key='yoco-cleanup-qa-idempotency-0001'),
-        'DELETE TEST PAYMENT ' || (select payment_id::text from public.payment_attempts
-          where idempotency_key='yoco-cleanup-qa-idempotency-0001'),
+        current_setting('test.yoco_cleanup_payment_id'),
+        'DELETE TEST PAYMENT ' || current_setting('test.yoco_cleanup_payment_id'),
         'Synthetic cleanup QA reason'
     ),
     '42501',
@@ -186,16 +192,14 @@ select set_config(
 select extensions.throws_ok(
     format(
         'select public.admin_cleanup_yoco_test_payment(%L::uuid, %L, %L)',
-        (select payment_id::text from public.payment_attempts
-          where idempotency_key='yoco-cleanup-qa-idempotency-0001'),
+        current_setting('test.yoco_cleanup_payment_id'),
         'WRONG CONFIRMATION',
         'Synthetic cleanup QA reason'
     ),
     'P0001',
     format(
         'Confirmation must exactly match: DELETE TEST PAYMENT %s',
-        (select payment_id::text from public.payment_attempts
-          where idempotency_key='yoco-cleanup-qa-idempotency-0001')
+        current_setting('test.yoco_cleanup_payment_id')
     ),
     'owner cannot clean up without exact payment-ID confirmation'
 );
@@ -226,12 +230,8 @@ select extensions.throws_ok(
 select extensions.ok(
     (
         public.admin_cleanup_yoco_test_payment(
-            (select payment_id from public.payment_attempts
-              where idempotency_key='yoco-cleanup-qa-idempotency-0001'),
-            'DELETE TEST PAYMENT ' || (
-                select payment_id::text from public.payment_attempts
-                 where idempotency_key='yoco-cleanup-qa-idempotency-0001'
-            ),
+            current_setting('test.yoco_cleanup_payment_id')::uuid,
+            'DELETE TEST PAYMENT ' || current_setting('test.yoco_cleanup_payment_id'),
             'Synthetic Yoco test-payment cleanup QA'
         )->>'ok'
     ) = 'true',
@@ -240,10 +240,11 @@ select extensions.ok(
 reset role;
 
 select extensions.ok(
-    not exists (
+    exists (
         select 1 from public.payments
          where id='10000000-0000-4000-8000-000000000011'
-    ) is false,
+           and provider='paystack'
+    ),
     'Paystack payment remains untouched'
 );
 select extensions.ok(
@@ -262,6 +263,14 @@ select extensions.ok(
     'Yoco test payment ledger row is removed'
 );
 select extensions.ok(
+    not exists (
+        select 1 from public.payment_receipts pr
+        join public.payments p on p.id=pr.payment_id
+         where p.id=current_setting('test.yoco_cleanup_payment_id')::uuid
+    ),
+    'issued receipt row is removed only after its immutable snapshot is archived'
+);
+select extensions.ok(
     exists (
         select 1 from public.payment_attempts pa
          where pa.idempotency_key='yoco-cleanup-qa-idempotency-0001'
@@ -269,6 +278,11 @@ select extensions.ok(
            and pa.payment_id is null
     ),
     'successful provider attempt is retained and detached from the removed ledger row'
+);
+select extensions.ok(
+    (select amount_outstanding from public.invoices
+      where id='10000000-0000-4000-8000-000000000002') = 98.00,
+    'invoice balance is recalculated after removal of the two-rand test payment'
 );
 select extensions.ok(
     exists (
