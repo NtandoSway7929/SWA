@@ -24952,6 +24952,65 @@ function simpleBars(items, color) {
 
         if (!config) return;
 
+        // Payments are financial records, not ordinary workspace records.
+        // Fail closed when there is any evidence of settlement or a linked
+        // payment workflow. Never remove receipts, approved transfer evidence,
+        // provider transactions or refunds through this generic REST path.
+        if (type === "payments") {
+            const payment = state.payments.find(function (item) {
+                return String(item.id) === String(id);
+            });
+
+            if (!payment) {
+                throw new Error("Payment not found in the current workspace data. Refresh and try again.");
+            }
+
+            if (!state.currentAdmin || state.currentAdmin.role !== "owner") {
+                throw new Error("Only the Swayphics owner can manage payment records.");
+            }
+
+            const protectedStatus = ["paid", "partially_paid", "refunded", "partially_refunded", "settled"];
+            if (
+                protectedStatus.includes(String(payment.status || "").toLowerCase()) ||
+                payment.paid_at ||
+                payment.provider ||
+                payment.provider_transaction_id ||
+                payment.provider_checkout_id
+            ) {
+                throw new Error("This payment is protected financial history. Paid, settled or provider-linked payments cannot be permanently deleted. Retain the record and correct it through the appropriate refund or reconciliation workflow.");
+            }
+
+            const dependencyChecks = [
+                ["payment_receipts", "payment_id"],
+                ["payment_attempts", "payment_id"],
+                ["payment_refunds", "payment_id"],
+                ["payment_reconciliation", "payment_id"],
+                ["payment_reconciliation_actions", "related_payment_id"],
+                ["bank_transfer_submissions", "payment_id"],
+                ["manual_payment_record_requests", "payment_id"]
+            ];
+
+            const linked = await Promise.all(dependencyChecks.map(async function (check) {
+                const rows = await api(
+                    "/rest/v1/" + check[0] + "?select=" + check[1] +
+                    "&" + check[1] + "=eq." + encodeURIComponent(id) + "&limit=1"
+                );
+                return Array.isArray(rows) && rows.length > 0 ? check[0] : null;
+            }));
+
+            const blockers = linked.filter(Boolean);
+            if (blockers.length) {
+                throw new Error(
+                    "This payment has linked financial records (" + blockers.join(", ") +
+                    "). They must be retained and reconciled; the payment cannot be deleted from the generic Payments action."
+                );
+            }
+
+            throw new Error(
+                "Permanent payment deletion is disabled unless the record is explicitly verified as a disposable test record through the dedicated finance cleanup workflow. No payment data was changed."
+            );
+        }
+
         if (
             type === "team"
         ) {
