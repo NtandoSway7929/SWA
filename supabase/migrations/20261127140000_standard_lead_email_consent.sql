@@ -261,7 +261,7 @@ where id in (
 );
 
 
-do $
+do $$
 declare
   v_target_count integer;
 begin
@@ -304,6 +304,6 @@ begin
     raise exception 'Standard Lead consent migration expected 30 verified cohort records; found %.', v_target_count;
   end if;
 end;
-$;
+$$;
 
 commit;
