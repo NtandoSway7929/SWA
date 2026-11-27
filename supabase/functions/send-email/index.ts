@@ -717,6 +717,7 @@ Deno.serve(async (req) => {
     }
 
     const emailConsentAction = body.email_consent_action;
+    let emailConsentClaimed = false;
     if (emailConsentAction && (!primaryLookup && !secondaryLookup || resolvedContactType !== "lead")) {
       return Response.json(
         { error: "Email-consent actions require a verified Standard Lead record." },
@@ -765,6 +766,29 @@ Deno.serve(async (req) => {
           headers: corsHeaders,
         },
       );
+    }
+
+    if (resolvedContactType === "lead" && emailConsentAction === "permission_request") {
+      const claim = await supabase
+        .from("leads")
+        .update({
+          email_consent_status: "sending",
+          email_consent_channel: "Email",
+          email_consent_evidence: "Permission-request send is in progress; check the Swayphics Mail result before retrying.",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contact.id)
+        .eq("email_consent_required", true)
+        .eq("email_consent_status", "not_requested")
+        .select("id")
+        .maybeSingle();
+      if (claim.error || !claim.data) {
+        return Response.json(
+          { error: "This one-time permission request has already been claimed or sent. Check the lead consent history before retrying." },
+          { status: 409, headers: corsHeaders },
+        );
+      }
+      emailConsentClaimed = true;
     }
 
     const fromEmail =
@@ -867,6 +891,18 @@ Deno.serve(async (req) => {
     }
 
     if (!emailResponse.ok) {
+      if (emailConsentClaimed) {
+        await supabase
+          .from("leads")
+          .update({
+            email_consent_status: "not_requested",
+            email_consent_channel: null,
+            email_consent_evidence: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", contact.id)
+          .eq("email_consent_status", "sending");
+      }
       const messageText =
         result?.message ||
         result?.error?.message ||
@@ -928,9 +964,9 @@ Deno.serve(async (req) => {
     if (resolvedContactType === "lead" && emailConsentAction === "permission_request") {
       const requestedAt = new Date().toISOString();
       const consentEvidence =
-        "One-time permission request sent through branded Swayphics Mail.\\nSubject: " +
+        "One-time permission request sent through branded Swayphics Mail.\nSubject: " +
         subject +
-        "\\n\\n" +
+        "\n\n" +
         message;
       const consentUpdate = await supabase
         .from("leads")
@@ -943,7 +979,7 @@ Deno.serve(async (req) => {
         })
         .eq("id", contact.id)
         .eq("email_consent_required", true)
-        .eq("email_consent_status", "not_requested")
+        .eq("email_consent_status", "sending")
         .select("id,business_name,email")
         .maybeSingle();
 
