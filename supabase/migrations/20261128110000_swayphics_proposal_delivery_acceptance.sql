@@ -273,7 +273,8 @@ begin
         'monthly_recurring_subtotal', v_quote.monthly_recurring_subtotal,
         'yearly_recurring_subtotal', v_quote.yearly_recurring_subtotal,
         'valid_until', v_quote.valid_until,
-        'expires_at', v_expires_at
+        'expires_at', v_expires_at,
+        'requires_email_consent', v_email_consent_required
     );
 end;
 $function$;
@@ -460,7 +461,7 @@ begin
             using errcode = '22023';
     end if;
 
-    if p_decision not in ('accepted', 'rejected') then
+    if p_decision is null or p_decision not in ('accepted', 'rejected') then
         raise exception 'Choose either accept or decline.'
             using errcode = '22023';
     end if;
