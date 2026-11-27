@@ -18,6 +18,7 @@ interface EmailRequest {
   subject?: string;
   message?: string;
   proposal_type?: "improv-website" | "no-website" | "not-website-related";
+  email_consent_action?: "permission_request" | "marketing";
   in_reply_to?: string;
   references?: string;
   thread_id?: string;
@@ -549,6 +550,8 @@ Deno.serve(async (req) => {
       business_name?: string | null;
       contact_name?: string | null;
       email?: string | null;
+      email_consent_required?: boolean | null;
+      email_consent_status?: string | null;
     } | null = null;
 
     let resolvedContactType =
@@ -564,7 +567,7 @@ Deno.serve(async (req) => {
           const byId =
             await supabase
               .from(tableName)
-              .select(columns)
+              .select(tableName === "leads" ? columns + ",email_consent_required,email_consent_status" : columns)
               .eq("id", contactId)
               .maybeSingle();
 
@@ -587,7 +590,7 @@ Deno.serve(async (req) => {
           const byEmail =
             await supabase
               .from(tableName)
-              .select(columns)
+              .select(tableName === "leads" ? columns + ",email_consent_required,email_consent_status" : columns)
               .ilike("email", requestedRecipientEmail)
               .maybeSingle();
 
@@ -711,6 +714,37 @@ Deno.serve(async (req) => {
       throw new Error(
         "The selected recipient email does not match the saved contact. Refresh the dashboard and select the recipient again.",
       );
+    }
+
+    const emailConsentAction = body.email_consent_action;
+    if (emailConsentAction && (!primaryLookup && !secondaryLookup || resolvedContactType !== "lead")) {
+      return Response.json(
+        { error: "Email-consent actions require a verified Standard Lead record." },
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
+    if (resolvedContactType === "lead" && contact.email_consent_required === true) {
+      if (emailConsentAction === "permission_request") {
+        if (contact.email_consent_status !== "not_requested") {
+          return Response.json(
+            { error: "A one-time email permission request has already been sent or this lead is not eligible for another request." },
+            { status: 409, headers: corsHeaders },
+          );
+        }
+      } else if (emailConsentAction === "marketing") {
+        if (contact.email_consent_status !== "granted") {
+          return Response.json(
+            { error: "Marketing email is blocked until explicit email consent has been recorded." },
+            { status: 403, headers: corsHeaders },
+          );
+        }
+      } else {
+        return Response.json(
+          { error: "This lead requires a recorded email-consent state. Use the permission-request action first." },
+          { status: 403, headers: corsHeaders },
+        );
+      }
     }
 
     const subject =
@@ -885,6 +919,55 @@ Deno.serve(async (req) => {
           "Unable to retrieve Resend Message-ID after sending:",
           retrieveError
         );
+      }
+    }
+
+    let emailConsentRecorded: boolean | null = null;
+    let emailConsentRecordError: string | null = null;
+
+    if (resolvedContactType === "lead" && emailConsentAction === "permission_request") {
+      const requestedAt = new Date().toISOString();
+      const consentEvidence =
+        "One-time permission request sent through branded Swayphics Mail.\\nSubject: " +
+        subject +
+        "\\n\\n" +
+        message;
+      const consentUpdate = await supabase
+        .from("leads")
+        .update({
+          email_consent_status: "requested",
+          email_consent_requested_at: requestedAt,
+          email_consent_channel: "Email",
+          email_consent_evidence: consentEvidence,
+          updated_at: requestedAt,
+        })
+        .eq("id", contact.id)
+        .eq("email_consent_required", true)
+        .eq("email_consent_status", "not_requested")
+        .select("id,business_name,email")
+        .maybeSingle();
+
+      emailConsentRecorded = Boolean(consentUpdate.data && !consentUpdate.error);
+      if (!emailConsentRecorded) {
+        emailConsentRecordError = consentUpdate.error?.message ||
+          "The email was sent, but the consent request could not be recorded. Do not send a second request; reconcile the lead record first.";
+      } else {
+        const eventInsert = await supabase
+          .from("lead_email_consent_events")
+          .insert({
+            lead_id: contact.id,
+            business_name: consentUpdate.data.business_name || recipientBusinessName || "Unknown business",
+            email_address: recipientEmail,
+            event_type: "request_sent",
+            channel: "Email",
+            evidence: consentEvidence,
+            actor_id: userData.user.id,
+            created_at: requestedAt,
+          });
+        if (eventInsert.error) {
+          emailConsentRecorded = false;
+          emailConsentRecordError = "The permission request was sent and the lead status was updated, but its audit event could not be saved: " + eventInsert.error.message;
+        }
       }
     }
 
@@ -1086,6 +1169,8 @@ Deno.serve(async (req) => {
                 "Communication log insert failed."
               )
             : null,
+        email_consent_recorded: emailConsentRecorded,
+        email_consent_record_error: emailConsentRecordError,
       },
       {
         status: 200,
