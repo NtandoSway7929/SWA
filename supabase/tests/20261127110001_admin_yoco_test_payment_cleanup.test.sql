@@ -134,6 +134,14 @@ select innerme_private.settle_yoco_payment(
     'yoco_cleanup_qa_transaction_0001'
 );
 
+-- The disposable Yoco baseline predates the Paystack migration. Mirror
+-- production's widened provider constraint inside this rolled-back test so a
+-- Paystack live ledger row can be inserted and proven ineligible.
+alter table public.payments drop constraint if exists payments_provider_check;
+alter table public.payments
+    add constraint payments_provider_check
+    check (provider is null or provider in ('yoco', 'paystack'));
+
 -- Add non-Yoco records to prove provider classification is fail-closed.
 insert into public.payments (
     id, client_id, invoice_id, amount, status, method, reference, paid_at,
