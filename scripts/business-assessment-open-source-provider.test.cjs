@@ -51,6 +51,19 @@ const assert = require("node:assert/strict");
     ]);
     assert.equal(normalizedCrawl.etag, "abc123");
 
+    const suspendedCrawl = __testing.normaliseCrawlResult({
+        url: "https://business.example.co.za/",
+        redirected_url: "https://business.example.co.za/cgi-sys/suspendedpage.cgi",
+        success: true,
+        markdown: { raw_markdown: "# Account Suspended\\nThis account has been suspended." },
+        metadata: { title: "Account Suspended" },
+        status_code: 302
+    }, "https://business.example.co.za/");
+    assert.equal(suspendedCrawl.success, false, "A non-2xx HTTP response must not count as a successful page fetch");
+    assert.equal(suspendedCrawl.error_code, "http_status_302");
+    assert.equal(suspendedCrawl.status_code, 302);
+    assert.equal(suspendedCrawl.final_url, "https://business.example.co.za/cgi-sys/suspendedpage.cgi");
+
     const calls = [];
     const fakeFetch = async (url, init = {}) => {
         calls.push({ url: String(url), init });
