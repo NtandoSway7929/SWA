@@ -9,6 +9,23 @@ alter table public.payments
 comment on column public.payments.is_test is
   'Owner-classified test-only payment. Test payments are excluded from revenue reporting and may be permanently purged through the guarded admin RPC.';
 
+create table if not exists public.payment_test_deletion_storage_cleanup (
+    id uuid primary key default gen_random_uuid(),
+    payment_id uuid not null,
+    bucket_id text not null check (bucket_id = 'swayphics-payment-receipts'),
+    object_path text not null,
+    status text not null default 'pending' check (status in ('pending', 'completed')),
+    attempt_count integer not null default 0 check (attempt_count >= 0),
+    last_error text,
+    created_at timestamptz not null default now(),
+    completed_at timestamptz,
+    unique (bucket_id, object_path)
+);
+
+alter table public.payment_test_deletion_storage_cleanup enable row level security;
+revoke all on public.payment_test_deletion_storage_cleanup from public, anon, authenticated;
+grant select, insert, update, delete on public.payment_test_deletion_storage_cleanup to service_role;
+
 create or replace function innerme_private.swayphics_invoice_net_paid(p_invoice_id uuid)
 returns numeric
 language sql
@@ -314,6 +331,7 @@ declare
     v_payment public.payments%rowtype;
     v_receipt_ids uuid[] := array[]::uuid[];
     v_deleted_receipts integer := 0;
+    v_storage_cleanup_ids uuid[] := array[]::uuid[];
     v_previous_setting text;
 begin
     if auth.uid() is null or not coalesce(public.is_swayphics_owner(), false) then
@@ -359,14 +377,27 @@ begin
       from public.payment_receipts
      where payment_id = p_payment_id;
 
-    if exists (
-        select 1
-        from public.payment_receipt_deliveries d
-        where d.receipt_id = any(v_receipt_ids)
-          and d.pdf_storage_path is not null
-    ) then
-        raise exception 'A receipt PDF is stored for this payment. Remove it through the receipt storage workflow before deleting the test payment.';
-    end if;
+    -- Persist private receipt-file cleanup work before removing the receipt rows.
+    -- Storage deletion is performed by the service-role Edge Function after commit.
+    insert into public.payment_test_deletion_storage_cleanup (
+        payment_id, bucket_id, object_path
+    )
+    select p_payment_id, 'swayphics-payment-receipts', d.pdf_storage_path
+    from public.payment_receipt_deliveries d
+    where d.receipt_id = any(v_receipt_ids)
+      and d.pdf_storage_path is not null
+    on conflict (bucket_id, object_path) do update
+       set payment_id = excluded.payment_id,
+           status = 'pending',
+           attempt_count = public.payment_test_deletion_storage_cleanup.attempt_count,
+           last_error = null,
+           completed_at = null;
+
+    select coalesce(array_agg(id), array[]::uuid[])
+      into v_storage_cleanup_ids
+      from public.payment_test_deletion_storage_cleanup
+     where payment_id = p_payment_id
+       and status = 'pending';
 
     v_previous_setting := current_setting('innerme_private.allow_test_payment_purge', true);
     perform set_config('innerme_private.allow_test_payment_purge', 'on', true);
@@ -387,7 +418,8 @@ begin
     return jsonb_build_object(
         'deleted', true,
         'payment_id', p_payment_id,
-        'receipts_deleted', v_deleted_receipts
+        'receipts_deleted', v_deleted_receipts,
+        'storage_cleanup_ids', to_jsonb(v_storage_cleanup_ids)
     );
 end;
 $function$;
