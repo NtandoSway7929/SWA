@@ -81,13 +81,28 @@ The application must call TinyFish's **REST API from a Supabase Edge Function**.
 - Fail closed with `provider_not_configured` when the secret is absent. Do not fall back to a public client-side request.
 - The current connected Supabase tools do not expose a secrets-list or secret-write action, so availability of this key has not been verified. Configure it through the Supabase project's secret manager before enabling the worker.
 
-### Provider data-use approval gate
+### Mandatory restricted-processing agreement
 
-- The Edge Function also requires the server-side environment secret `TINYFISH_DATA_USE_APPROVED=true`.
-- The gate is default-off: a missing value or anything other than the exact string `true` blocks the inspection request before an inspection run is created and before any provider call is made.
-- Configure this secret only after an authorised Swayphics decision to accept the applicable TinyFish terms or after a suitable written agreement is in force. Record the decision and the terms/agreement version outside the code repository.
-- This gate is separate from respondent inspection consent and from the API key. Respondent consent does not itself authorise Swayphics to accept a provider contract.
-- Do not set this value in production as part of technical deployment. It is a separate governance approval.
+Live TinyFish inspections are prohibited until Swayphics has a signed written agreement with TinyFish (or the legally responsible contracting entity) that overrides any inconsistent standard self-service terms.
+
+At minimum, the written agreement must:
+
+- Restrict use of submitted business/customer data to processing necessary to provide the specific inspection requested by Swayphics.
+- Expressly prohibit using that data to train, fine-tune or evaluate any AI or machine-learning model, including model development or improvement.
+- Prohibit using that data for unrelated product or service improvement, analytics or development not necessary to deliver the requested inspection.
+- Apply the same restrictions to relevant subprocessors and prevent onward use inconsistent with the agreement.
+- Define retention, deletion, security, incident notification, subprocessors and cross-border processing arrangements sufficiently for Swayphics to assess its legal and operational obligations.
+
+A respondent checkbox, a privacy notice, an API key, a verbal assurance or acceptance of the standard self-service terms is not a substitute for this signed agreement.
+
+The Edge Function has a default-off, server-side gate. It requires both:
+
+- `TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_APPROVED=true`
+- `TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_REFERENCE=<signed-agreement-reference>`
+
+The reference must identify the signed agreement/version held in Swayphics' controlled records. Every inspection run stores that reference for audit. If either value is missing, blank, or not exactly approved, the endpoint rejects the request before creating an inspection run or making a TinyFish request.
+
+This gate is separate from respondent inspection consent and the `TINYFISH_API_KEY`. Never set it as part of routine deployment. Only set it after the signed agreement has been reviewed and approved by Swayphics. If TinyFish will not provide the required restrictions, keep the provider disabled and evaluate another provider.
 
 TinyFish REST API authentication is API-key based and is separate from TinyFish MCP authentication. See [TinyFish Authentication](https://docs.tinyfish.ai/authentication).
 
