@@ -1,0 +1,181 @@
+name: swayphics-bof-private-gateway
+
+services:
+  searxng:
+    image: ghcr.io/searxng/searxng:2026.11.23-a7163d091@sha256:c9ea2372a7f1fb3fc01fda5bacfde4adc871621ad96d9cdec903b4cbe542fcf8
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?Set SEARXNG_SECRET in the private deployment environment}
+      SEARXNG_BASE_URL: ${BOF_GATEWAY_PUBLIC_URL:?Set BOF_GATEWAY_PUBLIC_URL to the protected HTTPS hostname}
+      SEARXNG_LIMITER: "true"
+      SEARXNG_VALKEY_URL: valkey://valkey:6379/0
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - ./searxng/limiter.toml:/etc/searxng/limiter.toml:ro
+    depends_on:
+      valkey:
+        condition: service_healthy
+    networks:
+      - search_internal
+      - search_egress
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          pids: 256
+
+  crawl4ai:
+    image: unclecode/crawl4ai:0.9.6@sha256:4603d7c4d69769673dfa1214fa9abbcac2a874d4d9af07d784782af528b65c68
+    environment:
+      CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:?Set CRAWL4AI_API_TOKEN in the private deployment environment}
+    networks:
+      - crawl_internal
+      - crawl_egress
+    shm_size: "1gb"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/lib/redis:uid=999,gid=999,mode=0700
+      - /var/lib/crawl4ai/outputs:uid=999,gid=999,mode=0700
+      - /home/appuser/.crawl4ai:uid=999,gid=999,mode=0700
+      - /home/appuser/.cache/url_seeder:uid=999,gid=999,mode=0700
+      - /home/appuser/.gunicorn:uid=999,gid=999,mode=0700
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          pids: 512
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    user: "appuser"
+    restart: unless-stopped
+
+  valkey:
+    image: ${VALKEY_IMAGE:?Set VALKEY_IMAGE to a reviewed version and full sha256-pinned image reference}
+    command:
+      - valkey-server
+      - --protected-mode
+      - "yes"
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    networks:
+      - search_internal
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          pids: 128
+
+  gateway:
+    image: ${CADDY_IMAGE:?Set CADDY_IMAGE to a reviewed version and full sha256-pinned image reference}
+    volumes:
+      - ./gateway:/etc/caddy:ro
+    depends_on:
+      - searxng
+      - crawl4ai
+    networks:
+      tunnel_internal:
+        ipv4_address: 10.77.30.2
+      search_internal:
+        ipv4_address: 10.77.10.2
+      crawl_internal:
+        ipv4_address: 10.77.20.2
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /data
+      - /config
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          pids: 128
+
+  cloudflared:
+    image: ${CLOUDFLARED_IMAGE:?Set CLOUDFLARED_IMAGE to a reviewed version and full sha256-pinned image reference}
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token-file
+      - /run/secrets/cloudflare_tunnel_token
+    secrets:
+      - cloudflare_tunnel_token
+    networks:
+      - tunnel_internal
+      - cloudflare_egress
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          pids: 128
+
+networks:
+  tunnel_internal:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.77.30.0/24
+  search_internal:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.77.10.0/24
+  crawl_internal:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.77.20.0/24
+  search_egress:
+    driver: bridge
+  crawl_egress:
+    driver: bridge
+  cloudflare_egress:
+    driver: bridge
+
+secrets:
+  cloudflare_tunnel_token:
+    file: ${CLOUDFLARED_TUNNEL_TOKEN_FILE:?Set CLOUDFLARED_TUNNEL_TOKEN_FILE to a protected token file outside the repository}

@@ -348,6 +348,74 @@ const path = require("node:path");
     assert.equal(storePageIdentity.status, "confirmed",
         "A same-domain store page with the business name and supplied locality should confirm identity");
 
+    const privateGatewayRoot = path.join(
+        __dirname, "bof-open-source-provider-poc", "private-gateway"
+    );
+    const privateCompose = fs.readFileSync(path.join(privateGatewayRoot, "compose.yml"), "utf8");
+    const privateCaddyfile = fs.readFileSync(path.join(privateGatewayRoot, "gateway", "Caddyfile"), "utf8");
+    const privateSearxSettings = fs.readFileSync(path.join(privateGatewayRoot, "searxng", "settings.yml"), "utf8");
+    const privateLimiter = fs.readFileSync(path.join(privateGatewayRoot, "searxng", "limiter.toml"), "utf8");
+    const privateEnvExample = fs.readFileSync(path.join(privateGatewayRoot, ".env.example"), "utf8");
+
+    assert.doesNotMatch(privateCompose, /^\s*ports:/m,
+        "The private deployment Compose file must not publish host ports");
+    assert.equal((privateCompose.match(/internal: true/g) || []).length, 3,
+        "The gateway, search and crawler backplane networks must be internally isolated");
+    assert.match(privateCompose, /10\.77\.10\.2/);
+    assert.match(privateCompose, /10\.77\.20\.2/);
+    assert.match(privateCompose, /10\.77\.30\.2/);
+    assert.match(privateCompose, /CLOUDFLARED_TUNNEL_TOKEN_FILE/);
+    assert.match(privateCompose, /--token-file/);
+    assert.match(privateCompose, /condition: service_healthy/);
+    assert.match(privateCompose, /SEARXNG_LIMITER: "true"/);
+    assert.match(privateCompose, /SEARXNG_VALKEY_URL: valkey:\/\/valkey:6379\/0/);
+    assert.match(privateCompose, /CADDY_IMAGE:\?/);
+    assert.match(privateCompose, /VALKEY_IMAGE:\?/);
+    assert.match(privateCompose, /CLOUDFLARED_IMAGE:\?/);
+    assert.match(privateCompose, /unclecode\/crawl4ai:0\.9\.6@sha256:/);
+    assert.match(privateCompose, /ghcr\.io\/searxng\/searxng:.*@sha256:/);
+    assert.match(privateCompose, /search_egress/);
+    assert.match(privateCompose, /crawl_egress/);
+    assert.match(privateCompose, /cloudflare_egress/);
+
+    const gatewayService = privateCompose.match(/  gateway:\n([\s\S]*?)\n  cloudflared:/)?.[1] || "";
+    assert.ok(gatewayService, "The private Compose file must define a gateway service");
+    assert.match(gatewayService, /tunnel_internal:/);
+    assert.match(gatewayService, /search_internal:/);
+    assert.match(gatewayService, /crawl_internal:/);
+    assert.doesNotMatch(gatewayService, /_egress:/,
+        "The Caddy gateway must not share outbound internet egress networks");
+
+    const tunnelService = privateCompose.match(/  cloudflared:\n([\s\S]*?)\nnetworks:/)?.[1] || "";
+    assert.ok(tunnelService, "The private Compose file must define a Cloudflare Tunnel connector");
+    assert.match(tunnelService, /tunnel_internal/);
+    assert.match(tunnelService, /cloudflare_egress/);
+    assert.doesNotMatch(tunnelService, /ports:/);
+
+    assert.match(privateCaddyfile, /path \/search/);
+    assert.match(privateCaddyfile, /path \/crawl/);
+    assert.match(privateCaddyfile, /method GET/);
+    assert.match(privateCaddyfile, /method POST/);
+    assert.match(privateCaddyfile, /header CF-Connecting-IP \*/);
+    assert.match(privateCaddyfile, /X-Forwarded-For \{http\.request\.header\.CF-Connecting-IP\}/);
+    assert.match(privateCaddyfile, /X-Real-IP \{http\.request\.header\.CF-Connecting-IP\}/);
+    assert.equal((privateCaddyfile.match(/header_up -CF-Access-Client-Id/g) || []).length, 2,
+        "Caddy must strip the Cloudflare Access client ID before forwarding to each upstream");
+    assert.equal((privateCaddyfile.match(/header_up -CF-Access-Client-Secret/g) || []).length, 2,
+        "Caddy must strip the Cloudflare Access client secret before forwarding to each upstream");
+    assert.match(privateCaddyfile, /reverse_proxy searxng:8080/);
+    assert.match(privateCaddyfile, /reverse_proxy crawl4ai:11235/);
+
+    assert.match(privateSearxSettings, /limiter: true/);
+    assert.match(privateSearxSettings, /- json/);
+    assert.match(privateLimiter, /trusted_proxies/);
+    assert.match(privateLimiter, /10\.77\.10\.2\/32/);
+    assert.match(privateEnvExample, /CLOUDFLARED_TUNNEL_TOKEN_FILE/);
+    assert.match(privateEnvExample, /CADDY_IMAGE=/);
+    assert.match(privateEnvExample, /VALKEY_IMAGE=/);
+    assert.match(privateEnvExample, /CLOUDFLARED_IMAGE=/);
+    assert.doesNotMatch(privateEnvExample, /CF-Access-Client-Secret\s*=\s*[^\n]+/);
+
     console.log("Swayphics business identity matcher contract tests passed.");
     console.log("Business Opportunity Finder open-source provider adapter tests passed.");
 })().catch((error) => {

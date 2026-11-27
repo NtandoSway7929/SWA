@@ -207,6 +207,30 @@ Use one dedicated token for the Swayphics BOF Edge Function, tagged for the prod
 
 **Isolated adapter integration implemented:** the POC adapter sends `CF-Access-Client-Id` and `CF-Access-Client-Secret` on both the SearXNG `/search` request and the Crawl4AI `/crawl` request. The Crawl4AI bearer token remains a separate `Authorization` header on `/crawl` only. Access credentials are never included in the JSON crawl body. The adapter rejects non-loopback service endpoints unless both Access credentials are configured; one-sided configuration is rejected. HTTP loopback endpoints remain available for local Docker tests without Cloudflare credentials. The live integration and benchmark scripts accept the two server-side environment variables. This completes adapter plumbing only: no Cloudflare service token, hostname, tunnel, VM or production secret has been created, and no production Edge Function has been changed.
 
+### Isolated private-gateway deployment template — created, not deployed
+
+A separate Compose definition now exists at `scripts/bof-open-source-provider-poc/private-gateway/compose.yml`. It is deliberately separate from the loopback-only CI Compose file.
+
+The candidate network layout separates service traffic and outbound access:
+
+- `tunnel_internal`: Caddy gateway and `cloudflared` connector only; internal Docker network.
+- `search_internal`: Caddy, SearXNG and Valkey only; internal Docker network.
+- `crawl_internal`: Caddy and Crawl4AI only; internal Docker network.
+- `search_egress`, `crawl_egress`, `cloudflare_egress`: one outbound-capable network per service requiring outbound connectivity. SearXNG needs external search-engine access; Crawl4AI needs public website access; cloudflared needs outbound connectivity to Cloudflare. These egress networks are not shared with each other.
+- No service publishes a host port. The Caddy gateway has no outbound egress network and is reachable by cloudflared only across `tunnel_internal`.
+
+The Caddyfile accepts only `GET /search` and `POST /crawl`, and requires the Cloudflare-provided `CF-Connecting-IP` header. It sets `X-Forwarded-For` and `X-Real-IP` from that value for the SearXNG limiter. It strips `CF-Access-Client-Id` and `CF-Access-Client-Secret` before forwarding to either upstream. The Crawl4AI `Authorization: Bearer` header is preserved for the crawler API.
+
+SearXNG's deployment settings enable JSON and its limiter. Valkey is reachable only on the internal search network and is configured as an ephemeral, memory-bounded limiter store. The limiter trusts only the fixed Caddy address `10.77.10.2/32`; the Caddy address and `limiter.toml` must be kept in sync.
+
+The Cloudflare Tunnel connector uses a remotely managed tunnel token mounted from a separate protected file via `--token-file`. The token is distinct from the Cloudflare Access service token. The example environment file contains no actual credentials. Caddy, Valkey and cloudflared image references are intentionally required as environment variables and must be filled with reviewed, full-digest-pinned references before Compose will start; no unreviewed image digest has been invented.
+
+Before using this template, check that the three fixed Docker subnets (`10.77.10.0/24`, `10.77.20.0/24`, `10.77.30.0/24`) do not overlap with host, VPN or existing Docker networks. Change the Compose IPAM entries, Caddy address and limiter trusted-proxy entry together if a different subnet plan is required.
+
+**Important residual network control:** dedicated Docker egress networks isolate the three outbound services from one another, but they do not by themselves prevent a container from reaching private, link-local or cloud metadata addresses through its egress network. Host-level egress filtering and live DNS-rebinding/redirect SSRF tests remain mandatory. Do not rely on UFW alone without checking Docker's packet-filtering behavior.
+
+This is a configuration template only. No hostname has been routed, Cloudflare Access application or Tunnel created, token generated, VM purchased, provider deployed or production code changed. The actual remotely managed tunnel hostname should be routed to `http://gateway:8080` only after the Access application is configured first, with a deny-by-default Service Auth policy limited to the BOF service token and Tunnel's **Protect with Access** origin validation enabled. Cloudflare Tunnel uses outbound connections from the connector, so no inbound server port is required. See [Cloudflare Tunnel run parameters](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/run-parameters/) and [Docker Compose network isolation](https://docs.docker.com/compose/how-tos/networking/).
+
 ### Hosting candidate and indicative cost
 
 The most credible locally hosted option identified so far is [xneelo Cloud](https://xneelo.co.za/cloud/). Its published pricing currently lists:
@@ -234,7 +258,7 @@ Railway private DNS names are scoped to services in the same Railway project and
 1. Confirm that the Swayphics-controlled domain can be used as an active Cloudflare zone and that the Cloudflare Access Free plan is actually available to the account.
 2. Obtain a final VM quote and confirm resource quotas, storage, backups/snapshots, network policy, support and any provider terms.
 3. Build the gateway and private Docker network so that neither SearXNG nor Crawl4AI publishes a public host port. The only inbound public hostname should terminate at Cloudflare Access; the tunnel connector initiates outbound connectivity.
-4. Add private Valkey and turn on SearXNG rate limiting, or document and test an equivalent authenticated-gateway rate limit. Review the trusted-proxy/client-IP chain.
+4. The private-gateway template now includes internal Valkey, enables SearXNG's limiter and forwards the Cloudflare client IP through a fixed Caddy address. The configuration is not yet runtime-validated; verify the IP chain and limiter behavior with actual requests before treating this control as complete.
 5. The isolated adapter now sends both Cloudflare Access headers on both service requests and fails closed when remote endpoints are configured without the complete credential pair. Tests cover missing and partial configuration, header forwarding, and exclusion from the crawl body. Staging must still verify that Cloudflare Access rejects missing, wrong and expired tokens with 401/403, and must confirm that no credentials are written to service or gateway logs.
 6. Configure the Edge Function with the gateway URL, Access Client ID/Secret and Crawl4AI bearer token as server-side secrets. Confirm the Edge Function's actual invocation region and measure search/crawl latency and request timeouts against the VM in Johannesburg.
 7. Complete network egress/SSRF, DNS-rebinding, Chromium sandbox, image/SBOM, secret-rotation, log-retention, backup/restore and outage-recovery tests in staging.
@@ -244,8 +268,8 @@ Supabase Edge Functions can make outbound HTTP requests to other APIs using `fet
 
 ### Remaining production blockers
 
-1. **SearXNG abuse controls:** the test setting has `server.limiter: false`. Either add a private Valkey service, enable the SearXNG limiter and set trusted proxy headers correctly, or place SearXNG behind a private authenticated gateway with independently tested per-client rate limiting. Do not simply set `limiter: true` without the Valkey dependency and proxy headers.
-2. **Ingress and service identity:** both POC ports bind to host loopback. A deployment must keep both services private, allow only the Swayphics Edge Function or its private gateway to call them, terminate TLS, enforce authentication at the service boundary and prevent direct public access. SearXNG has no application token in this adapter contract; protect it with private ingress or an authenticated gateway.
+1. **SearXNG abuse controls:** the local CI setting still has `server.limiter: false`, but the separate private-gateway template enables the limiter and supplies internal Valkey plus a fixed trusted-proxy address. The deployment configuration still requires runtime validation of Valkey connectivity, Cloudflare client-IP forwarding and actual rate-limit behavior.
+2. **Ingress and service identity:** the new deployment template has no public host-port mappings and routes through a private Caddy gateway and cloudflared connector. The live Cloudflare Access application, Service Auth policy, service token, Tunnel hostname, `Protect with Access` setting and origin behavior remain unconfigured and untested. SearXNG itself has no application token in this adapter contract; it must remain reachable only from Caddy on the internal search network.
 3. **Egress/SSRF:** retain Crawl4AI's v0.9.6 pinning egress protections. Add network-level egress restrictions so the crawler cannot reach private, loopback, link-local, metadata or Swayphics infrastructure ranges. Validate DNS-rebinding and redirect cases against the actual deployment network, not only URL-string validation in the adapter.
 4. **Chromium sandbox:** complete the upstream sandbox verification. The current container controls do not by themselves prove renderer sandboxing.
 5. **Secrets and rotation:** store the SearXNG secret, Crawl4AI API token and any gateway credentials in a managed secret store. Define rotation, least-privilege access and emergency revocation. Never put them in browser code, Git history or assessment payloads.
@@ -257,7 +281,7 @@ Supabase Edge Functions can make outbound HTTP requests to other APIs using `fet
 
 The current Crawl4AI image is the reviewed v0.9.6 release, which upstream marks as a security release. Continue tracking upstream advisories and releases; pinning a digest is a reproducibility control, not a guarantee that the image remains vulnerability-free.
 
-No production hostname, hosting provider, private networking, production secret, Valkey instance or deployment has been selected or provisioned. These decisions remain open and must be completed before any production integration.
+No production hostname, hosting provider, private networking, production secret, Valkey instance or deployment has been selected or provisioned. The repository now contains a private-gateway deployment template, but the template has not been started against real services or a host. These decisions remain open and must be completed before any production integration.
 
 The GitHub Actions workflow runs both the mocked adapter tests and this Docker smoke test on the isolated POC branch.
 

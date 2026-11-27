@@ -1,0 +1,33 @@
+:8080 {
+    @search {
+        path /search
+        method GET
+        header CF-Connecting-IP *
+    }
+
+    handle @search {
+        reverse_proxy searxng:8080 {
+            header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+            header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+            header_up -CF-Access-Client-Id
+            header_up -CF-Access-Client-Secret
+        }
+    }
+
+    @crawl {
+        path /crawl
+        method POST
+        header CF-Connecting-IP *
+    }
+
+    handle @crawl {
+        reverse_proxy crawl4ai:11235 {
+            header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+            header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+            header_up -CF-Access-Client-Id
+            header_up -CF-Access-Client-Secret
+        }
+    }
+
+    respond "not found" 404
+}

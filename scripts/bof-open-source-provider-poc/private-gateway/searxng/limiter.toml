@@ -1,0 +1,6 @@
+# The only trusted reverse proxy on the search_internal network is Caddy.
+# The fixed gateway address is assigned in compose.yml and must remain in sync.
+[botdetection]
+trusted_proxies = [
+  '10.77.10.2/32',
+]
