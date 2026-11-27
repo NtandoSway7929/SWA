@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(30);
+select extensions.plan(31);
 
 select extensions.has_table(
     'public',
@@ -14,6 +14,17 @@ select extensions.has_table(
     'public',
     'business_assessment_evidence',
     'inspection evidence table exists'
+);
+
+select extensions.ok(
+    exists (
+        select 1 from information_schema.columns
+        where table_schema='public'
+          and table_name='business_assessment_inspections'
+          and column_name='provider_agreement_reference'
+          and is_nullable='NO'
+    ),
+    'each inspection run records a mandatory written provider-agreement reference'
 );
 
 select extensions.ok(
@@ -171,7 +182,7 @@ values ('10000000-0000-4000-8000-000000000001');
 set local role service_role;
 insert into public.business_assessment_inspections (
     id, assessment_id, inspection_version, status, requested_sources,
-    idempotency_key, requested_by, consent_version, provider
+    idempotency_key, requested_by, consent_version, provider, provider_agreement_reference
 ) values (
     '10000000-0000-4000-8000-000000000002',
     '10000000-0000-4000-8000-000000000001',
@@ -181,7 +192,8 @@ insert into public.business_assessment_inspections (
     '10000000-0000-4000-8000-000000000003',
     null,
     'bof-public-presence-v1',
-    'tinyfish'
+    'tinyfish',
+    'SWAYPHICS-TINYFISH-AGREEMENT-TEST-001'
 );
 insert into public.business_assessment_evidence (
     id, inspection_id, source_type, source_status, source_url,
