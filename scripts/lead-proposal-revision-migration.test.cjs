@@ -36,7 +36,7 @@ for (const scenario of [
     "approval state is captured as its own immutable snapshot",
     "approved proposal content cannot be overwritten without reopening a draft revision",
     "a stored proposal snapshot cannot be updated",
-    "a stored proposal snapshot cannot be deleted",
+    "existing CRM parent deletion cascades to the linked proposal snapshots",
     "saving the reopened draft creates the next immutable revision"
 ]) {
     assert.ok(testSql.includes(scenario), "database regression coverage must include: " + scenario);
