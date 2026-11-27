@@ -33,6 +33,27 @@ revoke all on table innerme_private.yoco_test_payment_cleanup_audit
 comment on table innerme_private.yoco_test_payment_cleanup_audit is
     'Append-only private snapshots of explicitly owner-approved Yoco test-payment cleanup operations.';
 
+create or replace function innerme_private.prevent_yoco_test_payment_cleanup_audit_mutation()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+    raise exception 'Yoco test-payment cleanup audit records are immutable.'
+        using errcode = '55000';
+end;
+$function$;
+
+revoke all on function innerme_private.prevent_yoco_test_payment_cleanup_audit_mutation()
+    from public, anon, authenticated, service_role;
+
+drop trigger if exists trg_prevent_yoco_test_payment_cleanup_audit_mutation
+    on innerme_private.yoco_test_payment_cleanup_audit;
+create trigger trg_prevent_yoco_test_payment_cleanup_audit_mutation
+before update or delete on innerme_private.yoco_test_payment_cleanup_audit
+for each row
+execute function innerme_private.prevent_yoco_test_payment_cleanup_audit_mutation();
+
 -- Add a second, narrowly scoped exception to the existing immutable-ledger
 -- guard. The archived-invoice purge path is left unchanged.
 create or replace function innerme_private.guard_yoco_financial_ledger()
@@ -192,6 +213,16 @@ begin
            and e.processing_status = 'processed'
     ) then
         raise exception 'A processed, signature-verified Yoco test success event is required.';
+    end if;
+
+    if exists (
+        select 1
+          from public.payment_webhook_events e
+         where e.payment_attempt_id = v_attempt.id
+           and (e.provider is distinct from 'yoco'
+                or e.environment is distinct from 'test')
+    ) then
+        raise exception 'The payment attempt has webhook evidence from an unexpected provider environment.';
     end if;
 
     select i.* into v_invoice
