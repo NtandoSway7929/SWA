@@ -10,6 +10,7 @@ on:
       - "scripts/business-assessment-open-source-provider.test.cjs"
       - "scripts/business-assessment-open-source-provider.integration.cjs"
       - "scripts/business-assessment-open-source-provider.search-benchmark.cjs"
+      - "scripts/business-assessment-open-source-provider.fetch-benchmark.cjs"
       - "scripts/bof-open-source-provider-poc/**"
       - "docs/business-opportunity-finder-open-source-provider-poc.md"
       - ".github/workflows/business-opportunity-finder-open-source-provider-poc.yml"
@@ -102,6 +103,12 @@ jobs:
         env:
           SEARXNG_BASE_URL: http://127.0.0.1:8080
         run: node scripts/business-assessment-open-source-provider.search-benchmark.cjs
+
+      - name: Benchmark official website page retrieval
+        env:
+          SEARXNG_BASE_URL: http://127.0.0.1:8080
+          CRAWL4AI_BASE_URL: http://127.0.0.1:11235
+        run: node scripts/business-assessment-open-source-provider.fetch-benchmark.cjs
 
       - name: Collect provider logs on failure
         if: failure()
