@@ -21818,6 +21818,8 @@ function simpleBars(items, color) {
             state.leads.find(function (item) {
                 return item.id === proposal.lead_id;
             });
+        const isEditableDraft =
+            String(proposal.status || "draft") === "draft";
 
         const modal = document.createElement("div");
         modal.className = "sway-modal sway-proposal-review-modal";
@@ -21842,23 +21844,29 @@ function simpleBars(items, color) {
                 '<div class="sway-proposal-review-fields">' +
                     '<label>Proposal title<input id="sway-proposal-title" type="text" value="' +
                         esc(proposal.title || "") +
-                    '"></label>' +
+                    '"' + (isEditableDraft ? "" : " readonly") + '></label>' +
                     '<label>Email subject<input id="sway-proposal-subject" type="text" value="' +
                         esc(proposal.subject || "") +
-                    '"></label>' +
-                    '<label>Proposal content<textarea id="sway-proposal-content" rows="18">' +
+                    '"' + (isEditableDraft ? "" : " readonly") + '></label>' +
+                    '<label>Proposal content<textarea id="sway-proposal-content" rows="18"' +
+                        (isEditableDraft ? "" : " readonly") + '>' +
                         esc(proposal.content || "") +
                     '</textarea></label>' +
                 '</div>' +
                 '<div class="sway-proposal-review-actions">' +
-                    '<button type="button" class="sway-workspace-button" data-proposal-reject="' +
-                        esc(proposal.id) +
-                    '">Keep as draft</button>' +
-                    '<button type="button" class="sway-workspace-button primary" data-proposal-approve="' +
-                        esc(proposal.id) +
-                    '">Approve proposal</button>' +
+                    (isEditableDraft
+                        ? '<button type="button" class="sway-workspace-button" data-proposal-close>Close without saving</button>' +
+                          '<button type="button" class="sway-workspace-button" data-proposal-save-draft="' +
+                            esc(proposal.id) +
+                          '">Save draft</button>' +
+                          '<button type="button" class="sway-workspace-button primary" data-proposal-approve="' +
+                            esc(proposal.id) +
+                          '">Approve proposal</button>'
+                        : '<p class="sway-proposal-review-note">This proposal is ' +
+                          esc(formatDisplayText(proposal.status || "not editable")) +
+                          ' and is read-only. Create a new revision to make changes.</p>') +
                 '</div>' +
-                '<p class="sway-proposal-review-note">Approval only approves the draft. It does not send an email to the lead.</p>' +
+                '<p class="sway-proposal-review-note">Saving keeps the proposal as an internal draft. Approval does not send an email to the lead.</p>' +
             '</div>';
 
         document.body.appendChild(modal);
@@ -21869,17 +21877,95 @@ function simpleBars(items, color) {
 
         modal.querySelector(".sway-modal-close")?.addEventListener("click", close);
         modal.querySelector(".sway-modal-backdrop")?.addEventListener("click", close);
+        modal.querySelector("[data-proposal-close]")?.addEventListener("click", close);
 
-        modal.querySelector("[data-proposal-reject]")?.addEventListener(
+        modal.querySelector("[data-proposal-save-draft]")?.addEventListener(
             "click",
-            function () {
-                close();
+            async function () {
+                if (!isEditableDraft) return;
+
+                const title = String(
+                    modal.querySelector("#sway-proposal-title")?.value || ""
+                ).trim();
+                const subject = String(
+                    modal.querySelector("#sway-proposal-subject")?.value || ""
+                ).trim();
+                const content = String(
+                    modal.querySelector("#sway-proposal-content")?.value || ""
+                ).trim();
+
+                if (!content) {
+                    swayAlert("Add the proposal content before saving this draft.");
+                    return;
+                }
+
+                const saveButton =
+                    modal.querySelector("[data-proposal-save-draft]");
+                saveButton.disabled = true;
+                saveButton.textContent = "Saving…";
+
+                try {
+                    const updated = await api(
+                        "/rest/v1/lead_proposals?id=eq." +
+                        encodeURIComponent(proposal.id),
+                        {
+                            method: "PATCH",
+                            headers: headers({
+                                "Content-Type": "application/json",
+                                "Prefer": "return=representation"
+                            }),
+                            body: JSON.stringify({
+                                title: title || "Swayphics Proposal",
+                                subject: subject || "Swayphics | Proposal",
+                                content,
+                                status: "draft",
+                                approved_by: null,
+                                approved_at: null,
+                                updated_at: new Date().toISOString()
+                            })
+                        }
+                    );
+
+                    const updatedProposal =
+                        Array.isArray(updated)
+                            ? updated[0]
+                            : updated;
+
+                    if (!updatedProposal || !updatedProposal.id) {
+                        throw new Error("The proposal draft could not be saved.");
+                    }
+
+                    const index =
+                        state.leadProposals.findIndex(function (item) {
+                            return item.id === proposal.id;
+                        });
+
+                    if (index >= 0) {
+                        state.leadProposals[index] = updatedProposal;
+                    }
+
+                    close();
+                    renderView();
+                    swayAlert("Draft saved. It has not been approved or sent.");
+                } catch (error) {
+                    saveButton.disabled = false;
+                    saveButton.textContent = "Save draft";
+                    swayAlert(
+                        error.message ||
+                        "The proposal draft could not be saved."
+                    );
+                }
             }
         );
 
         modal.querySelector("[data-proposal-approve]")?.addEventListener(
             "click",
             async function () {
+                if (!isEditableDraft) {
+                    swayAlert("Only a saved draft can be approved. Approved proposals are read-only.");
+                    return;
+                }
+
                 const title = String(
                     modal.querySelector("#sway-proposal-title")?.value || ""
                 ).trim();
