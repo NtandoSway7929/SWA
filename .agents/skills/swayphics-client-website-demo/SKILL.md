@@ -61,6 +61,18 @@ The repository's universal Swayphics art-direction standard remains mandatory an
 4. Do not use an AI-generated result as evidence for a business fact. Keep source-of-truth copy separate from visual inspiration.
 5. If MCP is unavailable, continue with the verified design system and local implementation; report the missing tool without fabricating tool results.
 
+### Conversion, SEO and browser QA skills
+
+Use these vendored upstream skills when the task calls for them. Read each skill's own `SKILL.md` and its referenced local playbooks before relying on its detailed workflow:
+
+- **Product and brand context:** `.agents/skills/product-marketing/SKILL.md` helps establish the client's audience, positioning, offer, customer language, proof and voice. Keep the context client-specific. A client context document belongs inside that client's isolated demo (for example, `demos/<slug>/.agents/product-marketing.md`). Never use Swayphics' repository-root `.agents/product-marketing.md` as a client's context. Do not create, move or update a context document without the user's approval.
+- **Conversion diagnosis:** `.agents/skills/cro/SKILL.md` covers page hierarchy, value proposition, calls to action, trust and forms. Read `references/form.md` for form work and `references/experiments.md` for page-level hypotheses. Separate observed friction from design judgement and untested hypotheses. Never invent conversion rates, uplift, leads, revenue, ROI or test results.
+- **Experiment design:** `.agents/skills/ab-testing/SKILL.md` and its two references apply only where real analytics, sufficient traffic and a viable testing method exist. Do not present an A/B test as proof, recommend underpowered tests as decisive, or declare a winner without valid measured results.
+- **Search optimisation:** `.agents/skills/seo-audit/SKILL.md` and its local references support technical, on-page, international and local SEO checks. Report only what the available evidence establishes. Mark unavailable or unrun checks as **not measured**, not passed. Re-check current Google Search Central guidance before implementing rules that may have changed. Never invent business locations, service areas, opening hours, profile eligibility or Search Console data.
+- **Browser verification:** `.agents/skills/playwright-cli/SKILL.md` is optional and requires the Playwright CLI to be available (upstream specifies Node.js 20+). Check availability first. Do not install or update Node/npm packages or browser tooling without explicit user approval. Use an isolated, non-persistent anonymous browser session for public/demo checks. Do not attach to the user's everyday browser/profile, read or save cookies or storage state, access real account sessions, or submit real enquiries, bookings, payments, messages or destructive actions. Test only the isolated demo or an explicitly approved test environment. When Playwright is unavailable, report that browser verification was not performed; never claim a pass.
+
+These specialist skills are subordinate to the repository's non-negotiable guardrails, the universal Swayphics art-direction standard, the client's verified identity and the approved project scope. They do not authorise new dependencies, production changes or live interactions.
+
 ### 4. Design for conversion
 
 - State the business value clearly near the top of the page, using language grounded in the brief and verifiable business facts.
