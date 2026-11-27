@@ -224,7 +224,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_lead public.leads%rowtype;
   v_evidence text := trim(coalesce(p_evidence, ''));
@@ -260,7 +260,7 @@ begin
     'event_type', 'request_sent'
   );
 end;
-$;
+$$;
 
 revoke all on function public.record_swayphics_lead_email_request_sent(uuid, text, text, uuid)
   from public, anon, authenticated;
