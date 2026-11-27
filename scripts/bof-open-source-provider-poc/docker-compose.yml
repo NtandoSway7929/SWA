@@ -1,0 +1,21 @@
+services:
+  searxng:
+    image: ghcr.io/searxng/searxng:2026.11.23-a7163d091@sha256:c9ea2372a7f1fb3fc01fda5bacfde4adc871621ad96d9cdec903b4cbe542fcf8
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?Set SEARXNG_SECRET before starting the POC}
+      SEARXNG_BASE_URL: http://127.0.0.1:${SEARXNG_PORT:-8080}/
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    ports:
+      - "127.0.0.1:${SEARXNG_PORT:-8080}:8080"
+    restart: "no"
+
+  crawl4ai:
+    # 0.9.6 is the upstream security release dated 20 November 2026.
+    image: unclecode/crawl4ai:0.9.6
+    environment:
+      CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:?Set CRAWL4AI_API_TOKEN before starting the POC}
+    ports:
+      - "127.0.0.1:${CRAWL4AI_PORT:-11235}:11235"
+    shm_size: "1gb"
+    restart: "no"
