@@ -63,6 +63,15 @@ assert.equal(totals.vatAmount, 1050,
 assert.equal(totals.initialAmount, 8050,
     "initial amount due must equal the expected invoice amount");
 
+const fractionalTotals = quotePricingTotals([
+    { billing_interval: "none", quantity: 0.333, unit_price: 0.10 },
+    { billing_interval: "none", quantity: 0.333, unit_price: 0.10 }
+], 0, 0);
+assert.equal(fractionalTotals.onceOffSubtotal, 0.06,
+    "browser totals must use the same two-decimal quantity and line-total rounding as PostgreSQL");
+assert.equal(fractionalTotals.initialAmount, 0.06,
+    "fractional line totals must not drift between the browser preview and the database");
+
 const quoteEditor = functionBody(workspace, "    async function openQuoteEditor(");
 for (const contract of [
     "data-quote-line-service",
