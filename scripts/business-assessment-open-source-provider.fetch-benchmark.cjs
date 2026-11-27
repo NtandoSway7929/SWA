@@ -39,13 +39,7 @@ const cases = [
         url: "https://www.kalm-studio.co.za/",
         expectedDomain: "kalm-studio.co.za",
         location: "Elarduspark Pretoria",
-        identityTerms: ["kalm"],
-        identityFollowupPages: [
-            {
-                url: "https://www.kalm-studio.co.za/pages/our-stores",
-                location: "Elarduspark Pretoria"
-            }
-        ]
+        identityTerms: ["kalm"]
     }
 ];
 
@@ -109,7 +103,7 @@ function summarise(items) {
     if (!crawlBaseUrl) throw new Error("CRAWL4AI_BASE_URL_is_required");
     if (!crawlApiToken) throw new Error("CRAWL4AI_API_TOKEN_is_required");
 
-    const { createOpenSourceInspectionProvider } = await import(
+    const { createOpenSourceInspectionProvider, __testing } = await import(
         "../supabase/functions/_shared/business-assessment-open-source-provider.mjs"
     );
     const { matchBusinessIdentity } = await import(
@@ -157,6 +151,9 @@ function summarise(items) {
                 sourceUrl: result.final_url
             })
             : null;
+        const followupCandidateUrl = identity?.status === "ambiguous"
+            ? __testing.selectIdentityFollowupUrl(result.links, result.final_url || testCase.url)
+            : null;
         return {
             dataset: testCase.dataset,
             business: testCase.business,
@@ -178,15 +175,22 @@ function summarise(items) {
             contentIdentityCue,
             descriptionPresent: Boolean(String(result.description || "").trim()),
             textCharacters,
-            extractedLinkCount: Array.isArray(result.links) ? result.links.length : 0
+            extractedLinkCount: Array.isArray(result.links) ? result.links.length : 0,
+            followupCandidateUrl
         };
     });
 
-    // When the homepage is ambiguous, test a single, explicitly listed same-domain
-    // location/contact page. Keep this result separate from the homepage assessment.
-    const followupCases = cases.flatMap((testCase) =>
-        (testCase.identityFollowupPages || []).map((page) => ({ testCase, page }))
-    );
+    // Only ambiguous homepages can trigger a follow-up. The selector returns at most
+    // one HTTPS location/store/contact/about URL on the exact same host.
+    const followupCases = rawResults.flatMap(({ testCase }) => {
+        const primary = report.find((item) => item.business === testCase.business);
+        return primary?.identityMatchStatus === "ambiguous" && primary.followupCandidateUrl
+            ? [{
+                testCase,
+                page: { url: primary.followupCandidateUrl, location: testCase.location }
+            }]
+            : [];
+    });
     const secondaryPageResults = [];
     for (const batchStart of Array.from(
         { length: Math.ceil(followupCases.length / 8) },
@@ -231,6 +235,13 @@ function summarise(items) {
             });
         });
     }
+    const followupSelectionSummary = {
+        ambiguousHomepages: report.filter((item) => item.identityMatchStatus === "ambiguous").length,
+        candidatesSelected: report.filter((item) => Boolean(item.followupCandidateUrl)).length,
+        ambiguousHomepagesWithoutCandidate: report.filter((item) =>
+            item.identityMatchStatus === "ambiguous" && !item.followupCandidateUrl
+        ).length
+    };
     const secondaryPageSummary = {
         total: secondaryPageResults.length,
         succeeded: secondaryPageResults.filter((item) => item.success).length,
@@ -250,6 +261,7 @@ function summarise(items) {
         batchSizes: [3, 2],
         summary: summarise(report),
         cases: report,
+        followupSelectionSummary,
         secondaryPageSummary,
         secondaryPageResults
     };
@@ -295,7 +307,9 @@ function summarise(items) {
             "- Business-name cue present in page content: **" + evaluated.summary.contentIdentityCue + "/" + evaluated.summary.total + "**\n" +
             "- Pages passing the basic usable-page check: **" + evaluated.summary.usableBusinessPages + "/" + evaluated.summary.total + "**\n" +
             "- Existing Swayphics identity matcher — confirmed: **" + evaluated.summary.identityMatchCounts.confirmed + "**; ambiguous: **" + evaluated.summary.identityMatchCounts.ambiguous + "**; rejected: **" + evaluated.summary.identityMatchCounts.rejected + "**; not evaluated after fetch failure: **" + evaluated.summary.identityMatchCounts.not_evaluated_fetch_failed + "**\n" +
-            "- Final-domain mismatches: **" + evaluated.summary.finalDomainMismatch + "**\n\n" +
+            "- Final-domain mismatches: **" + evaluated.summary.finalDomainMismatch + "**\n" +
+            "- Same-host follow-up candidates selected for ambiguous homepages: **" +
+                followupSelectionSummary.candidatesSelected + "/" + followupSelectionSummary.ambiguousHomepages + "**\n\n" +
             "**Identity matching:** statuses are produced by the existing `matchBusinessIdentity()` function from Swayphics' evidence module. Inputs are the public business name/location in this test case, fetched title and up to 12,000 extracted characters. A confirmed result exercises the current rules; it is not independent proof of legal ownership.\n\n" +
             "**Interpretation:** the usable-page check is a diagnostic gate, not proof of full page completeness or legal ownership. HTTP error/redirect pages with short or unrelated text must not be treated as successful website evidence. Individual site blocking or content differences are reported, not treated as provider API failures.\n" +
             secondarySummary;

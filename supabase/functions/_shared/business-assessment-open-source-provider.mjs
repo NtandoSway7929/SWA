@@ -124,6 +124,81 @@ function flattenCrawlLinks(links) {
     return output;
 }
 
+function selectIdentityFollowupUrl(links, homepageUrl) {
+    if (!Array.isArray(links) || typeof homepageUrl !== "string") return null;
+
+    let homepage;
+    try {
+        homepage = new URL(homepageUrl);
+    } catch {
+        return null;
+    }
+    if (homepage.protocol !== "https:" || homepage.username || homepage.password) return null;
+
+    const excludedPathTokens = new Set([
+        "blog", "blogs", "news", "article", "articles", "product", "products",
+        "collection", "collections", "search", "tag", "tags", "category", "categories"
+    ]);
+    const candidates = [];
+    const seen = new Set();
+
+    for (const value of links) {
+        if (typeof value !== "string") continue;
+        let candidate;
+        let normalised;
+        try {
+            candidate = new URL(value);
+            if (candidate.protocol !== "https:" ||
+                candidate.origin !== homepage.origin ||
+                candidate.username || candidate.password) continue;
+            normalised = normalisePublicUrl(value);
+            if (!normalised || seen.has(normalised)) continue;
+            candidate = new URL(normalised);
+        } catch {
+            continue;
+        }
+
+        let decodedPath;
+        try {
+            decodedPath = decodeURIComponent(candidate.pathname).toLowerCase();
+        } catch {
+            decodedPath = candidate.pathname.toLowerCase();
+        }
+        if (decodedPath.length > 220) continue;
+
+        const segments = decodedPath.split("/").filter(Boolean);
+        if (!segments.length || segments.length > 8) continue;
+        const tokens = segments.flatMap((segment) => segment.split(/[^a-z0-9]+/).filter(Boolean));
+        if (tokens.some((token) => excludedPathTokens.has(token))) continue;
+
+        let score = 0;
+        if (tokens.some((token) => ["store", "stores", "location", "locations", "branch", "branches"].includes(token))) {
+            score = 3;
+        } else if (tokens.some((token) => ["contact", "contacts", "direction", "directions"].includes(token)) ||
+            (tokens.includes("find") && tokens.includes("us"))) {
+            score = 2;
+        } else if (tokens.some((token) => ["about", "story"].includes(token)) ||
+            (tokens.includes("our") && tokens.includes("story"))) {
+            score = 1;
+        }
+        if (!score || candidate.pathname === "/" || candidate.pathname === homepage.pathname) continue;
+
+        seen.add(normalised);
+        candidates.push({
+            url: normalised,
+            score,
+            pathLength: candidate.pathname.length
+        });
+    }
+
+    candidates.sort((left, right) =>
+        right.score - left.score ||
+        left.pathLength - right.pathLength ||
+        left.url.localeCompare(right.url)
+    );
+    return candidates[0]?.url || null;
+}
+
 function markdownText(markdown) {
     if (typeof markdown === "string") return markdown;
     if (!markdown || typeof markdown !== "object") return "";
@@ -391,5 +466,6 @@ export function createOpenSourceInspectionProvider({
 export const __testing = {
     normaliseSearxngResults,
     normaliseCrawlResult,
-    flattenCrawlLinks
+    flattenCrawlLinks,
+    selectIdentityFollowupUrl
 };

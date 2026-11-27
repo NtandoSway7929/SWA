@@ -51,6 +51,30 @@ const assert = require("node:assert/strict");
     ]);
     assert.equal(normalizedCrawl.etag, "abc123");
 
+    const selectedStorePage = __testing.selectIdentityFollowupUrl([
+        "https://www.example.co.za/about-us",
+        "https://www.example.co.za/pages/our-stores?utm_source=homepage",
+        "https://www.example.co.za/contact",
+        "https://www.example.co.za/blog/store-locations",
+        "https://www.instagram.com/example/",
+        "https://locations.example.co.za/stores",
+        "http://www.example.co.za/locations"
+    ], "https://www.example.co.za/");
+    assert.equal(selectedStorePage, "https://www.example.co.za/pages/our-stores",
+        "The selector should prefer same-host store/location pages and discard external, alternate-host, insecure and blog links");
+
+    assert.equal(__testing.selectIdentityFollowupUrl([
+        "https://www.example.co.za/blog/contact",
+        "https://www.example.co.za/products/store-finder",
+        "https://www.example.co.za/services"
+    ], "https://www.example.co.za/"), null,
+        "The selector must not treat blog, product or unrelated pages as identity follow-ups");
+
+    assert.equal(__testing.selectIdentityFollowupUrl([
+        "https://www.example.co.za/contact"
+    ], "http://www.example.co.za/"), null,
+        "The selector must require an HTTPS homepage");
+
     const suspendedCrawl = __testing.normaliseCrawlResult({
         url: "https://business.example.co.za/",
         redirected_url: "https://business.example.co.za/cgi-sys/suspendedpage.cgi",

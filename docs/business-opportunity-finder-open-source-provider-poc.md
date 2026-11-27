@@ -197,3 +197,10 @@ These checks do not prove live discovery quality, identity matching accuracy, pr
 Do not replace TinyFish in the production Edge Function, configure production provider secrets, deploy either service, run a real assessment inspection or change the consent/agreement gates as part of this proof of concept.
 
 A provider switch requires a separate decision after the mocked tests, isolated live tests with non-customer public URLs, operational/security review and evidence-quality comparison have all passed.
+
+
+### Automatic bounded internal-page selection
+
+The follow-up benchmark no longer hard-codes Kalm's stores-page URL. For a homepage that the existing identity matcher classifies as ambiguous, the isolated POC examines the homepage's extracted links and selects at most one eligible candidate. Candidate selection is restricted to HTTPS URLs on the exact same host and prioritises store/location/branch paths, then contact/directions paths, then about/story paths. Blog, news, article, product, collection, search and category paths are excluded. If no eligible link exists, no follow-up request is made.
+
+The selected page is fetched separately and passed through the unchanged identity matcher using the supplied business name and location. Its result remains a separate page-level evidence result; it does not alter the homepage match. This is still a benchmark-only POC helper, not production Edge Function behaviour. CI must verify the selector contract and the live Kalm link-selection result before any further design decision.
