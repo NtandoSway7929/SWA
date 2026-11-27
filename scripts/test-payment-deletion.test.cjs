@@ -42,7 +42,7 @@ assert.match(migration, /grant execute on function public\.admin_permanently_del
 assert.match(migration, /and p\.is_test is false/);
 assert.match(migration, /and rp\.is_test is false/);
 assert.match(migration, /Payments must be deleted through an authorized test-payment or archived-invoice purge workflow/);
-assert.match(edge, /storage\.from\(String\(row\.bucket_id\)\)\s*\.remove/);
+assert.match(edge, /storage\s*\.from\(String\(row\.bucket_id\)\)\s*\.remove/);
 assert.match(edge, /retry_cleanup/);
 assert.match(edge, /admin_permanently_delete_test_payment/);
 assert.match(config, /\[functions\.admin-delete-test-payment\]\s*verify_jwt = true/);
