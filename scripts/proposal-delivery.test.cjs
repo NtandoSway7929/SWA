@@ -58,6 +58,10 @@ assert.match(reviewPage, /Decline proposal/,
     "the recipient must have a decline action");
 assert.match(reviewPage, /id="quote-lines"/,
     "the client review must show the itemised commercial quotation");
+assert.match(reviewPage, /assumptions_exclusions/,
+    "the client review must render the proposal editor's assumptions and exclusions section");
+assert.match(migration, /'requires_email_consent', v_email_consent_required/,
+    "the delivery RPC must return whether the existing lead consent gate applies");
 const inlineScript = reviewPage.match(/<script>([\s\S]*?)<\/script>/);
 assert.ok(inlineScript, "the client review page must include its application script");
 new vm.Script(inlineScript[1], { filename: "proposal-review-inline.js" });
