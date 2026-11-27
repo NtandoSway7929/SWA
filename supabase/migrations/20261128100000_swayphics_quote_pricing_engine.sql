@@ -175,6 +175,7 @@ declare
     v_proposal_lead_id uuid;
     v_proposal_version_id uuid;
     v_title text;
+    v_status text;
     v_valid_until date;
     v_notes text;
     v_discount numeric(12,2);
@@ -219,6 +220,17 @@ begin
     if v_title is null then
         raise exception 'A quote title is required.'
             using errcode = '22023';
+    end if;
+
+    v_status := coalesce(nullif(p_quote->>'status', ''), 'draft');
+    if v_status not in ('draft','sent','accepted','rejected','expired') then
+        raise exception 'The selected quote status is not valid.'
+            using errcode = '22023';
+    end if;
+
+    if p_quote_id is null and v_status <> 'draft' then
+        raise exception 'New quotes must be saved as drafts first.'
+            using errcode = '55000';
     end if;
 
     v_lead_id := nullif(p_quote->>'lead_id', '')::uuid;
@@ -435,6 +447,7 @@ begin
            vat_rate = v_vat_rate,
            vat_amount = v_vat_amount,
            amount = v_initial_amount,
+           status = v_status,
            updated_at = now()
      where id = v_quote.id
     returning * into v_quote;
