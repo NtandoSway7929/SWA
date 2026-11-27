@@ -193,6 +193,37 @@ $function$;
 revoke all on function innerme_private.guard_yoco_financial_ledger()
     from public, anon, authenticated, service_role;
 
+-- A voided test EFT transfer is permanent evidence and cannot be re-approved,
+-- deleted, or otherwise overwritten after its audited correction.
+create or replace function innerme_private.guard_voided_manual_test_eft_submission()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+    if old.status = 'voided_test' then
+        raise exception 'Voided test bank-transfer submissions are immutable.'
+            using errcode = '55000';
+    end if;
+
+    if tg_op = 'DELETE' then
+        return old;
+    end if;
+
+    return new;
+end;
+$function$;
+
+revoke all on function innerme_private.guard_voided_manual_test_eft_submission()
+    from public, anon, authenticated, service_role;
+
+drop trigger if exists trg_guard_voided_manual_test_eft_submission
+    on public.bank_transfer_submissions;
+create trigger trg_guard_voided_manual_test_eft_submission
+before update or delete on public.bank_transfer_submissions
+for each row
+execute function innerme_private.guard_voided_manual_test_eft_submission();
+
 -- The payment trigger is normally authoritative for setting status='paid'.
 -- A narrow branch permits only this one test EFT to move from paid to voided_test.
 create or replace function public.enforce_swayphics_payment_invoice_integrity()
@@ -239,6 +270,11 @@ begin
                = (to_jsonb(old) - 'status' - 'updated_at' - 'notes') then
             return new;
         end if;
+    end if;
+
+    if tg_op = 'UPDATE' and old.status = 'voided_test' then
+        raise exception 'Voided test payments are immutable and cannot be reactivated or edited.'
+            using errcode = '55000';
     end if;
 
     if new.invoice_id is null then
