@@ -40,6 +40,28 @@ jobs:
       - name: Run isolated mocked tests
         run: node scripts/business-assessment-open-source-provider.test.cjs
 
+      - name: Validate private gateway Compose configuration without starting services
+        shell: bash
+        run: |
+          set -euo pipefail
+          token_file="$(mktemp)"
+          trap 'rm -f "$token_file"' EXIT
+          : > "$token_file"
+          digest_stub="$(printf 'a%.0s' {1..64})"
+          env \
+            SEARXNG_SECRET=ci-placeholder-only \
+            CRAWL4AI_API_TOKEN=ci-placeholder-only \
+            BOF_GATEWAY_PUBLIC_URL=https://bof-inspect.swayphics.co.za \
+            CADDY_IMAGE="caddy:2.11.9-alpine@sha256:$digest_stub" \
+            VALKEY_IMAGE="valkey/valkey:9.2.1-alpine@sha256:$digest_stub" \
+            CLOUDFLARED_IMAGE="cloudflare/cloudflared:2026.11.2@sha256:$digest_stub" \
+            CLOUDFLARED_TUNNEL_TOKEN_FILE="$token_file" \
+            docker compose --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml config --quiet
+          docker run --rm --network none \
+            --volume "$PWD/scripts/bof-open-source-provider-poc/private-gateway/gateway:/etc/caddy:ro" \
+            caddy:2.11.9-alpine \
+            validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
   live-docker-smoke:
     name: Live SearXNG and Crawl4AI Docker smoke test
     needs: adapter-contract
