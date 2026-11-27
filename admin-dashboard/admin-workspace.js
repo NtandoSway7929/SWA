@@ -71,6 +71,7 @@
         initialDataLoaded: false,
         initialDataLoading: false,
         initialDataError: null,
+        testPaymentCleanupPending: false,
         communications: [],
         emailMessages: [],
         emailMessagesRefreshing: false,
@@ -19741,11 +19742,16 @@ function simpleBars(items, color) {
                 '<article class="sway-record-card" data-ai-record="payments:' + esc(item.id) + '">' +
                     '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">PAYMENT</span>' +
                         '<div class="sway-record-card-badges">' + (item.is_test === true ? chip("TEST") : "") + (overdue ? chip("overdue") : "") + chip(item.status) + '</div></div>' +
-                    '<button type="button" class="sway-record-card-open" data-edit="payments" data-id="' + esc(item.id) +
-                        '" aria-label="Open payment for ' + esc(clientName(item.client_id)) + '">' +
-                        '<strong class="sway-record-card-title">' + esc(money(item.amount)) + '</strong>' +
-                        '<span class="sway-record-card-description">' + esc(clientName(item.client_id)) + '</span>' +
-                    '</button>' +
+                    (item.is_test === true
+                        ? '<div class="sway-record-card-open" aria-label="Test payment">' +
+                            '<strong class="sway-record-card-title">' + esc(money(item.amount)) + '</strong>' +
+                            '<span class="sway-record-card-description">' + esc(clientName(item.client_id)) + '</span>' +
+                          '</div>'
+                        : '<button type="button" class="sway-record-card-open" data-edit="payments" data-id="' + esc(item.id) +
+                            '" aria-label="Open payment for ' + esc(clientName(item.client_id)) + '">' +
+                            '<strong class="sway-record-card-title">' + esc(money(item.amount)) + '</strong>' +
+                            '<span class="sway-record-card-description">' + esc(clientName(item.client_id)) + '</span>' +
+                          '</button>') +
                     '<div class="sway-record-card-details">' +
                         '<div class="sway-record-card-detail"><span>Project</span><strong>' + esc(projectName(item.project_id)) + '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Invoice</span><strong>' + esc(invoice ? invoice.invoice_number : "No invoice") + '</strong></div>' +
@@ -19769,7 +19775,12 @@ function simpleBars(items, color) {
         }).join("");
 
         return (
-            heading('<button class="sway-workspace-button primary" data-add="payments">+ New payment</button>') +
+            heading(
+                (state.testPaymentCleanupPending && state.currentAdmin && state.currentAdmin.role === "owner"
+                    ? '<button type="button" class="sway-workspace-button" data-retry-test-payment-cleanup>Retry receipt-file cleanup</button>'
+                    : "") +
+                '<button class="sway-workspace-button primary" data-add="payments">+ New payment</button>'
+            ) +
             panel(
                 "Payments",
                 "Every payment must be attached to a specific invoice. Live Paystack payments can be fully refunded from the Actions menu after confirmation.",
@@ -25002,16 +25013,39 @@ function simpleBars(items, color) {
             swayAlert("The confirmation did not match. No records were deleted.");
             return;
         }
-        const result = await api("/rest/v1/rpc/admin_permanently_delete_test_payment", {
+        const result = await api("/functions/v1/admin-delete-test-payment", {
             method: "POST",
-            body: JSON.stringify({ p_payment_id: paymentId, p_confirmation: confirmation })
+            body: JSON.stringify({ action: "delete", payment_id: paymentId, confirmation: confirmation })
         });
-        if (!result || result.deleted !== true) {
-            throw new Error("Supabase did not confirm deletion of the test payment.");
+        if (!result || result.ok !== true || result.deleted !== true) {
+            throw new Error(result && result.error ? result.error : "Supabase did not confirm deletion of the test payment.");
+        }
+        state.testPaymentCleanupPending = Boolean(result.cleanup_pending);
+        if (state.testPaymentCleanupPending) {
+            swayAlert("The test payment and receipt records were deleted, but the private receipt PDF could not be removed yet. Use Retry receipt-file cleanup to finish removing the stored file.");
         }
         await logActivity("Permanently deleted test payment", "payments", paymentId);
         await refreshData();
         renderShell();
+        renderView();
+    }
+
+    async function retryTestPaymentStorageCleanup() {
+        if (!state.currentAdmin || state.currentAdmin.role !== "owner") {
+            swayAlert("Only the Swayphics owner can retry receipt-file cleanup.");
+            return;
+        }
+        const result = await api("/functions/v1/admin-delete-test-payment", {
+            method: "POST",
+            body: JSON.stringify({ action: "retry_cleanup" })
+        });
+        if (!result || result.ok !== true) {
+            throw new Error(result && result.error ? result.error : "Receipt-file cleanup could not be retried.");
+        }
+        state.testPaymentCleanupPending = Number(result.storage_cleanup && result.storage_cleanup.pending || 0) > 0;
+        swayAlert(state.testPaymentCleanupPending
+            ? "Some receipt files are still pending cleanup. You can retry again."
+            : "Stored test receipt files have been removed.");
         renderView();
     }
 
@@ -30208,6 +30242,22 @@ function simpleBars(items, color) {
                         await deleteTestPayment(button.dataset.deleteTestPayment);
                     } catch (error) {
                         swayAlert(error.message || "Unable to delete this test payment.");
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-retry-test-payment-cleanup]")
+            .forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    if (button.disabled) return;
+                    button.disabled = true;
+                    try {
+                        await retryTestPaymentStorageCleanup();
+                    } catch (error) {
+                        swayAlert(error.message || "Receipt-file cleanup could not be retried.");
                     } finally {
                         button.disabled = false;
                     }
