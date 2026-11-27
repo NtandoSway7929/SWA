@@ -28,6 +28,14 @@ jobs:
           node --check admin-dashboard/admin-manual-payments.js
           node --check admin-dashboard/innerme-provider-usage.js
 
+      - name: Install Deno for payment deletion Edge Function
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check test payment deletion Edge Function
+        run: deno check supabase/functions/admin-delete-test-payment/index.ts
+
       - name: Test admin welcome authentication handshake
         run: node scripts/admin-welcome-auth.test.cjs
 
@@ -138,6 +146,9 @@ jobs:
 
       - name: Test payment tools Sales & Billing navigation
         run: node scripts/payment-tools-navigation.test.cjs
+
+      - name: Test owner-controlled test payment deletion
+        run: node scripts/test-payment-deletion.test.cjs
 
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
