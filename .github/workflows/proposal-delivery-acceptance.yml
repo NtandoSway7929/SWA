@@ -3,7 +3,7 @@ name: Proposal delivery and acceptance QA
 on:
   pull_request:
     branches:
-      - feature/proposal-delivery-acceptance
+      - feature/quote-pricing-engine
     paths:
       - "admin-dashboard/index.html"
       - "admin-dashboard/proposal-delivery.js"
@@ -13,7 +13,8 @@ on:
       - "supabase/migrations/20261128090000_lead_proposal_revision_history.sql"
       - "supabase/migrations/20261128100000_swayphics_quote_pricing_engine.sql"
       - "supabase/migrations/20261128110000_swayphics_proposal_delivery_acceptance.sql"
-      - "supabase/tests/proposal-review-*"
+      - "supabase/tests/proposal-review-baseline.sql"
+      - "supabase/tests/proposal-review-workflow.test.sql"
       - "supabase/tests/proposal-delivery_sql_syntax_check.py"
       - ".github/workflows/proposal-delivery-acceptance.yml"
   workflow_dispatch:
@@ -36,7 +37,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
 
-      - name: Check dashboard and quote pricing contracts
+      - name: Check proposal delivery source contracts
         run: |
           node --check admin-dashboard/proposal-delivery.js
           node scripts/proposal-delivery.test.cjs
@@ -44,8 +45,8 @@ jobs:
       - name: Install PostgreSQL parser
         run: python -m pip install --disable-pip-version-check pglast
 
-      - name: Parse proposal and quote pricing migrations and test fixtures
-        run: python supabase/tests/proposal-delivery-acceptance_sql_syntax_check.py
+      - name: Parse proposal review migrations and test fixtures
+        run: python supabase/tests/proposal-delivery_sql_syntax_check.py
 
   disposable-database:
     name: Disposable Supabase proposal review and acceptance tests
@@ -72,7 +73,7 @@ jobs:
           supabase init --workdir "$SUPABASE_WORKDIR"
           sed -i '/^\[db\]$/,/^\[/ s/^port = 54322$/port = 56325/' "$SUPABASE_WORKDIR/supabase/config.toml"
           mkdir -p "$SUPABASE_WORKDIR/supabase/tests"
-          cp supabase/tests/proposal-delivery-acceptance.test.sql "$SUPABASE_WORKDIR/supabase/tests/proposal-delivery-acceptance.test.sql"
+          cp supabase/tests/proposal-review-workflow.test.sql "$SUPABASE_WORKDIR/supabase/tests/proposal-review-workflow.test.sql"
           rm -f "$SUPABASE_WORKDIR/supabase/seed.sql"
 
       - name: Start isolated local Supabase
@@ -86,7 +87,7 @@ jobs:
           set -euo pipefail
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/tests/proposal-delivery-acceptance-baseline.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/tests/proposal-review-baseline.sql"
 
       - name: Apply proposal revision dependency migration
         shell: bash
@@ -106,19 +107,18 @@ jobs:
           test -n "$DB_URL"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128100000_swayphics_quote_pricing_engine.sql"
 
-
       - name: Apply proposal delivery and acceptance migration
         shell: bash
         working-directory: /tmp/proposal-delivery-acceptance-project
         run: |
           set -euo pipefail
-          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\\(.*\\)"$/\\1/p')"
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128110000_swayphics_proposal_delivery_acceptance.sql"
 
       - name: Run proposal delivery and client acceptance database tests
         working-directory: /tmp/proposal-delivery-acceptance-project
-        run: supabase test db supabase/tests/proposal-delivery-acceptance.test.sql
+        run: supabase test db supabase/tests/proposal-review-workflow.test.sql
 
       - name: Stop isolated Supabase
         if: always()
