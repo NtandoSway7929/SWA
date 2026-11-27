@@ -124,7 +124,9 @@ for (const contract of [
     "unique index if not exists quotes_invoice_id_unique_idx",
     "create or replace function public.admin_save_swayphics_quote",
     "create or replace function public.admin_create_invoice_from_quote",
-    "foreign key (invoice_id) references public.invoices(id)",
+    "create or replace function public.guard_swayphics_quote_commercial_record",
+    "current_setting('swayphics.quote_invoice_conversion'",
+    "foreign key (invoice_id) references public.invoices(id) on delete restrict",
     "grant execute on function public.admin_save_swayphics_quote",
     "grant execute on function public.admin_create_invoice_from_quote"
 ]) {
@@ -132,8 +134,8 @@ for (const contract of [
         "quote pricing migration must include: " + contract);
 }
 
-assert.match(migration, /before update on public\.quotes/i,
-    "quote lifecycle and immutable issued pricing must be protected by an update trigger or RPC guard");
+assert.match(migration, /before update or delete on public\.quotes/i,
+    "issued quote prices and invoice-linked quote deletion must be protected by a database trigger");
 assert.match(migration, /v_quote\.status <> 'draft'/,
     "only draft quotes may be modified by the pricing RPC");
 assert.match(migration, /if v_quote\.invoice_id is not null[\s\S]*?already_created/,
