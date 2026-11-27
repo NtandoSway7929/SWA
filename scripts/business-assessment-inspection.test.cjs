@@ -163,4 +163,63 @@ assert.doesNotMatch(adminScript, /SERVICE_ROLE_KEY|service_role/i,
 assert.match(adminCss, /\.bfa-inspection-status/,
     "Inspection statuses must have a readable text-first presentation");
 
-console.log("Business Opportunity Finder evidence inspection access, consent and privacy tests passed.");
+console.log("Business Opportunity Finder evidence inspection access, consent and privacy contract tests passed.");
+
+// Runtime privacy regression: without explicit, current-version inspection consent,
+// submitted URLs must be discarded rather than retained for later inspection.
+async function verifyPublicPresenceConsentPrivacy() {
+    const { normalizeAssessmentPayload, ASSESSMENT_VERSION } = await import(
+        "../supabase/functions/submit-business-assessment/rules.mjs"
+    );
+    const basePayload = (publicPresence) => ({
+        assessment_version: ASSESSMENT_VERSION,
+        submission_key: "00000000-0000-4000-8000-000000000001",
+        business_profile: {
+            business_name: "Consent Test Studio",
+            location: "Pretoria",
+            ...(publicPresence === undefined ? {} : { public_presence: publicPresence })
+        },
+        responses: [
+            { question_id: "industry", answer: "beauty_personal_care" },
+            { question_id: "discovery", answer: ["instagram"] },
+            { question_id: "contactMethods", answer: ["whatsapp"] },
+            { question_id: "friction", answer: ["missed_followups"] },
+            { question_id: "priority", answer: "enquiries" }
+        ]
+    });
+
+    const unconsented = normalizeAssessmentPayload(basePayload({
+        inspection_consent: false,
+        inspection_consent_version: "stale-or-irrelevant",
+        website_url: "https://example.com/?private_tracking=1",
+        google_business_profile_url: "https://maps.app.goo.gl/example",
+        social_profile_urls: [
+            { platform: "instagram", url: "https://www.instagram.com/example/?token=private" }
+        ]
+    }));
+    assert.deepEqual(unconsented.businessProfile.public_presence, {
+        inspection_consent: false
+    }, "Without inspection consent, all submitted public URLs and consent metadata must be discarded");
+
+    const omitted = normalizeAssessmentPayload(basePayload(undefined));
+    assert.deepEqual(omitted.businessProfile.public_presence, {
+        inspection_consent: false
+    }, "Omitting the optional consent must not retain any public-presence data");
+
+    assert.throws(
+        () => normalizeAssessmentPayload(basePayload({
+            inspection_consent: true,
+            inspection_consent_version: "outdated-consent-version"
+        })),
+        /consent version is not supported/,
+        "An unsupported consent version must be rejected"
+    );
+
+    console.log("Business Opportunity Finder public-presence consent privacy runtime tests passed.");
+}
+
+verifyPublicPresenceConsentPrivacy().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+});
+
