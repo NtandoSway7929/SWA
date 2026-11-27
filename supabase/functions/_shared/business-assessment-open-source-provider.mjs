@@ -124,6 +124,18 @@ function flattenCrawlLinks(links) {
     return output;
 }
 
+function isSameHttpsOrigin(left, right) {
+    try {
+        const requested = new URL(left);
+        const final = new URL(right);
+        return requested.protocol === "https:" &&
+            final.protocol === "https:" &&
+            requested.origin === final.origin;
+    } catch {
+        return false;
+    }
+}
+
 function selectIdentityFollowupUrl(links, homepageUrl) {
     if (!Array.isArray(links) || typeof homepageUrl !== "string") return null;
 
@@ -467,5 +479,6 @@ export const __testing = {
     normaliseSearxngResults,
     normaliseCrawlResult,
     flattenCrawlLinks,
-    selectIdentityFollowupUrl
+    selectIdentityFollowupUrl,
+    isSameHttpsOrigin
 };

@@ -75,6 +75,26 @@ const assert = require("node:assert/strict");
     ], "http://www.example.co.za/"), null,
         "The selector must require an HTTPS homepage");
 
+    assert.equal(__testing.isSameHttpsOrigin(
+        "https://www.example.co.za/pages/our-stores",
+        "https://www.example.co.za/pages/our-stores"
+    ), true, "An HTTPS fetch that stays on the selected origin is eligible for identity evaluation");
+
+    assert.equal(__testing.isSameHttpsOrigin(
+        "https://www.example.co.za/pages/our-stores",
+        "https://www.example.co.za.evil.test/locations"
+    ), false, "A cross-origin redirect must not count as same-origin evidence");
+
+    assert.equal(__testing.isSameHttpsOrigin(
+        "https://www.example.co.za/pages/our-stores",
+        "http://www.example.co.za/pages/our-stores"
+    ), false, "A downgrade to HTTP must not count as same-origin evidence");
+
+    assert.equal(__testing.isSameHttpsOrigin(
+        "https://www.example.co.za/pages/our-stores",
+        "https://example.co.za/pages/our-stores"
+    ), false, "A redirect to an alternate host must not count as same-origin evidence");
+
     const suspendedCrawl = __testing.normaliseCrawlResult({
         url: "https://business.example.co.za/",
         redirected_url: "https://business.example.co.za/cgi-sys/suspendedpage.cgi",

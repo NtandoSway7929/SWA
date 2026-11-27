@@ -203,7 +203,8 @@ function summarise(items) {
         }
         response.results.forEach((result, index) => {
             const { testCase, page } = batch[index];
-            const success = result.success === true;
+            const finalUrlOnSelectedOrigin = __testing.isSameHttpsOrigin(page.url, result.final_url);
+            const success = result.success === true && finalUrlOnSelectedOrigin;
             const identity = success
                 ? matchBusinessIdentity({
                     businessName: testCase.business,
@@ -220,6 +221,7 @@ function summarise(items) {
                 url: page.url,
                 finalHost: hostname(result.final_url),
                 expectedDomain: testCase.expectedDomain,
+                finalUrlOnSelectedOrigin,
                 statusCode: result.status_code ?? null,
                 success,
                 identityMatchStatus: identity?.status || "not_evaluated_fetch_failed",
@@ -231,7 +233,10 @@ function summarise(items) {
                     identity?.status === "confirmed",
                 title: String(result.title || "").slice(0, 180),
                 textCharacters: String(result.text || "").length,
-                errorCode: result.error_code || null
+                errorCode: result.error_code ||
+                    (result.success === true && !finalUrlOnSelectedOrigin
+                        ? "followup_final_origin_mismatch"
+                        : null)
             });
         });
     }
@@ -255,7 +260,7 @@ function summarise(items) {
     };
 
     const evaluated = {
-        benchmarkVersion: "bof-public-page-fetch-v4-followup",
+        benchmarkVersion: "bof-public-page-fetch-v5-auto-followup-origin-guard",
         scope: "Five independently verified Pretoria business websites; public URLs only; no assessment answers, respondent contact details or customer-submitted destinations.",
         provider: "Crawl4AI through the isolated Swayphics adapter",
         batchSizes: [3, 2],
@@ -287,13 +292,14 @@ function summarise(items) {
         const secondaryRows = secondaryPageResults.map((item) =>
             "| " + item.business + " | " + item.url + " | " +
             (item.success ? "Yes" : "No") + " | " + (item.statusCode ?? "—") + " | " +
+            (item.finalUrlOnSelectedOrigin ? "Yes" : "No") + " | " +
             item.primaryPageIdentityStatus + " | " + item.identityMatchStatus + " | " +
             (item.resolvesPrimaryAmbiguity ? "Yes" : "No") + " |"
         ).join("\n");
         const secondarySummary = secondaryPageResults.length
             ? "\n### Targeted same-domain follow-up pages\n\n" +
-                "| Business | Follow-up page | Fetch OK | HTTP | Homepage match | Follow-up match | Resolved ambiguity |\n" +
-                "|---|---|---:|---:|---|---|---:|\n" +
+                "| Business | Follow-up page | Fetch OK | HTTP | Final URL same origin | Homepage match | Follow-up match | Resolved ambiguity |\n" +
+                "|---|---|---:|---:|---:|---|---|---:|\n" +
                 secondaryRows + "\n\n" +
                 "- Ambiguous homepage matches resolved by a confirmed same-domain page: **" +
                 secondaryPageSummary.resolvedPrimaryAmbiguities + "/" + secondaryPageSummary.total + "**\n"
