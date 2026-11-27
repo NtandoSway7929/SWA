@@ -44,7 +44,7 @@ jobs:
         run: python -m pip install --disable-pip-version-check pglast
 
       - name: Parse proposal migration and disposable database fixtures
-        run: python supabase/tests/lead_proposal_sql_syntax_check.py
+        run: python supabase/tests/lead-proposal_sql_syntax_check.py
 
   disposable-database:
     name: Disposable Supabase proposal revision tests
