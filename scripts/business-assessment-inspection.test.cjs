@@ -33,6 +33,8 @@ assert.match(functionSource, /Deno\.env\.get\("TINYFISH_RESTRICTED_PROCESSING_AG
     "Live provider use must include a non-empty written-agreement reference");
 assert.match(functionSource, /TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_REFERENCE\.length > 0/,
     "The agreement approval gate must fail closed when the agreement reference is missing");
+assert.match(functionSource, /TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_REFERENCE\.length <= 128/,
+    "The agreement reference must fit the bounded audit field");
 assert.match(functionSource, /code: "provider_restricted_agreement_not_configured"/,
     "Missing restricted-processing agreement approval must fail closed with an explicit status");
 assert.match(functionSource, /provider_agreement_reference: TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_REFERENCE/,
