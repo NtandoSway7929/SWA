@@ -146,12 +146,6 @@ select extensions.throws_ok(
         where proposal_id='99999999-9999-4999-8999-999999999994' and version_number=1 $$,
     '55000','Lead proposal revision history is immutable.','a stored proposal snapshot cannot be updated'
 );
-select extensions.throws_ok(
-    $$ delete from public.lead_proposal_versions
-        where proposal_id='99999999-9999-4999-8999-999999999994' and version_number=1 $$,
-    '55000','Lead proposal revision history is immutable.','a stored proposal snapshot cannot be deleted'
-);
-
 set local role authenticated;
 select set_config('request.jwt.claim.sub','99999999-9999-4999-8999-999999999991',true);
 update public.lead_proposals
@@ -185,6 +179,24 @@ select extensions.is(
     (select changed_by from public.lead_proposal_versions where proposal_id='99999999-9999-4999-8999-999999999994' and version_number=4),
     '99999999-9999-4999-8999-999999999991'::uuid,
     'revision history records the administrator who saved the new version'
+);
+
+insert into public.lead_proposals (
+    id,lead_id,title,content,created_by
+) values (
+    '99999999-9999-4999-8999-999999999995',
+    '99999999-9999-4999-8999-999999999993',
+    'Disposable cascade check',
+    'This proposal exists to verify that the CRM parent-delete cascade remains operational.',
+    '99999999-9999-4999-8999-999999999991'
+);
+delete from public.lead_proposals
+ where id='99999999-9999-4999-8999-999999999995';
+select extensions.is(
+    (select count(*)::integer from public.lead_proposal_versions
+      where proposal_id='99999999-9999-4999-8999-999999999995'),
+    0,
+    'existing CRM parent deletion cascades to the linked proposal snapshots'
 );
 
 reset role;
