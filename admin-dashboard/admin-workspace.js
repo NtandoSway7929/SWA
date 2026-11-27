@@ -19750,7 +19750,7 @@ function simpleBars(items, color) {
                         '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                             '<button class="sway-row-action" data-edit="payments" data-id="' + esc(item.id) + '">Edit</button>' +
                             refundAction +
-                            '<button class="sway-row-action danger" data-delete="payments" data-id="' + esc(item.id) + '">Delete</button>' +
+                            '<span class="sway-row-action" aria-label="Payment deletion is protected">Financial record · deletion protected</span>' +
                         '</div></details>' +
                     '</div>' +
                 '</article>'
