@@ -3,6 +3,8 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const os = require("node:os");
+const { spawnSync } = require("node:child_process");
 
 (async () => {
     const providerModule = await import("../supabase/functions/_shared/business-assessment-open-source-provider.mjs");
@@ -383,6 +385,9 @@ const path = require("node:path");
     assert.match(privateCompose, /search_egress/);
     assert.match(privateCompose, /crawl_egress/);
     assert.match(privateCompose, /cloudflare_egress/);
+    assert.match(privateCompose, /search_egress:\s*\n\s+driver: bridge\s*\n\s+ipam:\s*\n\s+config:\s*\n\s+- subnet: 10\.77\.40\.0\/24/);
+    assert.match(privateCompose, /crawl_egress:\s*\n\s+driver: bridge\s*\n\s+ipam:\s*\n\s+config:\s*\n\s+- subnet: 10\.77\.50\.0\/24/);
+    assert.match(privateCompose, /cloudflare_egress:\s*\n\s+driver: bridge\s*\n\s+ipam:\s*\n\s+config:\s*\n\s+- subnet: 10\.77\.60\.0\/24/);
 
     const gatewayService = privateCompose.match(/  gateway:\n([\s\S]*?)\n  cloudflared:/)?.[1] || "";
     assert.ok(gatewayService, "The private Compose file must define a gateway service");
@@ -426,6 +431,46 @@ const path = require("node:path");
     assert.match(privateEnvExample, /multi-platform sha256 index digest/);
     assert.doesNotMatch(privateEnvExample, /(?:CADDY|VALKEY|CLOUDFLARED)_IMAGE=/);
     assert.doesNotMatch(privateEnvExample, /CF-Access-Client-Secret\s*=\s*[^\n]+/);
+
+    const firewallAuditScript = path.join(
+        __dirname, "bof-open-source-provider-poc", "private-gateway",
+        "audit-host-firewall-backend.sh"
+    );
+    assert.ok(fs.existsSync(firewallAuditScript),
+        "The private gateway must include a read-only host firewall backend audit");
+
+    const mockBin = fs.mkdtempSync(path.join(os.tmpdir(), "bof-firewall-audit-"));
+    try {
+        const mockCommands = {
+            docker: '#!/bin/sh\nif [ "$1" = "info" ]; then printf " Firewall Backend: %s\\n" "$MOCK_DOCKER_FIREWALL_BACKEND"; exit 0; fi\nexit 1\n',
+            iptables: '#!/bin/sh\nif [ "$1" = "-S" ] && [ "$2" = "DOCKER-USER" ]; then exit 0; fi\nexit 1\n',
+            nft: '#!/bin/sh\nif [ "$1" = "list" ] && [ "$2" = "tables" ]; then exit 0; fi\nexit 1\n'
+        };
+        for (const [name, content] of Object.entries(mockCommands)) {
+            const commandPath = path.join(mockBin, name);
+            fs.writeFileSync(commandPath, content, { mode: 0o755 });
+            fs.chmodSync(commandPath, 0o755);
+        }
+        const runAudit = (backend) => spawnSync("bash", [firewallAuditScript], {
+            encoding: "utf8",
+            env: {
+                ...process.env,
+                PATH: mockBin + path.delimiter + process.env.PATH,
+                MOCK_DOCKER_FIREWALL_BACKEND: backend
+            }
+        });
+        const iptablesAudit = runAudit("iptables");
+        assert.equal(iptablesAudit.status, 0, iptablesAudit.stderr);
+        assert.match(iptablesAudit.stdout, /DOCKER-USER/);
+        const nftablesAudit = runAudit("nftables");
+        assert.equal(nftablesAudit.status, 0, nftablesAudit.stderr);
+        assert.match(nftablesAudit.stdout, /separate nftables table/);
+        const unknownAudit = runAudit("unknown");
+        assert.equal(unknownAudit.status, 2);
+        assert.match(unknownAudit.stderr, /could not identify/i);
+    } finally {
+        fs.rmSync(mockBin, { recursive: true, force: true });
+    }
 
     console.log("Swayphics business identity matcher contract tests passed.");
     console.log("Business Opportunity Finder open-source provider adapter tests passed.");

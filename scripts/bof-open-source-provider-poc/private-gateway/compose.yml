@@ -173,10 +173,19 @@ networks:
         - subnet: 10.77.20.0/24
   search_egress:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.77.40.0/24
   crawl_egress:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.77.50.0/24
   cloudflare_egress:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.77.60.0/24
 
 secrets:
   cloudflare_tunnel_token:
