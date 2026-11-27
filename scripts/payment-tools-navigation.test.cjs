@@ -21,14 +21,17 @@ test("manual payment recording is launched from Sales & Billing, not a floating 
 
 test("payment receipt management is launched from Sales & Billing, not a floating shortcut", () => {
   assert.match(receipts, /data-nav-menu="billing"/);
-  assert.match(receipts, /button\.dataset\.view = "payment-receipts"/);
+  assert.match(receipts, /receiptsButton.dataset.view = "payment-receipts"/);
   assert.match(receipts, /textContent = "Payment receipts"/);
   assert.match(receipts, /stopImmediatePropagation\(\)/);
   assert.match(receipts, /\.pr-launch\{display:none;/);
   assert.match(receipts, /navObserver\.observe\(document\.body/);
+  assert.match(receipts, /data-view="yoco-test-payment-cleanup"/);
+  assert.match(receipts, /textContent = "Test payment cleanup"/);
+  assert.match(receipts, /admin_list_yoco_test_payment_cleanup_candidates/);
 });
 
 test("dashboard refreshes both payment module scripts after navigation changes", () => {
-  assert.match(dashboard, /payment-receipts\.js\?v=20261127-sales-billing-nav-1/);
+  assert.match(dashboard, /payment-receipts\.js\?v=20261127-yoco-test-cleanup-1/);
   assert.match(dashboard, /admin-manual-payments\.js\?v=20261127-sales-billing-nav-1/);
 });

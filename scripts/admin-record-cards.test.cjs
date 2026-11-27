@@ -48,7 +48,7 @@ const cards = {
         'data-invoice-action=\"delete\"'
     ],
     services: ['data-edit=\"services\"', 'data-delete=\"services\"'],
-    payments: ['data-edit=\"payments\"', 'data-delete=\"payments\"'],
+    payments: ['data-edit=\"payments\"' , "Financial record · deletion protected"],
     enquiries: ["data-enquiry-status=", 'data-status-next=\"contacted\"', 'data-status-next=\"closed\"'],
     communications: [
         "data-admin-table-row=\"communications\"", "data-admin-table-select=\"communications\"",
@@ -136,11 +136,23 @@ for (const view of ["tasks", "followups", "communications"]) {
 const clientDeleteHandler = section(
     workspace, "    async function removeRecord(type, id)", "record deletion handler"
 );
+const paymentDeleteHandler = clientDeleteHandler.slice(
+    clientDeleteHandler.indexOf('if (type === "payments")'),
+    clientDeleteHandler.indexOf('\n        if (\n            type === "team"')
+);
 assert.match(clientDeleteHandler, /state\.invoices\.filter/);
 assert.match(clientDeleteHandler, /state\.payments\.filter/);
 assert.match(clientDeleteHandler, /clientInvoices\.length/);
 assert.match(clientDeleteHandler, /clientPayments\.length/);
 assert.match(clientDeleteHandler, /archive the client/i);
+assert.match(clientDeleteHandler, /if \(type === "payments"\)/,
+    "payment deletion must use a dedicated financial-history guard");
+assert.match(clientDeleteHandler, /Only the Swayphics owner can manage payment records/);
+assert.match(clientDeleteHandler, /protects receipts, approved bank-transfer evidence, refunds and reconciliation history/);
+assert.match(clientDeleteHandler, /Dedicated test-payment cleanup is not yet available/);
+assert.doesNotMatch(paymentDeleteHandler, /method: "DELETE"/,
+    "the payment delete handler must never send a generic DELETE request");
+assert.match(clientDeleteHandler, /No payment data was changed/);
 assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\)/,
     "client deletion must not cascade-delete invoice history");
 assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHandler.indexOf("swayConfirm(confirmMessage)"),
@@ -201,7 +213,7 @@ assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-record-card/);
 assert.match(css, /@media \(max-width: 620px\)/);
 assert.match(css, /prefers-reduced-motion/);
 
-assert.match(html, /admin-workspace\.js\?v=20261126-archived-invoice-purge-1/,
+assert.match(html, /admin-workspace\.js\?v=20261127-payment-delete-financial-history-guard-1/,
     "the communication viewer workspace script must use a refreshed cache key");
 
 console.log("Admin record-card contract tests passed for 15 dashboard views and communication viewing.");

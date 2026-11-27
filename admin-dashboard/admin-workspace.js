@@ -19750,7 +19750,7 @@ function simpleBars(items, color) {
                         '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                             '<button class="sway-row-action" data-edit="payments" data-id="' + esc(item.id) + '">Edit</button>' +
                             refundAction +
-                            '<button class="sway-row-action danger" data-delete="payments" data-id="' + esc(item.id) + '">Delete</button>' +
+                            '<span class="sway-row-action" aria-label="Payment deletion is protected">Financial record · deletion protected</span>' +
                         '</div></details>' +
                     '</div>' +
                 '</article>'
@@ -24951,6 +24951,19 @@ function simpleBars(items, color) {
         const config = configs[type];
 
         if (!config) return;
+
+        // Payment records are protected financial history. The generic
+        // workspace delete action must never remove them; a separate,
+        // explicitly verified test-data cleanup workflow is required.
+        if (type === "payments") {
+            if (!state.currentAdmin || state.currentAdmin.role !== "owner") {
+                throw new Error("Only the Swayphics owner can manage payment records.");
+            }
+
+            throw new Error(
+                "Payments cannot be permanently deleted from this screen. This protects receipts, approved bank-transfer evidence, refunds and reconciliation history. Correct financial records through the appropriate refund or reconciliation workflow. Dedicated test-payment cleanup is not yet available. No payment data was changed."
+            );
+        }
 
         if (
             type === "team"
