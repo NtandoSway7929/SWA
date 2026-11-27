@@ -99,6 +99,8 @@ function summarise(items) {
     const searchBaseUrl = process.env.SEARXNG_BASE_URL?.trim();
     const crawlBaseUrl = process.env.CRAWL4AI_BASE_URL?.trim();
     const crawlApiToken = process.env.CRAWL4AI_API_TOKEN?.trim();
+    const cloudflareAccessClientId = process.env.CLOUDFLARE_ACCESS_CLIENT_ID?.trim();
+    const cloudflareAccessClientSecret = process.env.CLOUDFLARE_ACCESS_CLIENT_SECRET?.trim();
     if (!searchBaseUrl) throw new Error("SEARXNG_BASE_URL_is_required");
     if (!crawlBaseUrl) throw new Error("CRAWL4AI_BASE_URL_is_required");
     if (!crawlApiToken) throw new Error("CRAWL4AI_API_TOKEN_is_required");
@@ -114,6 +116,8 @@ function summarise(items) {
         searchBaseUrl,
         crawlBaseUrl,
         crawlApiToken,
+        cloudflareAccessClientId,
+        cloudflareAccessClientSecret,
         fetchTimeoutMs: 90_000
     });
 

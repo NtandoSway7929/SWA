@@ -144,6 +144,8 @@ function summarise(items, prefix) {
 (async () => {
     const searchBaseUrl = process.env.SEARXNG_BASE_URL?.trim();
     if (!searchBaseUrl) throw new Error("SEARXNG_BASE_URL_is_required");
+    const cloudflareAccessClientId = process.env.CLOUDFLARE_ACCESS_CLIENT_ID?.trim();
+    const cloudflareAccessClientSecret = process.env.CLOUDFLARE_ACCESS_CLIENT_SECRET?.trim();
 
     const { createOpenSourceInspectionProvider } = await import(
         "../supabase/functions/_shared/business-assessment-open-source-provider.mjs"
@@ -151,9 +153,12 @@ function summarise(items, prefix) {
 
     const provider = createOpenSourceInspectionProvider({
         searchBaseUrl,
-        // Search-only benchmark: crawl service is not contacted.
-        crawlBaseUrl: process.env.CRAWL4AI_BASE_URL || "https://crawl.invalid.example",
-        crawlApiToken: process.env.CRAWL4AI_API_TOKEN || "search-benchmark-unused"
+        // Search-only benchmark: crawl service is not contacted. Use loopback when no
+        // crawl endpoint is configured so this unused placeholder does not require Access.
+        crawlBaseUrl: process.env.CRAWL4AI_BASE_URL || "http://127.0.0.1:11235",
+        crawlApiToken: process.env.CRAWL4AI_API_TOKEN || "search-benchmark-unused",
+        cloudflareAccessClientId,
+        cloudflareAccessClientSecret
     });
 
     const report = [];

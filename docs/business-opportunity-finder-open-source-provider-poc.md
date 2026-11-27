@@ -205,7 +205,7 @@ The Access application should be created before publishing the tunnel hostname. 
 
 Use one dedicated token for the Swayphics BOF Edge Function, tagged for the production environment, with a finite expiry and a documented rotation owner. The Client ID and Client Secret are sent in `CF-Access-Client-Id` and `CF-Access-Client-Secret` headers. Store both as Supabase Edge Function secrets, never in the browser or request body. Cloudflare supports secret rotation with a grace period; the old secret can then be revoked. The existing Crawl4AI `Authorization: Bearer` header remains separate and is forwarded only to the `/crawl` upstream. Strict service-token authentication ensures invalid machine credentials receive 401/403 and only Service Auth policies can grant access. See [Cloudflare service-token request and rotation documentation](https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/).
 
-**Adapter change still required before a staging test:** the current POC adapter only sends the Crawl4AI bearer token. It does not yet attach Cloudflare Access headers to both SearXNG and Crawl4AI requests. A later isolated change must add those two headers without placing their values in the JSON crawl body. Both configured service base URLs can use the same gateway origin because the adapter calls the root `/search` and `/crawl` paths. Do not make that change to the production Edge Function until the architecture has been approved.
+**Isolated adapter integration implemented:** the POC adapter sends `CF-Access-Client-Id` and `CF-Access-Client-Secret` on both the SearXNG `/search` request and the Crawl4AI `/crawl` request. The Crawl4AI bearer token remains a separate `Authorization` header on `/crawl` only. Access credentials are never included in the JSON crawl body. The adapter rejects non-loopback service endpoints unless both Access credentials are configured; one-sided configuration is rejected. HTTP loopback endpoints remain available for local Docker tests without Cloudflare credentials. The live integration and benchmark scripts accept the two server-side environment variables. This completes adapter plumbing only: no Cloudflare service token, hostname, tunnel, VM or production secret has been created, and no production Edge Function has been changed.
 
 ### Hosting candidate and indicative cost
 
@@ -235,7 +235,7 @@ Railway private DNS names are scoped to services in the same Railway project and
 2. Obtain a final VM quote and confirm resource quotas, storage, backups/snapshots, network policy, support and any provider terms.
 3. Build the gateway and private Docker network so that neither SearXNG nor Crawl4AI publishes a public host port. The only inbound public hostname should terminate at Cloudflare Access; the tunnel connector initiates outbound connectivity.
 4. Add private Valkey and turn on SearXNG rate limiting, or document and test an equivalent authenticated-gateway rate limit. Review the trusted-proxy/client-IP chain.
-5. Extend the isolated adapter to send the two Cloudflare Access headers on both service requests. Add tests for missing/wrong credentials, 401/403 behavior, and ensuring service credentials never enter request bodies or logs.
+5. The isolated adapter now sends both Cloudflare Access headers on both service requests and fails closed when remote endpoints are configured without the complete credential pair. Tests cover missing and partial configuration, header forwarding, and exclusion from the crawl body. Staging must still verify that Cloudflare Access rejects missing, wrong and expired tokens with 401/403, and must confirm that no credentials are written to service or gateway logs.
 6. Configure the Edge Function with the gateway URL, Access Client ID/Secret and Crawl4AI bearer token as server-side secrets. Confirm the Edge Function's actual invocation region and measure search/crawl latency and request timeouts against the VM in Johannesburg.
 7. Complete network egress/SSRF, DNS-rebinding, Chromium sandbox, image/SBOM, secret-rotation, log-retention, backup/restore and outage-recovery tests in staging.
 8. Only after those checks, make a separate production integration decision. Keep the existing TinyFish consent gate and production function untouched until then.
@@ -270,8 +270,10 @@ The eventual Edge Function would need server-side configuration similar to:
 - `SEARXNG_BASE_URL`
 - `CRAWL4AI_BASE_URL`
 - `CRAWL4AI_API_TOKEN`
+- `CLOUDFLARE_ACCESS_CLIENT_ID`
+- `CLOUDFLARE_ACCESS_CLIENT_SECRET`
 
-These are names for a future implementation only. No production secrets have been configured. They must never be exposed to the browser or committed to source control.
+These are names for a future server-side integration only. No production secrets have been configured or created. The two Cloudflare Access values must be supplied together and must never be exposed to the browser, assessment payloads, logs or source control.
 
 Service base URLs must use HTTPS. HTTP is accepted only for loopback-only local tests.
 

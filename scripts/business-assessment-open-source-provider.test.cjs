@@ -164,7 +164,9 @@ const path = require("node:path");
         fetchImpl: fakeFetch,
         searchBaseUrl: "https://search.internal.example",
         crawlBaseUrl: "https://crawl.internal.example",
-        crawlApiToken: "test-token"
+        crawlApiToken: "test-token",
+        cloudflareAccessClientId: "test-access-client-id",
+        cloudflareAccessClientSecret: "test-access-client-secret"
     });
 
     const search = await provider.search('"Business" Pretoria official website', {
@@ -173,6 +175,9 @@ const path = require("node:path");
     });
     assert.equal(search.requestId, "search-1");
     assert.equal(search.results.length, 1);
+    const searchCall = calls.find((call) => call.url.includes("/search"));
+    assert.equal(searchCall.init.headers["CF-Access-Client-Id"], "test-access-client-id");
+    assert.equal(searchCall.init.headers["CF-Access-Client-Secret"], "test-access-client-secret");
     assert.equal(search.results[0].url, "https://business.example.co.za/");
 
     const fetched = await provider.fetch(["https://business.example.co.za/?utm_campaign=discard"]);
@@ -201,11 +206,37 @@ const path = require("node:path");
     const crawlCall = calls.find((call) => call.url.endsWith("/crawl"));
     assert.equal(crawlCall.init.method, "POST");
     assert.equal(crawlCall.init.headers.Authorization, "Bearer test-token");
+    assert.equal(crawlCall.init.headers["CF-Access-Client-Id"], "test-access-client-id");
+    assert.equal(crawlCall.init.headers["CF-Access-Client-Secret"], "test-access-client-secret");
     const crawlBody = JSON.parse(crawlCall.init.body);
     assert.deepEqual(crawlBody.urls, ["https://business.example.co.za/"]);
     assert.deepEqual(crawlBody.browser_config, {});
     assert.deepEqual(crawlBody.crawler_config, {});
     assert.equal(Object.prototype.hasOwnProperty.call(crawlBody, "hooks"), false);
+    assert.equal(JSON.stringify(crawlBody).includes("test-access-client-id"), false);
+    assert.equal(JSON.stringify(crawlBody).includes("test-access-client-secret"), false);
+
+    assert.throws(() => createOpenSourceInspectionProvider({
+        fetchImpl: fakeFetch,
+        searchBaseUrl: "https://search.remote.example",
+        crawlBaseUrl: "https://crawl.remote.example",
+        crawlApiToken: "test-token"
+    }), /cloudflare_access_credentials_not_configured/);
+
+    assert.throws(() => createOpenSourceInspectionProvider({
+        fetchImpl: fakeFetch,
+        searchBaseUrl: "https://search.remote.example",
+        crawlBaseUrl: "https://crawl.remote.example",
+        crawlApiToken: "test-token",
+        cloudflareAccessClientId: "test-access-client-id"
+    }), /cloudflare_access_credentials_incomplete/);
+
+    assert.doesNotThrow(() => createOpenSourceInspectionProvider({
+        fetchImpl: fakeFetch,
+        searchBaseUrl: "http://127.0.0.1:8080",
+        crawlBaseUrl: "http://127.0.0.1:11235",
+        crawlApiToken: "test-token"
+    }), "Loopback-only local Docker tests may run without Cloudflare Access credentials");
 
     assert.throws(() => createOpenSourceInspectionProvider({
         fetchImpl: fakeFetch,
@@ -218,7 +249,9 @@ const path = require("node:path");
         fetchImpl: fakeFetch,
         searchBaseUrl: "https://search.example.com",
         crawlBaseUrl: "https://crawl.example.com",
-        crawlApiToken: ""
+        crawlApiToken: "",
+        cloudflareAccessClientId: "test-access-client-id",
+        cloudflareAccessClientSecret: "test-access-client-secret"
     }), /crawl4ai_token_not_configured/);
 
     assert.deepEqual(__testing.normaliseSearxngResults({
@@ -232,7 +265,9 @@ const path = require("node:path");
         }),
         searchBaseUrl: "https://search.internal.example",
         crawlBaseUrl: "https://crawl.internal.example",
-        crawlApiToken: "test-token"
+        crawlApiToken: "test-token",
+        cloudflareAccessClientId: "test-access-client-id",
+        cloudflareAccessClientSecret: "test-access-client-secret"
     });
     await assert.rejects(
         () => noJsonProvider.search("test"),
@@ -246,7 +281,9 @@ const path = require("node:path");
         }),
         searchBaseUrl: "https://search.internal.example",
         crawlBaseUrl: "https://crawl.internal.example",
-        crawlApiToken: "test-token"
+        crawlApiToken: "test-token",
+        cloudflareAccessClientId: "test-access-client-id",
+        cloudflareAccessClientSecret: "test-access-client-secret"
     });
     await assert.rejects(
         () => jsonErrorProvider.search("test"),

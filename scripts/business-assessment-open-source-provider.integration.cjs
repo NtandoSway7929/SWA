@@ -12,6 +12,8 @@ function requiredEnv(name) {
     const searchBaseUrl = requiredEnv("SEARXNG_BASE_URL");
     const crawlBaseUrl = requiredEnv("CRAWL4AI_BASE_URL");
     const crawlApiToken = requiredEnv("CRAWL4AI_API_TOKEN");
+    const cloudflareAccessClientId = process.env.CLOUDFLARE_ACCESS_CLIENT_ID?.trim();
+    const cloudflareAccessClientSecret = process.env.CLOUDFLARE_ACCESS_CLIENT_SECRET?.trim();
 
     const { createOpenSourceInspectionProvider } = await import(
         "../supabase/functions/_shared/business-assessment-open-source-provider.mjs"
@@ -20,7 +22,9 @@ function requiredEnv(name) {
     const provider = createOpenSourceInspectionProvider({
         searchBaseUrl,
         crawlBaseUrl,
-        crawlApiToken
+        crawlApiToken,
+        cloudflareAccessClientId,
+        cloudflareAccessClientSecret
     });
 
     // This is intentionally a generic software query, not a customer/business query.

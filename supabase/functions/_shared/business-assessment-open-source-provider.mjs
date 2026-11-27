@@ -32,6 +32,15 @@ function serviceBaseUrl(value, name) {
     return url.toString().replace(/\/+$/, "");
 }
 
+function isLoopbackServiceUrl(value) {
+    try {
+        const hostname = new URL(value).hostname.toLowerCase();
+        return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname);
+    } catch {
+        return false;
+    }
+}
+
 function normaliseDomainList(value) {
     const entries = Array.isArray(value) ? value : String(value || "").split(",");
     return [...new Set(entries.map((item) => String(item || "").trim().toLowerCase())
@@ -373,15 +382,37 @@ export function createOpenSourceInspectionProvider({
     searchBaseUrl,
     crawlBaseUrl,
     crawlApiToken,
+    cloudflareAccessClientId,
+    cloudflareAccessClientSecret,
     searchTimeoutMs = DEFAULT_SEARCH_TIMEOUT_MS,
     fetchTimeoutMs = DEFAULT_FETCH_TIMEOUT_MS
 } = {}) {
     const searchOrigin = serviceBaseUrl(searchBaseUrl, "searxng");
     const crawlOrigin = serviceBaseUrl(crawlBaseUrl, "crawl4ai");
     const crawlToken = typeof crawlApiToken === "string" ? crawlApiToken.trim() : "";
+    const accessClientId = typeof cloudflareAccessClientId === "string"
+        ? cloudflareAccessClientId.trim()
+        : "";
+    const accessClientSecret = typeof cloudflareAccessClientSecret === "string"
+        ? cloudflareAccessClientSecret.trim()
+        : "";
+    const hasAccessClientId = Boolean(accessClientId);
+    const hasAccessClientSecret = Boolean(accessClientSecret);
 
+    if (hasAccessClientId !== hasAccessClientSecret) {
+        throw new Error("cloudflare_access_credentials_incomplete");
+    }
+    if (!hasAccessClientId &&
+        (!isLoopbackServiceUrl(searchOrigin) || !isLoopbackServiceUrl(crawlOrigin))) {
+        throw new Error("cloudflare_access_credentials_not_configured");
+    }
     if (!crawlToken) throw new Error("crawl4ai_token_not_configured");
     if (typeof fetchImpl !== "function") throw new Error("fetch_implementation_required");
+
+    const cloudflareAccessHeaders = hasAccessClientId ? {
+        "CF-Access-Client-Id": accessClientId,
+        "CF-Access-Client-Secret": accessClientSecret
+    } : {};
 
     return {
         version: OPEN_SOURCE_PROVIDER_VERSION,
@@ -399,7 +430,10 @@ export function createOpenSourceInspectionProvider({
 
             const { data, requestId } = await requestJson(fetchImpl, url.toString(), {
                 method: "GET",
-                headers: { Accept: "application/json" }
+                headers: {
+                    Accept: "application/json",
+                    ...cloudflareAccessHeaders
+                }
             }, searchTimeoutMs, "search");
 
             return {
@@ -432,7 +466,8 @@ export function createOpenSourceInspectionProvider({
                 headers: {
                     Accept: "application/json",
                     "Content-Type": "application/json",
-                    Authorization: "Bearer " + crawlToken
+                    Authorization: "Bearer " + crawlToken,
+                    ...cloudflareAccessHeaders
                 },
                 body: JSON.stringify({
                     urls: normalisedUrls,
