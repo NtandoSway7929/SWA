@@ -11,6 +11,7 @@
             header_up X-Real-IP {http.request.header.CF-Connecting-IP}
             header_up -CF-Access-Client-Id
             header_up -CF-Access-Client-Secret
+            header_up -Cf-Access-Jwt-Assertion
         }
     }
 
@@ -26,6 +27,7 @@
             header_up X-Real-IP {http.request.header.CF-Connecting-IP}
             header_up -CF-Access-Client-Id
             header_up -CF-Access-Client-Secret
+            header_up -Cf-Access-Jwt-Assertion
         }
     }
 

@@ -408,6 +408,8 @@ const path = require("node:path");
         "Caddy must strip the Cloudflare Access client ID before forwarding to each upstream");
     assert.equal((privateCaddyfile.match(/header_up -CF-Access-Client-Secret/g) || []).length, 2,
         "Caddy must strip the Cloudflare Access client secret before forwarding to each upstream");
+    assert.equal((privateCaddyfile.match(/header_up -Cf-Access-Jwt-Assertion/g) || []).length, 2,
+        "Caddy must strip the Cloudflare Access JWT assertion before forwarding to each upstream");
     assert.match(privateCaddyfile, /reverse_proxy searxng:8080/);
     assert.match(privateCaddyfile, /reverse_proxy crawl4ai:11235/);
 
