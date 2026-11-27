@@ -154,9 +154,9 @@ begin
         raise exception 'Provide a cleanup reason between 10 and 500 characters.';
     end if;
 
-    -- Acquire locks in the same parent-first order as archived-invoice purge
-    -- and refund recording: invoice, payment, attempt, then webhook events.
-    -- This avoids lock inversion with those financial workflows.
+    -- Acquire the invoice before payment, matching archived-invoice purge, then
+    -- acquire payment before attempt/events, matching refund recording's
+    -- payment-first lock order. This reduces lock inversion with both flows.
     select p.* into v_payment
       from public.payments p
      where p.id = p_payment_id;
