@@ -155,4 +155,22 @@ assert.match(proposalReview, /isEditableDraft/,
 assert.match(proposalReview, /Only a saved draft can be approved/,
     "approval must be blocked for a non-draft proposal");
 
+assert.match(proposalReview, /structured_content:\s*\{/,
+    "saving proposal sections must persist structured JSON content");
+assert.match(proposalReview, /data-proposal-section=/,
+    "the editor must expose individual structured proposal sections");
+assert.match(proposalReview, /scope_and_deliverables/,
+    "the agreed scope and deliverables section must be present");
+assert.match(proposalReview, /business_understanding/,
+    "the agreed business understanding section must be present");
+assert.match(proposalReview, /Commercial investment/,
+    "the commercial investment section must be reserved for linked quote data");
+assert.match(proposalReview, /lead_proposal_versions/,
+    "proposal revision history must be loaded from its immutable snapshot table");
+assert.match(proposalReview, /data-proposal-create-revision=/,
+    "approved or rejected proposals must offer an explicit new draft revision action");
+assert.match(proposalReview, /missingRequiredSections/,
+    "internal approval must require the key structured proposal sections");
+assert.match(proposalReview, /current_version/,
+    "the current proposal revision number must be shown and retained");
 console.log("Admin lead-card and proposal draft tests passed.");
