@@ -163,6 +163,85 @@ The POC Compose service now mirrors the relevant upstream hardened Compose postu
 
 These checks intentionally stop short of claiming that Chromium itself is sandboxed. Upstream Crawl4AI still documents `--no-sandbox` as the default. Before production, test the `CRAWL4AI_CHROMIUM_SANDBOX=true` path with a supported unprivileged user namespace or a reviewed seccomp profile, following the upstream security verification runbook. Record the host/kernel and browser-start results. If this cannot be demonstrated, treat it as an explicit residual risk requiring a documented decision and compensating isolation controls.
 
+## Hosting architecture decision — recommended candidate, not yet approved
+
+**Recommendation for a first controlled deployment:** one South African self-managed cloud VM running the existing Docker services, with Cloudflare Tunnel and Cloudflare Access providing the only path from Supabase Edge Functions to a private reverse-proxy gateway. This avoids depending on a private network that Supabase Edge Functions cannot join directly, while keeping the VM's service ports off the public interface.
+
+This is an architecture candidate for costing and a later staging test. It is **not** approval to purchase hosting, expose a hostname, create service credentials, deploy, or modify the production Edge Function.
+
+### Proposed request path
+
+```text
+Swayphics assessment / admin action
+        |
+        v
+Supabase Edge Function
+  - validates the request and public URL
+  - calls a single HTTPS gateway hostname
+  - sends Cloudflare Access service-token headers
+  - sends the Crawl4AI bearer token only on /crawl
+        |
+        v
+Cloudflare Access
+  - deny by default
+  - Service Auth policy for the BOF token only
+  - strict service-token authentication
+  - unauthenticated requests return 401/403, not an interactive login redirect
+        |
+        v
+Cloudflare Tunnel (outbound connection from the VM)
+        |
+        v
+Private reverse-proxy gateway
+  /search -> SearXNG
+  /crawl  -> Crawl4AI
+        |
+        +-- private Docker network -- SearXNG
+        +-- private Docker network -- Crawl4AI
+        +-- private Docker network -- Valkey (for SearXNG's limiter)
+```
+
+The Access application should be created before publishing the tunnel hostname. Cloudflare documents that a published hostname without an Access application is available to anyone on the Internet. Access applications are deny-by-default; only a matching policy is granted access. Enable the service-token-specific 401 response and strict service-token authentication, and enable Tunnel's **Protect with Access** origin validation. The public hostname remains internet-addressable at Cloudflare's edge, but requests must pass the service-auth policy; the origin's SearXNG and Crawl4AI ports remain unexposed. See [Cloudflare's self-hosted application guide](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/) and [service-token guide](https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/).
+
+Use one dedicated token for the Swayphics BOF Edge Function, tagged for the production environment, with a finite expiry and a documented rotation owner. The Client ID and Client Secret are sent in `CF-Access-Client-Id` and `CF-Access-Client-Secret` headers. Store both as Supabase Edge Function secrets, never in the browser or request body. Cloudflare supports secret rotation with a grace period; the old secret can then be revoked. The existing Crawl4AI `Authorization: Bearer` header remains separate and is forwarded only to the `/crawl` upstream. Strict service-token authentication ensures invalid machine credentials receive 401/403 and only Service Auth policies can grant access. See [Cloudflare service-token request and rotation documentation](https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/).
+
+**Adapter change still required before a staging test:** the current POC adapter only sends the Crawl4AI bearer token. It does not yet attach Cloudflare Access headers to both SearXNG and Crawl4AI requests. A later isolated change must add those two headers without placing their values in the JSON crawl body. Both configured service base URLs can use the same gateway origin because the adapter calls the root `/search` and `/crawl` paths. Do not make that change to the production Edge Function until the architecture has been approved.
+
+### Hosting candidate and indicative cost
+
+The most credible locally hosted option identified so far is [xneelo Cloud](https://xneelo.co.za/cloud/). Its published pricing currently lists:
+
+| Resource | Published price | Basis |
+|---|---:|---|
+| 4 vCPU / 8 GB RAM | R402/month | 730-hour compute estimate |
+| 50 GB Premium NVMe | R90/month | 50 × R1.80/GB/month |
+| **Indicative total** | **R492/month** | Compute + 50 GB volume |
+
+The xneelo page says its monthly estimates include VAT and are based on 730 hours; actual invoices vary with actual hours and resource use. The 50 GB volume estimate assumes the total Premium NVMe allocation, including the required 10 GB boot volume, is 50 GB. Extra snapshots or storage are additional. See [xneelo's current Cloud pricing](https://xneelo.co.za/cloud/).
+
+This is a **starting-size candidate**, not a measured capacity guarantee. Crawl4AI's self-hosting guide asks for at least 4 GB RAM available for the crawler container alone, with more recommended for heavier use. A 4 GB VM would therefore leave no reasonable memory headroom for the OS, SearXNG, Valkey and gateway. Start evaluation at 8 GB, restrict concurrency, and measure real memory/CPU before committing to production. See [Crawl4AI self-hosting prerequisites](https://docs.crawl4ai.com/core/self-hosting/).
+
+xneelo states that its Cloud service currently has one region and one availability zone in Johannesburg. That is locally relevant, but it is also a single-zone availability risk. xneelo Cloud is self-managed: OS patching, container updates, backup policy, firewall, monitoring and incident response remain Swayphics' responsibility. See [xneelo's region and support information](https://xneelo.co.za/cloud/).
+
+Cloudflare Zero Trust currently lists a Free plan for teams under 50 users, and its account limits list up to 50 service tokens and 1,000 Cloudflare Tunnels. This could avoid an additional Access subscription for a small machine-to-machine use case, subject to confirming the account's current entitlement and whether its usage fits the plan. This does not make the VM free. The domain must be an active Cloudflare zone (full or partial setup) for a custom published application hostname. See [Cloudflare plans](https://www.cloudflare.com/plans/), [account limits](https://developers.cloudflare.com/cloudflare-one/account-limits/) and [application prerequisites](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/).
+
+### Why not Railway or Fly private networking as the direct bridge?
+
+Railway private DNS names are scoped to services in the same Railway project and environment. Fly's 6PN private network is scoped to apps within the same Fly organization; external access requires a WireGuard connection or another explicitly configured route. A hosted Supabase Edge Function is not automatically a member of either provider's private network. Those platforms would still need an access-controlled HTTPS ingress or a separate network connector, so their private-network feature alone does not solve this integration. See [Railway private networking](https://docs.railway.com/networking/private-networking) and [Fly private networking](https://fly.io/docs/networking/private-networking/).
+
+### Deployment and staging gates
+
+1. Confirm that the Swayphics-controlled domain can be used as an active Cloudflare zone and that the Cloudflare Access Free plan is actually available to the account.
+2. Obtain a final VM quote and confirm resource quotas, storage, backups/snapshots, network policy, support and any provider terms.
+3. Build the gateway and private Docker network so that neither SearXNG nor Crawl4AI publishes a public host port. The only inbound public hostname should terminate at Cloudflare Access; the tunnel connector initiates outbound connectivity.
+4. Add private Valkey and turn on SearXNG rate limiting, or document and test an equivalent authenticated-gateway rate limit. Review the trusted-proxy/client-IP chain.
+5. Extend the isolated adapter to send the two Cloudflare Access headers on both service requests. Add tests for missing/wrong credentials, 401/403 behavior, and ensuring service credentials never enter request bodies or logs.
+6. Configure the Edge Function with the gateway URL, Access Client ID/Secret and Crawl4AI bearer token as server-side secrets. Confirm the Edge Function's actual invocation region and measure search/crawl latency and request timeouts against the VM in Johannesburg.
+7. Complete network egress/SSRF, DNS-rebinding, Chromium sandbox, image/SBOM, secret-rotation, log-retention, backup/restore and outage-recovery tests in staging.
+8. Only after those checks, make a separate production integration decision. Keep the existing TinyFish consent gate and production function untouched until then.
+
+Supabase Edge Functions can make outbound HTTP requests to other APIs using `fetch()`; the hosted runtime also imposes wall-clock and idle-time limits. The gateway request path therefore needs a real staging invocation from the deployed Edge Function, not only a local Node.js test. Review [Supabase Edge Function usage](https://supabase.com/docs/guides/functions/quickstart) and [current Edge Function limits](https://supabase.com/docs/guides/functions/limits) before setting the operational timeout budget.
+
 ### Remaining production blockers
 
 1. **SearXNG abuse controls:** the test setting has `server.limiter: false`. Either add a private Valkey service, enable the SearXNG limiter and set trusted proxy headers correctly, or place SearXNG behind a private authenticated gateway with independently tested per-client rate limiting. Do not simply set `limiter: true` without the Valkey dependency and proxy headers.
