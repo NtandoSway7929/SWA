@@ -17,7 +17,9 @@ on:
       - "scripts/email-mime-helpers.test.mjs"
       - "scripts/email-viewer-rendering.test.mjs"
       - "scripts/sent-email-recipient-preview.test.mjs"
+      - "scripts/standard-lead-email-consent.test.cjs"
       - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/standard-lead-email-consent.js"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/admin-notes.js"
       - "admin-dashboard/admin-rich-text.js"
@@ -41,7 +43,9 @@ on:
       - "scripts/email-mime-helpers.test.mjs"
       - "scripts/email-viewer-rendering.test.mjs"
       - "scripts/sent-email-recipient-preview.test.mjs"
+      - "scripts/standard-lead-email-consent.test.cjs"
       - "admin-dashboard/admin-workspace.js"
+      - "admin-dashboard/standard-lead-email-consent.js"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/admin-notes.js"
       - "admin-dashboard/admin-rich-text.js"
@@ -76,6 +80,8 @@ jobs:
       - name: Check admin workspace, Notes and rich-text editor JavaScript syntax
         run: |
           node --check admin-dashboard/admin-workspace.js
+          node --check admin-dashboard/standard-lead-email-consent.js
+          node --check scripts/standard-lead-email-consent.test.cjs
           node --check admin-dashboard/admin-notes.js
           node --check admin-dashboard/admin-rich-text.js
           node --check supabase/functions/send-email/rich-text-helpers.mjs
@@ -90,6 +96,7 @@ jobs:
           node --check scripts/sent-email-recipient-preview.test.mjs
           node --test scripts/send-email-rich-text.test.mjs
           node --test scripts/sent-email-recipient-preview.test.mjs
+          node --test scripts/standard-lead-email-consent.test.cjs
           node --test scripts/email-viewer-rendering.test.mjs
           node --check scripts/email-inbox-sync.test.mjs
           node --test scripts/email-inbox-sync.test.mjs
