@@ -171,15 +171,15 @@ function summarise(items) {
             (item.errorCode || "—") + " |"
         ).join("\n");
         const summary =
-            "\\n## BOF public-business page retrieval benchmark\\n\\n" +
-            "| Business | Fetch OK | HTTP | Final host | Text chars | Title cue | Content cue | Page usable | Error |\\n" +
-            "|---|---:|---:|---|---:|---:|---:|---:|---|\\n" +
-            rows + "\\n\\n" +
-            "- Successful 2xx page extractions: **" + evaluated.summary.succeeded + "/" + evaluated.summary.total + "**\\n" +
-            "- Business-name cue present in page content: **" + evaluated.summary.contentIdentityCue + "/" + evaluated.summary.total + "**\\n" +
-            "- Pages passing the basic usable-page check (successful fetch, expected domain, identity cue and at least 150 text characters): **" + evaluated.summary.usableBusinessPages + "/" + evaluated.summary.total + "**\\n" +
-            "- Final-domain mismatches: **" + evaluated.summary.finalDomainMismatch + "**\\n\\n" +
-            "**Interpretation:** the usable-page check is a diagnostic gate, not proof of full page completeness, legal ownership or confirmed business identity. HTTP error/redirect pages with short or unrelated text must not be treated as successful website evidence. Individual site blocking or content differences are reported, not treated as provider API failures.\\n";
+            "\n## BOF public-business page retrieval benchmark\n\n" +
+            "| Business | Fetch OK | HTTP | Final host | Text chars | Title cue | Content cue | Page usable | Error |\n" +
+            "|---|---:|---:|---|---:|---:|---:|---:|---|\n" +
+            rows + "\n\n" +
+            "- Successful 2xx page extractions: **" + evaluated.summary.succeeded + "/" + evaluated.summary.total + "**\n" +
+            "- Business-name cue present in page content: **" + evaluated.summary.contentIdentityCue + "/" + evaluated.summary.total + "**\n" +
+            "- Pages passing the basic usable-page check (successful fetch, expected domain, identity cue and at least 150 text characters): **" + evaluated.summary.usableBusinessPages + "/" + evaluated.summary.total + "**\n" +
+            "- Final-domain mismatches: **" + evaluated.summary.finalDomainMismatch + "**\n\n" +
+            "**Interpretation:** the usable-page check is a diagnostic gate, not proof of full page completeness, legal ownership or confirmed business identity. HTTP error/redirect pages with short or unrelated text must not be treated as successful website evidence. Individual site blocking or content differences are reported, not treated as provider API failures.\n";
         await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, summary, "utf8");
     }
 })().catch((error) => {
