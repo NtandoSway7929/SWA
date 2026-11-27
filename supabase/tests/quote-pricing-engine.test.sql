@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(36);
+select extensions.plan(41);
 
 select extensions.has_table('public','quote_items','itemised quote line table exists');
 select extensions.has_column('public','quotes','invoice_id','quotes have a persisted invoice relationship');
