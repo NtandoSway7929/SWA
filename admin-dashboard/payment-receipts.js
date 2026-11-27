@@ -7,7 +7,7 @@
   var SUPABASE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
   var ACCESS_KEY = "swayphics_admin_access_token";
   var REFRESH_KEY = "swayphics_admin_refresh_token";
-  var root = null, receipts = [], busy = false;
+  var root = null, receipts = [], busy = false, cleanupPayments = [], cleanupBusy = false;
 
   function esc(value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, function (c) {
@@ -54,8 +54,28 @@
     if (!response.ok || !data || data.ok !== true) throw new Error(data && data.error || "The receipt request could not be completed.");
     return data;
   }
+  async function rpc(name, payload, retried) {
+    var access = token();
+    if (!access) throw new Error("Your administrator session is missing. Sign in again.");
+    var response = await fetch(SUPABASE_URL + "/rest/v1/rpc/" + encodeURIComponent(name), {
+      method:"POST",
+      headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer " + access,"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify(payload || {}),cache:"no-store"
+    });
+    if (response.status === 401 && !retried && await refreshSession()) return rpc(name,payload,true);
+    var raw = await response.text(), data = null;
+    try { data = raw ? JSON.parse(raw) : null; } catch (_) {}
+    if (!response.ok) throw new Error(data && (data.message || data.error || data.hint) || "The financial cleanup request could not be completed.");
+    return data;
+  }
   function status(message, bad) {
     var node = root && root.querySelector("[data-pr-status]");
+    if (!node) return;
+    node.textContent = message || "";
+    node.setAttribute("data-error",bad ? "true" : "false");
+  }
+  function cleanupStatus(message, bad) {
+    var node = root && root.querySelector("[data-pr-cleanup-status]");
     if (!node) return;
     node.textContent = message || "";
     node.setAttribute("data-error",bad ? "true" : "false");
@@ -89,6 +109,39 @@
       '</article>';
     }).join("");
   }
+  function renderCleanup() {
+    var list = root && root.querySelector("[data-pr-cleanup-list]");
+    if (!list) return;
+    if (!cleanupPayments.length) {
+      list.innerHTML = '<div class="pr-empty"><strong>No eligible Yoco test payments</strong><p>Only fully verified Yoco test-mode payments appear here. Paystack live payments, manual payments and bank transfers are excluded.</p></div>';
+      return;
+    }
+    list.innerHTML = cleanupPayments.map(function (row) {
+      return '<article class="pr-item">' +
+        '<div class="pr-item-head"><div><strong>' + esc(row.invoice_number || "Invoice") + '</strong><small>' + esc(row.client_name || "Client") + ' · ' + esc(date(row.paid_at)) + '</small></div>' +
+        '<b>' + esc(money(row.amount,row.currency)) + '</b></div>' +
+        '<div class="pr-meta"><span>Receipt</span><strong>' + esc(row.receipt_number || "—") + '</strong></div>' +
+        '<div class="pr-meta"><span>Provider</span><strong>Yoco · TEST MODE</strong></div>' +
+        '<div class="pr-actions"><button type="button" data-pr-cleanup-id="' + esc(row.payment_id) + '">Review cleanup</button></div>' +
+      '</article>';
+    }).join("");
+  }
+  async function loadCleanup() {
+    cleanupStatus("Checking verified Yoco test-mode payment records…",false);
+    try {
+      var data = await rpc("admin_list_yoco_test_payment_cleanup_candidates",{});
+      if (!data || data.ok !== true || !Array.isArray(data.payments)) {
+        throw new Error("The eligible test-payment list response is incomplete.");
+      }
+      cleanupPayments = data.payments;
+      renderCleanup();
+      cleanupStatus(cleanupPayments.length + " eligible Yoco test payment(s).",false);
+    } catch (error) {
+      cleanupPayments = [];
+      renderCleanup();
+      cleanupStatus(error.message || "Unable to load eligible Yoco test payments.",true);
+    }
+  }
   async function load() {
     status("Loading issued receipts…",false);
     try {
@@ -102,7 +155,45 @@
   }
   async function handleClick(event) {
     if (event.target.closest("[data-pr-close]")) { root.setAttribute("data-open","false"); return; }
-    if (event.target.closest("[data-pr-open]")) { root.setAttribute("data-open","true"); load(); return; }
+    if (event.target.closest("[data-pr-cleanup-close]")) { root.setAttribute("data-cleanup-open","false"); return; }
+    if (event.target.closest("[data-pr-open]")) { root.setAttribute("data-cleanup-open","false"); root.setAttribute("data-open","true"); load(); return; }
+
+    var cleanupButton = event.target.closest("[data-pr-cleanup-id]");
+    if (cleanupButton && !cleanupBusy) {
+      var paymentId = cleanupButton.dataset.prCleanupId;
+      var reason = window.prompt("Why are you removing this verified Yoco TEST payment? Enter at least 10 characters.");
+      if (reason === null) return;
+      if (reason.trim().length < 10) {
+        cleanupStatus("A cleanup reason of at least 10 characters is required.",true);
+        return;
+      }
+      var expectedConfirmation = "DELETE TEST PAYMENT " + paymentId;
+      var confirmation = window.prompt("Type this exact confirmation to continue:\n" + expectedConfirmation);
+      if (confirmation !== expectedConfirmation) {
+        cleanupStatus("Confirmation did not match. No payment data was changed.",true);
+        return;
+      }
+      if (!window.confirm("This permanently removes the local test payment and issued receipt. The provider attempt, webhook events and audit snapshots are retained, and the invoice balance is recalculated. Continue?")) return;
+      cleanupBusy = true;
+      cleanupButton.disabled = true;
+      cleanupButton.textContent = "Cleaning up…";
+      try {
+        var result = await rpc("admin_cleanup_yoco_test_payment",{
+          p_payment_id:paymentId,
+          p_confirmation:confirmation,
+          p_reason:reason.trim()
+        });
+        if (!result || result.ok !== true) throw new Error(result && result.message || "The test payment cleanup was not completed.");
+        await loadCleanup();
+        cleanupStatus("Cleanup complete. Audit reference: " + (result.audit_id || "recorded") + ".",false);
+      } catch (error) {
+        cleanupStatus(error.message || "The test payment could not be cleaned up.",true);
+        await loadCleanup();
+      } finally {
+        cleanupBusy = false;
+      }
+      return;
+    }
 
     var test = event.target.closest("[data-pr-test]");
     if (test) {
@@ -157,7 +248,8 @@
       #sway-payment-receipts .pr-launch{display:none;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:#081533;color:#fff;box-shadow:0 12px 34px rgba(8,21,51,.22);font-size:11px;font-weight:800;cursor:pointer}
       #sway-payment-receipts .pr-count{min-width:22px;height:22px;display:grid;place-items:center;padding:0 6px;border-radius:99px;background:#fff;color:#081533;font-size:11px}
       #sway-payment-receipts .pr-panel{display:none;position:fixed;right:22px;bottom:140px;width:min(620px,calc(100vw - 28px));max-height:min(78vh,760px);overflow:auto;background:#fff;border:1px solid #dfe5ea;border-radius:20px;padding:20px;box-shadow:0 24px 70px #07163835}
-      #sway-payment-receipts[data-open=true] .pr-panel{display:block}
+      #sway-payment-receipts[data-open=true] .pr-panel:not(.pr-cleanup-panel){display:block}
+      #sway-payment-receipts[data-cleanup-open=true] .pr-cleanup-panel{display:block}
       #sway-payment-receipts .pr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
       #sway-payment-receipts h2{font-size:18px;margin:0 0 5px;color:#081533}
       #sway-payment-receipts p{font-size:12px;line-height:1.55;color:#66717B}
@@ -197,10 +289,14 @@
     root = document.createElement("div");
     root.id = "sway-payment-receipts";
     root.setAttribute("data-open","false");
+    root.setAttribute("data-cleanup-open","false");
     root.innerHTML = '<button type="button" class="pr-launch" data-pr-open>Payment receipts <span class="pr-count" data-pr-count>0</span></button>' +
       '<section class="pr-panel" aria-label="Payment receipt delivery"><div class="pr-head"><div><h2>Payment receipts</h2><p>Issued receipts are emailed after verified payments. Failed deliveries can be retried here.</p></div><div class="pr-head-actions"><button type="button" class="pr-test" data-pr-test>Send test email</button><button type="button" class="pr-close" data-pr-close aria-label="Close">×</button></div></div>' +
       '<p class="pr-test-note">Admin-only test: sends one clearly marked TEST ONLY email and PDF to swayphics@gmail.com. It does not create or change payment records.</p>' +
-      '<div class="pr-list" data-pr-list><div class="pr-empty">Open the panel to load receipts.</div></div><p data-pr-status role="status" aria-live="polite"></p></section>';
+      '<div class="pr-list" data-pr-list><div class="pr-empty">Open the panel to load receipts.</div></div><p data-pr-status role="status" aria-live="polite"></p></section>' +
+      '<section class="pr-panel pr-cleanup-panel" aria-label="Yoco test payment cleanup"><div class="pr-head"><div><h2>Yoco test payment cleanup</h2><p>Remove only fully verified Yoco TEST payments after owner confirmation. Provider and receipt audit history is retained.</p></div><button type="button" class="pr-close" data-pr-cleanup-close aria-label="Close">×</button></div>' +
+      '<p class="pr-test-note">Paystack live payments, manually recorded payments and bank transfers are not eligible. If a payment has refunds or reconciliation history, cleanup is blocked.</p>' +
+      '<div class="pr-list" data-pr-cleanup-list><div class="pr-empty">Open this view to check for eligible test payments.</div></div><p data-pr-cleanup-status role="status" aria-live="polite"></p></section>';
     document.body.appendChild(root);
     root.addEventListener("click",handleClick);
 
@@ -208,22 +304,43 @@
       var menu = document.querySelector('[data-nav-menu="billing"]');
       if (!menu) return;
       var anchor = menu.querySelector('[data-view="invoice-settings"]');
-      if (!anchor || menu.querySelector('[data-view="payment-receipts"]')) return;
-      var button = anchor.cloneNode(true);
-      button.dataset.view = "payment-receipts";
-      button.removeAttribute("aria-current");
-      button.textContent = "Payment receipts";
-      button.setAttribute("aria-label", "Payment receipts");
-      anchor.insertAdjacentElement("afterend", button);
+      if (!anchor) return;
+      var receiptsButton = menu.querySelector('[data-view="payment-receipts"]');
+      if (!receiptsButton) {
+        receiptsButton = anchor.cloneNode(true);
+        receiptsButton.dataset.view = "payment-receipts";
+        receiptsButton.removeAttribute("aria-current");
+        receiptsButton.textContent = "Payment receipts";
+        receiptsButton.setAttribute("aria-label", "Payment receipts");
+        anchor.insertAdjacentElement("afterend", receiptsButton);
+      }
+      if (!menu.querySelector('[data-view="yoco-test-payment-cleanup"]')) {
+        var cleanupNav = receiptsButton.cloneNode(true);
+        cleanupNav.dataset.view = "yoco-test-payment-cleanup";
+        cleanupNav.removeAttribute("aria-current");
+        cleanupNav.textContent = "Test payment cleanup";
+        cleanupNav.setAttribute("aria-label", "Test payment cleanup");
+        receiptsButton.insertAdjacentElement("afterend", cleanupNav);
+      }
     }
     addBillingNavigationItem();
     var navObserver = new MutationObserver(addBillingNavigationItem);
     navObserver.observe(document.body, {childList:true,subtree:true});
     document.addEventListener("click", function(event) {
+      var cleanupNav = event.target.closest('[data-view="yoco-test-payment-cleanup"]');
+      if (cleanupNav) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        root.setAttribute("data-open","false");
+        root.setAttribute("data-cleanup-open","true");
+        loadCleanup();
+        return;
+      }
       var button = event.target.closest('[data-view="payment-receipts"]');
       if (!button) return;
       event.preventDefault();
       event.stopImmediatePropagation();
+      root.setAttribute("data-cleanup-open","false");
       root.setAttribute("data-open","true");
       load();
     }, true);
