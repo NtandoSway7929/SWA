@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(41);
+select extensions.plan(44);
 
 select extensions.has_table('public','quote_items','itemised quote line table exists');
 select extensions.has_column('public','quotes','invoice_id','quotes have a persisted invoice relationship');
@@ -271,6 +271,16 @@ update public.quotes
 
 select extensions.throws_ok(
     format(
+        'update public.quotes set amount=1 where id=%L',
+        (select id from saved_quote_id)
+    ),
+    '55000',
+    'Only draft quotes can be edited. Create a new quote for changes.',
+    'issued quote totals cannot be changed directly'
+);
+
+select extensions.throws_ok(
+    format(
         'select public.admin_save_swayphics_quote(%L::uuid,%L::jsonb,%L::jsonb)',
         (select id from saved_quote_id),
         '{"title":"Attempted overwrite"}',
@@ -346,6 +356,25 @@ select extensions.is(
     (select invoice_id from public.quotes where id=(select id from saved_quote_id)),
     (select (result->>'invoice_id')::uuid from first_invoice_result),
     'quote stores the successfully created invoice relationship'
+);
+
+select extensions.throws_ok(
+    format(
+        'update public.quotes set invoice_id=null where id=%L',
+        (select id from saved_quote_id)
+    ),
+    '55000',
+    'Quote-to-invoice links can only be created by the atomic conversion workflow.',
+    'invoice linkage cannot be cleared or reassigned directly'
+);
+select extensions.throws_ok(
+    format(
+        'delete from public.quotes where id=%L',
+        (select id from saved_quote_id)
+    ),
+    '55000',
+    'A quote linked to an invoice cannot be deleted.',
+    'a quote linked to an invoice is protected from deletion'
 );
 
 create temporary table second_invoice_result(result jsonb);
