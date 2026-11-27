@@ -171,13 +171,24 @@
         '</article>';
       return;
     }
-    var ready = data.payment_status === "paid" &&
-      data.invoice_number === "SWY-2026-0010" &&
+    var ready = data.payment_id === "4e8761b0-feec-429a-a690-7085b59aedcd" &&
+      data.payment_status === "paid" &&
+      data.payment_provider == null &&
       Number(data.amount) === 700 &&
+      data.currency === "ZAR" &&
       data.method === "EFT" &&
       data.reference === "SWY" &&
+      data.invoice_id === "19c2cc60-89d9-4a7e-b609-a33ca33b2dbb" &&
+      data.invoice_number === "SWY-2026-0010" &&
+      data.invoice_status === "paid" &&
+      Number(data.invoice_amount_paid) === 700 &&
+      Number(data.invoice_amount_outstanding) === 0 &&
+      data.invoice_archived === true &&
+      data.receipt_number === "SW-RCPT-2026-000001" &&
       !data.receipt_voided_at &&
-      data.bank_transfer_status === "approved";
+      data.bank_transfer_submission_id === "1eca46ef-3c9e-4e04-a72e-907431ad7bc6" &&
+      data.bank_transfer_status === "approved" &&
+      !data.bank_transfer_voided_at;
     if (!ready) {
       card.innerHTML = '<div class="pr-empty"><strong>Manual EFT void unavailable</strong><p>The specific R700 transaction no longer matches the expected pre-void state. No automatic changes will be made. Review the payment and audit history before proceeding.</p></div>';
       return;
