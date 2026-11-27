@@ -88,8 +88,7 @@ values (
 
 insert into public.invoices (
     id, invoice_number, client_id, status, currency, subtotal, total,
-    online_payment_enabled, online_payment_provider,
-    partial_payment_enabled
+    online_payment_enabled, partial_payment_enabled
 ) values (
     '10000000-0000-4000-8000-000000000002',
     'SWY-YOCO-CLEANUP-QA-0001',
@@ -99,7 +98,6 @@ insert into public.invoices (
     100.00,
     100.00,
     true,
-    'yoco',
     true
 );
 
