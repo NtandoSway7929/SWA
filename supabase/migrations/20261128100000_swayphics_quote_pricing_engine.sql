@@ -600,6 +600,61 @@ revoke all on function public.admin_create_invoice_from_quote(uuid)
 grant execute on function public.admin_create_invoice_from_quote(uuid)
     to authenticated;
 
+create or replace function public.guard_swayphics_quote_commercial_record()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+    if tg_op = 'DELETE' then
+        if old.invoice_id is not null then
+            raise exception 'A quote linked to an invoice cannot be deleted.'
+                using errcode = '55000';
+        end if;
+        return old;
+    end if;
+
+    if old.status <> 'draft' then
+        if new.title is distinct from old.title
+           or new.lead_id is distinct from old.lead_id
+           or new.client_id is distinct from old.client_id
+           or new.proposal_id is distinct from old.proposal_id
+           or new.proposal_version_id is distinct from old.proposal_version_id
+           or new.valid_until is distinct from old.valid_until
+           or new.notes is distinct from old.notes
+           or new.amount is distinct from old.amount
+           or new.once_off_subtotal is distinct from old.once_off_subtotal
+           or new.monthly_recurring_subtotal is distinct from old.monthly_recurring_subtotal
+           or new.yearly_recurring_subtotal is distinct from old.yearly_recurring_subtotal
+           or new.initial_subtotal is distinct from old.initial_subtotal
+           or new.discount is distinct from old.discount
+           or new.vat_rate is distinct from old.vat_rate
+           or new.vat_amount is distinct from old.vat_amount then
+            raise exception 'Only draft quotes can be edited. Create a new quote for changes.'
+                using errcode = '55000';
+        end if;
+    end if;
+
+    if old.invoice_id is not null
+       and new.invoice_id is distinct from old.invoice_id then
+        raise exception 'An invoice relationship already recorded on a quote cannot be changed.'
+            using errcode = '55000';
+    end if;
+
+    return new;
+end;
+$function$;
+
+revoke all on function public.guard_swayphics_quote_commercial_record()
+    from public, anon, authenticated, service_role;
+
+drop trigger if exists trg_guard_swayphics_quote_commercial_record
+    on public.quotes;
+create trigger trg_guard_swayphics_quote_commercial_record
+before update or delete on public.quotes
+for each row
+execute function public.guard_swayphics_quote_commercial_record();
+
 comment on column public.quotes.amount is
     'Initial amount due: once-off items plus the first monthly/yearly service periods, less the initial discount, plus quoted VAT.';
 comment on table public.quote_items is
