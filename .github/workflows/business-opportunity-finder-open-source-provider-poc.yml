@@ -250,7 +250,26 @@ jobs:
 
       - name: Collect provider logs on failure
         if: failure()
-        run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml logs --no-color
+        run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml logs --no-color || true
+
+      - name: Collect private-gateway Valkey diagnostics on failure
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          compose=(docker compose --project-name bof-private-gateway-ci --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml)
+          "${compose[@]}" ps --all
+          valkey_id="$("${compose[@]}" ps --all -q valkey)"
+          if [ -n "$valkey_id" ]; then
+            echo "::group::Valkey container logs"
+            docker logs --tail 100 "$valkey_id"
+            echo "::endgroup::"
+            echo "::group::Valkey healthcheck history"
+            docker inspect --format '{{json .State.Health}}' "$valkey_id"
+            echo "::endgroup::"
+          else
+            echo "Valkey container was not created."
+          fi
 
       - name: Stop and remove provider containers
         if: always()

@@ -464,7 +464,7 @@ const { spawnSync } = require("node:child_process");
         assert.match(iptablesAudit.stdout, /DOCKER-USER/);
         const nftablesAudit = runAudit("nftables");
         assert.equal(nftablesAudit.status, 0, nftablesAudit.stderr);
-        assert.match(nftablesAudit.stdout, /separate nftables table/);
+        assert.match(nftablesAudit.stdout, /administrator-owned nftables table/);
         const unknownAudit = runAudit("unknown");
         assert.equal(unknownAudit.status, 2);
         assert.match(unknownAudit.stderr, /could not identify/i);
