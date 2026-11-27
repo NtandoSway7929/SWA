@@ -136,6 +136,9 @@ jobs:
       - name: Test payment receipt email delivery
         run: node scripts/payment-receipt-delivery.test.cjs
 
+      - name: Test payment tools Sales & Billing navigation
+        run: node scripts/payment-tools-navigation.test.cjs
+
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
 
