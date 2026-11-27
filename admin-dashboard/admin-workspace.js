@@ -22074,16 +22074,22 @@ function simpleBars(items, color) {
         }
 
         async function refreshProposalVersions() {
-            const rows = await api(
-                "/rest/v1/lead_proposal_versions?select=*&proposal_id=eq." +
-                encodeURIComponent(proposal.id) +
-                "&order=version_number.desc"
-            );
-            state.leadProposalVersions = (state.leadProposalVersions || [])
-                .filter(function (item) {
-                    return String(item.proposal_id || "") !== String(proposal.id);
-                })
-                .concat(Array.isArray(rows) ? rows : []);
+            try {
+                const rows = await api(
+                    "/rest/v1/lead_proposal_versions?select=*&proposal_id=eq." +
+                    encodeURIComponent(proposal.id) +
+                    "&order=version_number.desc"
+                );
+                state.leadProposalVersions = (state.leadProposalVersions || [])
+                    .filter(function (item) {
+                        return String(item.proposal_id || "") !== String(proposal.id);
+                    })
+                    .concat(Array.isArray(rows) ? rows : []);
+                return true;
+            } catch (error) {
+                console.warn("Proposal was saved, but its revision history could not be refreshed:", error);
+                return false;
+            }
         }
 
         function updateProposalInState(updatedProposal) {
@@ -22145,13 +22151,14 @@ function simpleBars(items, color) {
                     }
 
                     updateProposalInState(updatedProposal);
-                    await refreshProposalVersions();
+                    const historyRefreshed = await refreshProposalVersions();
                     close();
                     renderView();
                     swayAlert(
                         "Draft saved as version " +
                         String(updatedProposal.current_version || "updated") +
-                        ". It has not been approved or sent."
+                        ". It has not been approved or sent." +
+                        (historyRefreshed ? "" : " Reload the lead profile to refresh its revision history.")
                     );
                 } catch (error) {
                     saveButton.disabled = false;
@@ -22268,12 +22275,13 @@ function simpleBars(items, color) {
                     }
 
                     updateProposalInState(updatedProposal);
-                    await refreshProposalVersions();
+                    const historyRefreshed = await refreshProposalVersions();
                     close();
                     swayAlert(
                         "Proposal version " +
                         String(updatedProposal.current_version || "") +
-                        " approved internally. It has not been sent."
+                        " approved internally. It has not been sent." +
+                        (historyRefreshed ? "" : " Reload the lead profile to refresh its revision history.")
                     );
                     renderView();
                 } catch (error) {
