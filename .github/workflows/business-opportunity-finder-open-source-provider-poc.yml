@@ -8,6 +8,8 @@ on:
       - "supabase/functions/_shared/business-assessment-open-source-provider.mjs"
       - "supabase/functions/_shared/business-assessment-evidence.mjs"
       - "scripts/business-assessment-open-source-provider.test.cjs"
+      - "scripts/business-assessment-open-source-provider.integration.cjs"
+      - "scripts/bof-open-source-provider-poc/**"
       - "docs/business-opportunity-finder-open-source-provider-poc.md"
       - ".github/workflows/business-opportunity-finder-open-source-provider-poc.yml"
   workflow_dispatch:
@@ -35,3 +37,66 @@ jobs:
 
       - name: Run isolated mocked tests
         run: node scripts/business-assessment-open-source-provider.test.cjs
+
+  live-docker-smoke:
+    name: Live SearXNG and Crawl4AI Docker smoke test
+    needs: adapter-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate ephemeral service credentials
+        shell: bash
+        run: |
+          echo "SEARXNG_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CRAWL4AI_API_TOKEN=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Start pinned local provider containers
+        run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml up --detach
+
+      - name: Wait for provider health endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 60); do
+            searx_ok=false
+            crawl_ok=false
+            if curl --fail --silent --show-error --location http://127.0.0.1:8080/ >/dev/null 2>&1; then
+              searx_ok=true
+            fi
+            if curl --fail --silent --show-error http://127.0.0.1:11235/health >/dev/null 2>&1; then
+              crawl_ok=true
+            fi
+            if [ "$searx_ok" = true ] && [ "$crawl_ok" = true ]; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          if [ "$ready" != true ]; then
+            docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml ps
+            docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml logs --no-color
+            exit 1
+          fi
+
+      - name: Run live provider integration smoke test
+        env:
+          SEARXNG_BASE_URL: http://127.0.0.1:8080
+          CRAWL4AI_BASE_URL: http://127.0.0.1:11235
+        run: node scripts/business-assessment-open-source-provider.integration.cjs
+
+      - name: Collect provider logs on failure
+        if: failure()
+        run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml logs --no-color
+
+      - name: Stop and remove provider containers
+        if: always()
+        run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml down --volumes --remove-orphans
