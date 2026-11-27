@@ -257,11 +257,12 @@ select extensions.throws_ok(
     'Paystack live payment is rejected'
 );
 select extensions.throws_ok(
-    $ select public.admin_cleanup_yoco_test_payment(
+    format(
+        'select public.admin_cleanup_yoco_test_payment(%L::uuid, %L, %L)',
         '10000000-0000-4000-8000-000000000012',
         'DELETE TEST PAYMENT 10000000-0000-4000-8000-000000000012',
         'Synthetic cleanup QA reason'
-    ) $,
+    ),
     'P0001',
     'Only Yoco test-mode payments are eligible. Paystack and manual payments are protected.',
     'manual payment is rejected'
