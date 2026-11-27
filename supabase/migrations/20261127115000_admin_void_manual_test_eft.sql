@@ -272,9 +272,11 @@ begin
         end if;
     end if;
 
-    if tg_op = 'UPDATE' and old.status = 'voided_test' then
-        raise exception 'Voided test payments are immutable and cannot be reactivated or edited.'
-            using errcode = '55000';
+    if tg_op = 'UPDATE' then
+        if old.status = 'voided_test' then
+            raise exception 'Voided test payments are immutable and cannot be reactivated or edited.'
+                using errcode = '55000';
+        end if;
     end if;
 
     if new.invoice_id is null then
