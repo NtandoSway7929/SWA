@@ -180,7 +180,7 @@ test("notification controls retain visible keyboard focus in light and dark them
   assert.match(workspaceCss, /\.sway-notification-open:focus-visible/);
   assert.match(workspaceCss, /\.sway-notification-item:focus-within/);
   assert.match(dashboardHtml, /body\.sway-dark-mode \.sway-notification-open:focus-visible/);
-  assert.match(dashboardHtml, /admin-workspace\.js\?v=20261127-payment-delete-financial-history-guard-1/);
+  assert.match(dashboardHtml, /admin-workspace\.js\?v=20261128-lead-proposal-draft-saving-1/);
 });
 
 console.log("Admin notification navigation regression checks passed.");
