@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const migration = read("supabase/migrations/202611210001_payment_receipt_email_delivery.sql");
 const trackingMigration = read("supabase/migrations/202611220003_payment_receipt_delivery_tracking.sql");
+const cleanupMigration = read("supabase/migrations/20261127110000_admin_yoco_test_payment_cleanup.sql");
 const manualMigration = read("supabase/migrations/202611210002_admin_manual_payment_recording.sql");
 const manualIndexes = read("supabase/migrations/202611220001_manual_payment_request_indexes.sql");
 const clientSnapshotMigration = read("supabase/migrations/202611220002_payment_receipt_client_snapshot.sql");
@@ -96,4 +97,18 @@ assert.match(html, /payment-receipts\.js/);
 assert.match(config, /\[functions\.deliver-payment-receipt\][\s\S]*?verify_jwt = false/);
 assert.match(config, /\[functions\.paystack-payment-webhook\][\s\S]*?verify_jwt = false/);
 
-console.log("Payment receipt delivery and manual payment recording source checks passed.");
+assert.match(cleanupMigration, /create or replace function public\.admin_list_yoco_test_payment_cleanup_candidates/);
+assert.match(cleanupMigration, /create or replace function public\.admin_cleanup_yoco_test_payment/);
+assert.match(cleanupMigration, /pa\.environment = 'test'/);
+assert.match(cleanupMigration, /e\.signature_verified is true/);
+assert.match(cleanupMigration, /allow_yoco_test_payment_cleanup/);
+assert.match(cleanupMigration, /yoco_test_payment_cleanup_audit/);
+assert.match(dashboard, /admin_list_yoco_test_payment_cleanup_candidates/);
+assert.match(dashboard, /admin_cleanup_yoco_test_payment/);
+assert.match(dashboard, /data-pr-cleanup-id/);
+assert.match(dashboard, /DELETE TEST PAYMENT/);
+assert.match(dashboard, /p_reason/);
+assert.match(dashboard, /yoco-test-payment-cleanup/);
+assert.match(html, /payment-receipts\.js\?v=20261127-yoco-test-cleanup-1/);
+
+console.log("Payment receipt delivery, manual payment recording and Yoco test cleanup source checks passed.");
