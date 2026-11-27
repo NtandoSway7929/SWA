@@ -134,7 +134,8 @@ jobs:
 
       - name: Run quote pricing and invoice conversion database tests
         working-directory: /tmp/quote-pricing-engine-project
-        run: supabase test db supabase/tests/quote-pricing-engine.test.sql
+        run: |
+          supabase test db supabase/tests/quote-pricing-engine.test.sql
           if [ -f supabase/tests/proposal-review-workflow.test.sql ]; then
             supabase test db supabase/tests/proposal-review-workflow.test.sql
           fi
