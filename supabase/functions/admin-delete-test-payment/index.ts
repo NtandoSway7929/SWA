@@ -116,7 +116,7 @@ Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   if (origin && origin !== ORIGIN) return json({ ok: false, error: "Origin not allowed." }, 403);
 
-  const token = (req.headers.get("authorization") || "").replace(/^Bearer\\s+/i, "").trim();
+  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return json({ ok: false, error: "Owner session required." }, 401);
 
   let body: Record<string, unknown>;
