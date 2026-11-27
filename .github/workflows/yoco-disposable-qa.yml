@@ -81,7 +81,7 @@ jobs:
             supabase/functions/yoco-payment-webhook/index.ts \
             supabase/functions/get-payment-status/index.ts \
             supabase/functions/reconcile-payment/index.ts \
-            supabase/functions/bank-transfer/index.ts \
+            supabase/functions/bank-transfer/index.ts
 
       - name: Run Yoco Deno tests
         env:
