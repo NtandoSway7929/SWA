@@ -25,7 +25,10 @@ test("only the 30 audited Standard Lead records enter the consent-required cohor
 test("consent evidence is auditable and cannot be directly edited through ordinary lead updates", () => {
   assert.match(migration, /create table if not exists public\.lead_email_consent_events/i);
   assert.match(migration, /create or replace function public\.record_swayphics_lead_email_consent/i);
+  assert.match(migration, /create or replace function public\.record_swayphics_lead_email_request_sent/i);
+  assert.match(migration, /grant execute on function public\.record_swayphics_lead_email_request_sent\(uuid, text, text, uuid\)\s+to service_role/i);
   assert.match(migration, /create or replace function public\.guard_lead_email_consent_fields/i);
+  assert.match(migration, /do \$\$[\s\S]*?\$\$;\s+commit;/i);
   assert.match(migration, /Use the Swayphics email-consent workflow/i);
   assert.match(migration, /for select to authenticated[\s\S]*public\.is_swayphics_admin\(\)/i);
 });
@@ -53,5 +56,8 @@ test("the send-email Edge Function enforces consent on the server and records a 
   assert.match(sendEmail, /email_consent_status !== "granted"/);
   assert.match(sendEmail, /email_consent_status !== "not_requested"/);
   assert.match(sendEmail, /email_consent_recorded/);
-  assert.match(sendEmail, /lead_email_consent_events/);
+  assert.match(sendEmail, /record_swayphics_lead_email_request_sent/);
+  assert.match(sendEmail, /one-time request for permission only/);
+  assert.match(sendEmail, /consent to receive occasional business-to-business marketing emails/);
+  assert.doesNotMatch(sendEmail, /from\("lead_email_consent_events"\)/);
 });
