@@ -68,6 +68,7 @@ function summarise(items) {
     const total = items.length;
     const succeeded = items.filter((item) => item.success).length;
     const identityCue = items.filter((item) => item.titleIdentityCue || item.contentIdentityCue).length;
+    const usableBusinessPages = items.filter((item) => item.usableBusinessPage).length;
     const wrongDomain = items.filter((item) => item.finalDomainMatches === false).length;
     return {
         total,
@@ -76,6 +77,8 @@ function summarise(items) {
         titleIdentityCue: items.filter((item) => item.titleIdentityCue).length,
         contentIdentityCue: items.filter((item) => item.contentIdentityCue).length,
         anyIdentityCue: identityCue,
+        usableBusinessPages,
+        usableBusinessPageRate: total ? Number((usableBusinessPages / total).toFixed(3)) : 0,
         finalDomainMismatch: wrongDomain
     };
 }
@@ -113,29 +116,36 @@ function summarise(items) {
 
     const report = rawResults.map(({ testCase, result }) => {
         const finalHost = hostname(result.final_url);
+        const finalDomainMatches = finalHost
+            ? hostMatchesDomain(finalHost, testCase.expectedDomain)
+            : false;
+        const titleIdentityCue = containsIdentityCue(result.title, testCase.identityTerms);
+        const contentIdentityCue = containsIdentityCue(result.text, testCase.identityTerms);
+        const textCharacters = String(result.text || "").length;
+        const success = result.success === true;
         return {
             dataset: testCase.dataset,
             business: testCase.business,
             expectedDomain: testCase.expectedDomain,
             requestedUrl: testCase.url,
             finalHost,
-            finalDomainMatches: finalHost
-                ? hostMatchesDomain(finalHost, testCase.expectedDomain)
-                : false,
-            success: result.success === true,
+            finalDomainMatches,
+            success,
+            usableBusinessPage: success && finalDomainMatches &&
+                (titleIdentityCue || contentIdentityCue) && textCharacters >= 150,
             errorCode: result.error_code || null,
             statusCode: result.status_code ?? null,
             title: String(result.title || "").slice(0, 180),
-            titleIdentityCue: containsIdentityCue(result.title, testCase.identityTerms),
-            contentIdentityCue: containsIdentityCue(result.text, testCase.identityTerms),
+            titleIdentityCue,
+            contentIdentityCue,
             descriptionPresent: Boolean(String(result.description || "").trim()),
-            textCharacters: String(result.text || "").length,
+            textCharacters,
             extractedLinkCount: Array.isArray(result.links) ? result.links.length : 0
         };
     });
 
     const evaluated = {
-        benchmarkVersion: "bof-public-page-fetch-v1",
+        benchmarkVersion: "bof-public-page-fetch-v2",
         scope: "Five independently verified Pretoria business websites; public URLs only; no assessment answers, respondent contact details or customer-submitted destinations.",
         provider: "Crawl4AI through the isolated Swayphics adapter",
         batchSizes: [3, 2],
@@ -157,6 +167,7 @@ function summarise(items) {
             item.textCharacters + " | " +
             (item.titleIdentityCue ? "Yes" : "No") + " | " +
             (item.contentIdentityCue ? "Yes" : "No") + " | " +
+            (item.usableBusinessPage ? "Yes" : "No") + " | " +
             (item.errorCode || "—") + " |"
         ).join("\n");
         const summary =
