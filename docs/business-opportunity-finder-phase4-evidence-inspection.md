@@ -1,6 +1,6 @@
 # Business Opportunity Finder — Phase 4 evidence inspection
 
-**Status:** Core implementation is in progress on PR #302's isolated feature branch. The public consent path, private inspection tables migration draft, admin-only TinyFish Search/Fetch Edge Function and source-evidence viewer are implemented. Feature tests and Deno type-check pass. No production schema or function deployment has occurred.  
+**Status:** Core implementation is on PR #302's isolated feature branch. The current disposable Supabase workflow successfully applied the evidence migration and passed all 32 database/RLS assertions, including the mandatory nonblank written-agreement reference. The current BOF site checks pass (preview tests, Edge Function type-check and inspection contract tests). The overall site workflow remains red on the separate payment-receipt email assertion. No production schema or function deployment has occurred.  
 **Branch baseline:** `feat/business-opportunity-finder-phase1-spec` after reconciliation with `main` on 26 November 2026.  
 **Scope:** Read-only inspection of public business information. No public report retrieval, public-page scraping from the browser, or automatic lead conversion is introduced by this phase.
 
