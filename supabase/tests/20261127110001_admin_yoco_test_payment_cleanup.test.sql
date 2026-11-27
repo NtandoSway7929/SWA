@@ -5,7 +5,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(21);
+select extensions.plan(27);
 
 select extensions.has_function(
     'public', 'admin_cleanup_yoco_test_payment',
@@ -56,6 +56,36 @@ select extensions.ok(
         'select'
     ),
     'authenticated users cannot read the private cleanup audit table directly'
+);
+
+select extensions.has_function(
+    'public', 'admin_list_yoco_test_payment_cleanup_candidates',
+    array[]::text[],
+    'owner-only Yoco test cleanup candidate listing RPC exists'
+);
+select extensions.ok(
+    (select prosecdef and proconfig @> array['search_path=""'] from pg_proc
+      where oid='public.admin_list_yoco_test_payment_cleanup_candidates()'::regprocedure),
+    'candidate listing RPC is SECURITY DEFINER with an empty search_path'
+);
+select extensions.ok(
+    has_function_privilege(
+        'authenticated',
+        'public.admin_list_yoco_test_payment_cleanup_candidates()',
+        'execute'
+    )
+    and not has_function_privilege(
+        'anon',
+        'public.admin_list_yoco_test_payment_cleanup_candidates()',
+        'execute'
+    )
+    and not exists (
+        select 1 from pg_proc p,
+             lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+         where p.oid='public.admin_list_yoco_test_payment_cleanup_candidates()'::regprocedure
+           and acl.grantee=0 and acl.privilege_type='EXECUTE'
+    ),
+    'candidate listing is executable only through authenticated owner-checked access'
 );
 
 insert into auth.users (
@@ -188,6 +218,12 @@ select extensions.throws_ok(
     'Active Swayphics owner access is required.',
     'non-owner cannot clean up a Yoco test payment'
 );
+select extensions.throws_ok(
+    'select public.admin_list_yoco_test_payment_cleanup_candidates()',
+    '42501',
+    'Active Swayphics owner access is required.',
+    'non-owner cannot list Yoco test cleanup candidates'
+);
 
 -- Owner must type the exact payment ID.
 select set_config(
@@ -221,14 +257,23 @@ select extensions.throws_ok(
     'Paystack live payment is rejected'
 );
 select extensions.throws_ok(
-    $$ select public.admin_cleanup_yoco_test_payment(
+    $ select public.admin_cleanup_yoco_test_payment(
         '10000000-0000-4000-8000-000000000012',
         'DELETE TEST PAYMENT 10000000-0000-4000-8000-000000000012',
         'Synthetic cleanup QA reason'
-    ) $$,
+    ) $,
     'P0001',
     'Only Yoco test-mode payments are eligible. Paystack and manual payments are protected.',
     'manual payment is rejected'
+);
+select extensions.ok(
+    jsonb_array_length(
+        public.admin_list_yoco_test_payment_cleanup_candidates()->'payments'
+    ) = 1
+    and (
+        public.admin_list_yoco_test_payment_cleanup_candidates()->'payments'->0->>'payment_id'
+    ) = current_setting('test.yoco_cleanup_payment_id'),
+    'owner candidate listing includes only the fully verified Yoco test payment'
 );
 
 -- Successful cleanup is owner-only, transactional, and preserves the
@@ -242,6 +287,12 @@ select extensions.ok(
         )->>'ok'
     ) = 'true',
     'owner can clean up a fully verified Yoco test payment'
+);
+select extensions.ok(
+    jsonb_array_length(
+        public.admin_list_yoco_test_payment_cleanup_candidates()->'payments'
+    ) = 0,
+    'candidate listing no longer shows the cleaned-up Yoco test payment'
 );
 reset role;
 
