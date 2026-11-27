@@ -656,7 +656,7 @@
         const message = element("p", "bfa-inspection-message");
         section.appendChild(message);
         const latest = await api(
-            "/rest/v1/business_assessment_inspections?select=id,status,inspection_version,requested_sources,failure_code,failure_summary,queued_at,started_at,completed_at,created_at&assessment_id=eq." +
+            "/rest/v1/business_assessment_inspections?select=id,status,inspection_version,requested_sources,provider_agreement_reference,failure_code,failure_summary,queued_at,started_at,completed_at,created_at&assessment_id=eq." +
             encodeURIComponent(item.id) + "&order=created_at.desc&limit=1"
         );
         const run = Array.isArray(latest) && latest.length ? latest[0] : null;
@@ -676,6 +676,8 @@
             runSummary.appendChild(element("p", "bfa-inspection-meta",
                 "Inspection version: " + String(run.inspection_version || "Unknown") +
                 " · Started: " + inspectionTimestamp(run.started_at || run.queued_at)));
+            runSummary.appendChild(element("p", "bfa-inspection-meta",
+                "Provider agreement reference: " + String(run.provider_agreement_reference || "Not recorded")));
             if (run.failure_summary) runSummary.appendChild(element("p", "bfa-inspection-notice", run.failure_summary));
             if (run.failure_code) runSummary.appendChild(element("p", "bfa-inspection-meta", "Run limitation: " + run.failure_code));
             section.appendChild(runSummary);
