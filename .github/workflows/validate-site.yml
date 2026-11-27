@@ -139,6 +139,9 @@ jobs:
       - name: Test payment tools Sales & Billing navigation
         run: node scripts/payment-tools-navigation.test.cjs
 
+      - name: Test owner-controlled test payment deletion
+        run: node scripts/test-payment-deletion.test.cjs
+
       - name: Test lead WhatsApp contact links
         run: node scripts/lead-whatsapp.test.cjs
 
