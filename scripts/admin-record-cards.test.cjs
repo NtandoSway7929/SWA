@@ -141,6 +141,13 @@ assert.match(clientDeleteHandler, /state\.payments\.filter/);
 assert.match(clientDeleteHandler, /clientInvoices\.length/);
 assert.match(clientDeleteHandler, /clientPayments\.length/);
 assert.match(clientDeleteHandler, /archive the client/i);
+assert.match(clientDeleteHandler, /if \(type === "payments"\)/,
+    "payment deletion must use a dedicated financial-history guard");
+assert.match(clientDeleteHandler, /Only the Swayphics owner can manage payment records/);
+assert.match(clientDeleteHandler, /payment_receipts/);
+assert.match(clientDeleteHandler, /bank_transfer_submissions/);
+assert.match(clientDeleteHandler, /Permanent payment deletion is disabled unless the record is explicitly verified/);
+assert.match(clientDeleteHandler, /No payment data was changed/);
 assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\)/,
     "client deletion must not cascade-delete invoice history");
 assert.ok(clientDeleteHandler.indexOf("clientInvoices.length") < clientDeleteHandler.indexOf("swayConfirm(confirmMessage)"),
