@@ -29,6 +29,8 @@ assert.match(adminScript, /email_consent_action = "marketing"/,
     "required lead consent must be passed through the existing sender");
 assert.match(adminScript, /admin_revoke_swayphics_quote_review/,
     "failed delivery must revoke the unissued review link");
+assert.match(adminScript, /Revoke link/,
+    "admins must be able to revoke an outstanding client review link");
 assert.match(adminScript, /quote_review_responses\?select=/,
     "the admin workspace must retrieve recorded client decisions");
 assert.match(adminScript, /View client response/,
