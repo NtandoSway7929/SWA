@@ -187,8 +187,8 @@
         await loadCleanup();
         cleanupStatus("Cleanup complete. Audit reference: " + (result.audit_id || "recorded") + ".",false);
       } catch (error) {
-        cleanupStatus(error.message || "The test payment could not be cleaned up.",true);
         await loadCleanup();
+        cleanupStatus(error.message || "The test payment could not be cleaned up.",true);
       } finally {
         cleanupBusy = false;
       }
