@@ -135,4 +135,24 @@ assert.match(css, /\.sway-lead-profile-modal[\s\S]*?max-height/);
 assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-lead-profile/);
 assert.match(css, /@media \(max-width: 680px\)/);
 
-console.log("Admin lead-card and profile contract tests passed.");
+const proposalReviewStart = workspace.indexOf("    function openLeadProposalReview(");
+assert.ok(proposalReviewStart >= 0, "the lead proposal review function must exist");
+const proposalReviewEnd = workspace.indexOf("\n    function ", proposalReviewStart + 1);
+assert.ok(proposalReviewEnd > proposalReviewStart, "the lead proposal review function must have an end marker");
+const proposalReview = workspace.slice(proposalReviewStart, proposalReviewEnd);
+assert.match(proposalReview, /data-proposal-save-draft=/,
+    "proposal review must expose a dedicated save-draft action");
+assert.match(proposalReview, /\[data-proposal-save-draft\]/,
+    "the save-draft action must have a click handler");
+assert.match(proposalReview, /status:\s*"draft"/,
+    "saving must retain the proposal in draft status");
+assert.match(proposalReview, /approved_by:\s*null[\s\S]*approved_at:\s*null/,
+    "saving a draft must clear internal approval metadata");
+assert.match(proposalReview, /data-proposal-close/,
+    "the proposal editor must provide an explicit close-without-saving action");
+assert.match(proposalReview, /isEditableDraft/,
+    "only draft proposals may be edited or approved");
+assert.match(proposalReview, /Only a saved draft can be approved/,
+    "approval must be blocked for a non-draft proposal");
+
+console.log("Admin lead-card and proposal draft tests passed.");
