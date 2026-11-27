@@ -24981,7 +24981,7 @@ function simpleBars(items, color) {
         }
         const expected = "TEST PAYMENT " + paymentId;
         const confirmation = window.prompt(
-            "Only classify this payment as test data if it was created for testing and no genuine customer funds were received. This action excludes it from revenue reporting. Type exactly:\\n" + expected
+            "Only classify this payment as test data if it was created for testing and no genuine customer funds were received. This action excludes it from revenue reporting. Type exactly:\n" + expected
         );
         if (confirmation === null) return;
         if (confirmation !== expected) {
@@ -25006,7 +25006,7 @@ function simpleBars(items, color) {
         }
         const expected = "DELETE TEST PAYMENT " + paymentId;
         const confirmation = window.prompt(
-            "This permanently deletes the test payment and its linked receipt and receipt-delivery records. Protected provider, refund, transfer-proof and reconciliation records cannot be deleted. Type exactly:\\n" + expected
+            "This permanently deletes the test payment and its linked receipt and receipt-delivery records. Protected provider, refund, transfer-proof and reconciliation records cannot be deleted. Type exactly:\n" + expected
         );
         if (confirmation === null) return;
         if (confirmation !== expected) {
