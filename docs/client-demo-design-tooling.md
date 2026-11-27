@@ -71,7 +71,7 @@ Official references:
 4. Design around the client's conversion goal (for example, an enquiry, booking, call or WhatsApp conversation). Keep calls to action specific and make important interactions functional.
 5. Use credible client assets or suitable stock imagery. Do not fabricate reviews, awards, prices, addresses, business hours, contact details or integrations. Mark unknown launch details for confirmation rather than presenting them as fact.
 6. Keep each demo isolated from the production website, admin dashboard, InnerMe, backend functions and Supabase data. No production deployment or outbound contact is part of creating a demo.
-7. Inspect mobile and desktop layouts, semantic structure, keyboard access, contrast, reduced-motion behavior, broken links/assets and JavaScript console errors. Run the repository's relevant validation checks and report what was actually tested.
+7. Follow the **Browser verification and existing CI** procedure below. Inspect mobile and desktop layouts, semantic structure, keyboard access, contrast, reduced-motion behavior, broken links/assets and JavaScript console errors. Use only tests that cover this demo, and report the exact checks run.
 8. Hand off the demo with a brief summary of the prospect's conversion gap, key design decisions, demo path, verified facts/remaining confirmations and test results.
 
 ## Browser verification and existing CI
