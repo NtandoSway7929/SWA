@@ -1,0 +1,14 @@
+use_default_settings: true
+
+search:
+  safe_search: 2
+  formats:
+    - html
+    - json
+
+server:
+  # This relaxed limiter is only for the short-lived local/CI proof of concept.
+  # Production must restore and correctly configure request limiting.
+  limiter: false
+  image_proxy: false
+  secret_key: "overridden-by-SEARXNG_SECRET"
