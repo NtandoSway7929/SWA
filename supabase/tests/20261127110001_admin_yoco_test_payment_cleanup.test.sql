@@ -5,7 +5,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(20);
+select extensions.plan(21);
 
 select extensions.has_function(
     'public', 'admin_cleanup_yoco_test_payment',
@@ -256,17 +256,19 @@ select extensions.ok(
 );
 select extensions.ok(
     not exists (
-        select 1 from public.payments p
-        join public.payment_attempts pa on pa.payment_id=p.id
-        where pa.idempotency_key='yoco-cleanup-qa-idempotency-0001'
+        select 1 from public.payments
+         where id=current_setting('test.yoco_cleanup_payment_id')::uuid
     ),
     'Yoco test payment ledger row is removed'
 );
 select extensions.ok(
     not exists (
         select 1 from public.payment_receipts pr
-        join public.payments p on p.id=pr.payment_id
-         where p.id=current_setting('test.yoco_cleanup_payment_id')::uuid
+         where pr.receipt_number = (
+             select a.receipt_number
+               from innerme_private.yoco_test_payment_cleanup_audit a
+              where a.original_payment_id=current_setting('test.yoco_cleanup_payment_id')::uuid
+         )
     ),
     'issued receipt row is removed only after its immutable snapshot is archived'
 );
@@ -306,6 +308,13 @@ select extensions.ok(
            and jsonb_array_length(a.webhook_event_snapshots) > 0
     ),
     'private cleanup audit retains payment, receipt, and webhook snapshots'
+);
+select extensions.throws_ok(
+    $ delete from innerme_private.yoco_test_payment_cleanup_audit
+        where original_payment_id=current_setting('test.yoco_cleanup_payment_id')::uuid $,
+    '55000',
+    'Yoco test-payment cleanup audit records are immutable.',
+    'cleanup audit records cannot be deleted'
 );
 
 select * from extensions.finish();
