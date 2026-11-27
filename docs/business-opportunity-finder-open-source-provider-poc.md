@@ -121,6 +121,18 @@ Charis remains an identity-review case. Its current site is `charisbeauty.co.za`
 
 These results are limited to five national brands and five curated Pretoria businesses, a single run per query set and the configured SearXNG engine mix at the time of testing. They are a search-discovery pilot, not a representative market accuracy estimate, a BOF lead-market coverage result or proof of identity-matching accuracy.
 
+### Public website retrieval benchmark
+
+The first live five-site Crawl4AI retrieval benchmark completed in [GitHub Actions run 18](https://github.com/NtandoSway7929/SWA/actions/runs/45921770711). All five requested URLs returned response content and stayed on their expected domains. Four returned HTTP 200 and contained the expected business-name cue in both the title and extracted text. Huba Fleurs returned HTTP 302, title `Account Suspended`, only 106 characters of text and no Huba Fleurs identity cue.
+
+The initial adapter version treated a provider response as successful whenever Crawl4AI set `success: true` and returned non-empty text. That condition was too permissive: a hosting suspension page was counted as a successful extraction even though it was not useful business evidence. Direct inspection of https://hubafleurs.online/ on 27 November 2026 also redirected to `/cgi-sys/suspendedpage.cgi` and returned “Account Suspended” and “This Account has been suspended.”
+
+The isolated adapter contract has therefore been tightened: a Crawl4AI item is successful only when it has readable text and its reported HTTP status is either absent or in the 2xx range. A non-2xx status is returned as `http_status_<status>`; it is not silently accepted as an extracted website. The mocked test now includes the observed 302 suspension-style response. The page-retrieval benchmark also reports a separate basic usable-page diagnostic requiring a successful fetch, expected domain, a business-name cue in the title or text and at least 150 extracted characters.
+
+The run 18 output is a baseline observation from before this classification correction. The corrected adapter and benchmark require a subsequent CI run before their new success counts can be treated as verified. The five-site set remains a small diagnostic pilot, not a representative sample of South African business websites or proof of identity matching.
+
+
+
 The SearXNG test config disables the request limiter only to keep the ephemeral test deterministic. It is not a production configuration. Production must restore rate limiting, restrict network access, configure abuse controls and review all external search engines.
 
 The GitHub Actions workflow runs both the mocked adapter tests and this Docker smoke test on the isolated POC branch.
@@ -162,6 +174,7 @@ The mocked adapter test checks:
 - HTTPS service URL requirement outside loopback.
 - Missing Crawl4AI token handling.
 - SearXNG JSON-disabled error mapping.
+- Non-2xx Crawl4AI page responses are not counted as successful extractions.
 
 The Docker integration test checks actual SearXNG JSON API compatibility and actual Crawl4AI retrieval of the reserved `example.com` page. The search benchmark measures expected official-domain rank for five large national brands and five locally operated/independent Pretoria businesses. The Pretoria set is tested using one primary and two alternate queries per business; primary-query and best-across-query metrics are kept separate, and candidate alias domains are surfaced for review without being counted as official-domain hits. A zero-result SearXNG response is reported as a discovery-quality warning rather than proof of useful search coverage.
 
