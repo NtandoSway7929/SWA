@@ -65,7 +65,7 @@ services:
     restart: unless-stopped
 
   valkey:
-    image: ${VALKEY_IMAGE:?Set VALKEY_IMAGE to a reviewed version and full sha256-pinned image reference}
+    image: valkey/valkey:9.2.1-alpine@sha256:3ad5a213cb1bc2fd4a113c89b6248a88655a6bf1dda69519d04e03cd3e3d2742
     command:
       - valkey-server
       - --protected-mode
@@ -97,7 +97,7 @@ services:
           pids: 128
 
   gateway:
-    image: ${CADDY_IMAGE:?Set CADDY_IMAGE to a reviewed version and full sha256-pinned image reference}
+    image: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
     volumes:
       - ./gateway:/etc/caddy:ro
     depends_on:
@@ -127,7 +127,7 @@ services:
           pids: 128
 
   cloudflared:
-    image: ${CLOUDFLARED_IMAGE:?Set CLOUDFLARED_IMAGE to a reviewed version and full sha256-pinned image reference}
+    image: cloudflare/cloudflared:2026.11.2@sha256:55c7e3e8d89d5e8d20b75a82f3602cbf98e06db406e73e282073cfdc5a9a3af6
     command:
       - tunnel
       - --no-autoupdate

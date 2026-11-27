@@ -207,6 +207,20 @@ Use one dedicated token for the Swayphics BOF Edge Function, tagged for the prod
 
 **Isolated adapter integration implemented:** the POC adapter sends `CF-Access-Client-Id` and `CF-Access-Client-Secret` on both the SearXNG `/search` request and the Crawl4AI `/crawl` request. The Crawl4AI bearer token remains a separate `Authorization` header on `/crawl` only. Access credentials are never included in the JSON crawl body. The adapter rejects non-loopback service endpoints unless both Access credentials are configured; one-sided configuration is rejected. HTTP loopback endpoints remain available for local Docker tests without Cloudflare credentials. The live integration and benchmark scripts accept the two server-side environment variables. This completes adapter plumbing only: no Cloudflare service token, hostname, tunnel, VM or production secret has been created, and no production Edge Function has been changed.
 
+### Immutable gateway image pins — checked 28 November 2026
+
+The private-gateway Compose file now uses fixed multi-platform image index digests:
+
+| Component | Image reference | Publisher evidence |
+|---|---|---|
+| Caddy | `caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0` | [Docker Official Image tag details](https://hub.docker.com/layers/library/caddy/2.11.9-alpine/) |
+| Valkey | `valkey/valkey:9.2.1-alpine@sha256:3ad5a213cb1bc2fd4a113c89b6248a88655a6bf1dda69519d04e03cd3e3d2742` | [Valkey Docker Hub image details](https://hub.docker.com/layers/valkey/valkey/9.2.1-alpine/) |
+| cloudflared | `cloudflare/cloudflared:2026.11.2@sha256:55c7e3e8d89d5e8d20b75a82f3602cbf98e06db406e73e282073cfdc5a9a3af6` | [Cloudflare Docker Hub image details](https://hub.docker.com/layers/cloudflare/cloudflared/2026.11.2/) |
+
+The Valkey 9.2.1 upstream release is dated 25 November 2026. Cloudflare's 2026.11.2 release is dated 23 November 2026. The Docker Hub sources identify the digests above as multi-platform index digests; the deployment can select the matching architecture without floating tags. These pins improve reproducibility but do not replace vulnerability monitoring or future security updates.
+
+The Compose deployment no longer needs Caddy, Valkey or cloudflared image variables in its private `.env` file. Before upgrading any pin, review the upstream release notes, confirm the new registry index digest, run the POC CI validation and retain an easy rollback to the previous digest.
+
 ### Isolated private-gateway deployment template — created, not deployed
 
 A separate Compose definition now exists at `scripts/bof-open-source-provider-poc/private-gateway/compose.yml`. It is deliberately separate from the loopback-only CI Compose file.
@@ -223,7 +237,7 @@ The Caddyfile accepts only `GET /search` and `POST /crawl`, and requires the Clo
 
 SearXNG's deployment settings enable JSON and its limiter. Valkey is reachable only on the internal search network and is configured as an ephemeral, memory-bounded limiter store. The limiter trusts only the fixed Caddy address `10.77.10.2/32`; the Caddy address and `limiter.toml` must be kept in sync.
 
-The Cloudflare Tunnel connector uses a remotely managed tunnel token mounted from a separate protected file via `--token-file`. The token is distinct from the Cloudflare Access service token. The example environment file contains no actual credentials. Caddy, Valkey and cloudflared image references are intentionally required as environment variables and must be filled with reviewed, full-digest-pinned references before Compose will start; no unreviewed image digest has been invented.
+The Cloudflare Tunnel connector uses a remotely managed tunnel token mounted from a separate protected file via `--token-file`. The token is distinct from the Cloudflare Access service token. The example environment file contains no actual credentials. Caddy, Valkey and cloudflared are now pinned directly in Compose to the publisher-visible full multi-platform index digests listed above. No image variables or floating image tags are required.
 
 Before using this template, check that the three fixed Docker subnets (`10.77.10.0/24`, `10.77.20.0/24`, `10.77.30.0/24`) do not overlap with host, VPN or existing Docker networks. Change the Compose IPAM entries, Caddy address and limiter trusted-proxy entry together if a different subnet plan is required.
 

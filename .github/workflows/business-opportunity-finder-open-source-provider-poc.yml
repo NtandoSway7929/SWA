@@ -47,14 +47,10 @@ jobs:
           token_file="$(mktemp)"
           trap 'rm -f "$token_file"' EXIT
           : > "$token_file"
-          digest_stub="$(printf 'a%.0s' {1..64})"
           env \
             SEARXNG_SECRET=ci-placeholder-only \
             CRAWL4AI_API_TOKEN=ci-placeholder-only \
             BOF_GATEWAY_PUBLIC_URL=https://bof-inspect.swayphics.co.za \
-            CADDY_IMAGE="caddy:2.11.9-alpine@sha256:$digest_stub" \
-            VALKEY_IMAGE="valkey/valkey:9.2.1-alpine@sha256:$digest_stub" \
-            CLOUDFLARED_IMAGE="cloudflare/cloudflared:2026.11.2@sha256:$digest_stub" \
             CLOUDFLARED_TUNNEL_TOKEN_FILE="$token_file" \
             docker compose --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml config --quiet
           docker run --rm --network none --entrypoint caddy \
