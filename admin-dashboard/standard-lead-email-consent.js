@@ -76,6 +76,7 @@
   function statusText(status) {
     return ({
       not_requested: "Email consent not requested",
+      sending: "Permission request sending · do not retry",
       requested: "Permission requested · awaiting response",
       granted: "Email consent recorded",
       declined: "Email marketing declined",
@@ -95,7 +96,9 @@
 
       emailButton.textContent = lead.email_consent_status === "not_requested"
         ? "Request consent"
-        : lead.email_consent_status === "requested"
+        : lead.email_consent_status === "sending"
+          ? "Request in progress"
+          : lead.email_consent_status === "requested"
           ? "Awaiting consent"
           : lead.email_consent_status === "granted"
             ? "Email · consented"
@@ -284,6 +287,8 @@
     const status = lead.email_consent_status;
     if (status === "not_requested") {
       openConsentRequest(lead);
+    } else if (status === "sending") {
+      window.alert("The permission request is being sent or its result needs reconciliation. Do not send another request until the Swayphics Mail result is checked.");
     } else if (status === "requested") {
       window.alert("The one-time permission request has already been sent. Wait for an explicit response and use Record response to capture it. Do not send another request.");
     } else if (status === "granted") {
