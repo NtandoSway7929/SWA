@@ -124,7 +124,18 @@
     if (renderTimer) return;
     renderTimer = window.setTimeout(function () {
       renderTimer = null;
-      renderActions();
+      var missingQuote = Array.prototype.some.call(
+        document.querySelectorAll('article[data-ai-record^="quotes:"]'),
+        function (card) {
+          var id = quoteIdFromCard(card);
+          return id && !quoteRows.has(id);
+        }
+      );
+      if (missingQuote) {
+        refreshQuoteState().then(renderActions).catch(function () { renderActions(); });
+      } else {
+        renderActions();
+      }
     }, 180);
   }
 
@@ -235,7 +246,11 @@
         await window.swayphicsAdminSessionReady;
       }
       if (!adminToken()) return;
-      await refreshQuoteState();
+      try {
+        await refreshQuoteState();
+      } catch (loadError) {
+        console.warn("Proposal quote state could not be loaded yet:", loadError);
+      }
       renderActions();
       observer = new MutationObserver(scheduleRender);
       observer.observe(document.body, { childList: true, subtree: true });
