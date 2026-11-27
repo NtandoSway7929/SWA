@@ -277,6 +277,14 @@ These are names for a future server-side integration only. No production secrets
 
 Service base URLs must use HTTPS. HTTP is accepted only for loopback-only local tests.
 
+### Cloudflare Access adapter contract
+
+- Both `searchBaseUrl` and `crawlBaseUrl` must use the same protected gateway origin for the proposed single-gateway deployment.
+- Any non-loopback service endpoint requires both `CLOUDFLARE_ACCESS_CLIENT_ID` and `CLOUDFLARE_ACCESS_CLIENT_SECRET`; supplying only one is rejected at adapter construction.
+- The adapter attaches both Access headers to each gateway request. The Crawl4AI bearer token is sent separately on `/crawl` only.
+- HTTP loopback endpoints are accepted without Access credentials only for local Docker tests. This is not a production authentication mode.
+- Adapter tests verify forwarding and that the Access credentials are absent from the Crawl4AI JSON body. A staging test must still verify denial of missing, incorrect and expired credentials, plus the gateway/service logging configuration.
+
 ## Hosting and security checks still required
 
 1. Choose hosting for both services and confirm that the Supabase Edge Function can reach them securely.
