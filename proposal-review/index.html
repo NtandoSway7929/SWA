@@ -328,7 +328,7 @@
         var note = String(el("response-message").value || "").trim();
         if (name.length < 2) {
           el("respondent-name").focus();
-          setState("Your name is required", "Enter your full name before submitting your response.");
+          window.alert("Enter your full name before submitting your response.");
           return;
         }
         if (decision === "accepted" && !el("accept-confirmation").checked) {
