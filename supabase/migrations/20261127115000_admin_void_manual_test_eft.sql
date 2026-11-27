@@ -123,14 +123,14 @@ begin
        and current_setting('innerme_private.allow_manual_test_eft_void', true) = 'on'
        and auth.uid() is not null
        and coalesce(public.is_swayphics_owner(), false)
-       and old.id = 'f5c08942-97d1-4c55-9cd5-f7e14557b325'::uuid
-       and old.payment_id = '4e8761b0-feec-429a-a690-7085b59aedcd'::uuid
-       and new.payment_id = old.payment_id
-       and new.receipt_number = old.receipt_number
-       and old.voided_at is null
-       and new.voided_at is not null
-       and new.voided_by = auth.uid()
-       and length(btrim(coalesce(new.void_reason, ''))) between 10 and 1000
+       and to_jsonb(old)->>'id' = 'f5c08942-97d1-4c55-9cd5-f7e14557b325'
+       and to_jsonb(old)->>'payment_id' = '4e8761b0-feec-429a-a690-7085b59aedcd'
+       and to_jsonb(new)->>'payment_id' = to_jsonb(old)->>'payment_id'
+       and to_jsonb(new)->>'receipt_number' = to_jsonb(old)->>'receipt_number'
+       and to_jsonb(old)->>'voided_at' is null
+       and to_jsonb(new)->>'voided_at' is not null
+       and to_jsonb(new)->>'voided_by' = auth.uid()::text
+       and length(btrim(coalesce(to_jsonb(new)->>'void_reason', ''))) between 10 and 1000
        and (to_jsonb(new) - 'voided_at' - 'voided_by' - 'void_reason')
            = (to_jsonb(old) - 'voided_at' - 'voided_by' - 'void_reason') then
         return new;
