@@ -15804,6 +15804,9 @@ function simpleBars(items, color) {
                 undefined,
             thread_id:
                 thread.thread_id ||
+                undefined,
+            email_consent_action:
+                thread.email_consent_action ||
                 undefined
         };
 
@@ -17846,7 +17849,11 @@ function simpleBars(items, color) {
                             replyInbound
                         )
                 }
-                : {};
+                : isCampaignProspect && campaignOptions.emailConsentAction
+                    ? {
+                        email_consent_action: campaignOptions.emailConsentAction
+                    }
+                    : {};
 
         const modal =
             document.createElement(
