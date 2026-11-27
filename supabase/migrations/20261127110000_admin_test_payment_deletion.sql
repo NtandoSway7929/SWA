@@ -276,9 +276,9 @@ begin
         raise exception 'The test-payment confirmation does not match.';
     end if;
 
-    if exists (select 1 from public.payment_attempts where payment_id = p_payment_id)
+    if exists (select 1 from public.payment_attempts where payment_id = p_payment_id or invoice_id = v_payment.invoice_id)
        or exists (select 1 from public.payment_refunds where payment_id = p_payment_id)
-       or exists (select 1 from public.bank_transfer_submissions where payment_id = p_payment_id)
+       or exists (select 1 from public.bank_transfer_submissions where payment_id = p_payment_id or invoice_id = v_payment.invoice_id)
        or exists (select 1 from public.payment_reconciliation where payment_id = p_payment_id)
        or exists (select 1 from public.payment_reconciliation_actions where related_payment_id = p_payment_id) then
         raise exception 'This payment has provider, refund, transfer-proof or reconciliation history and cannot be marked as disposable test data.';
@@ -341,9 +341,9 @@ begin
         raise exception 'The test-payment deletion confirmation does not match.';
     end if;
 
-    if exists (select 1 from public.payment_attempts where payment_id = p_payment_id)
+    if exists (select 1 from public.payment_attempts where payment_id = p_payment_id or invoice_id = v_payment.invoice_id)
        or exists (select 1 from public.payment_refunds where payment_id = p_payment_id)
-       or exists (select 1 from public.bank_transfer_submissions where payment_id = p_payment_id)
+       or exists (select 1 from public.bank_transfer_submissions where payment_id = p_payment_id or invoice_id = v_payment.invoice_id)
        or exists (select 1 from public.payment_reconciliation where payment_id = p_payment_id)
        or exists (select 1 from public.payment_reconciliation_actions where related_payment_id = p_payment_id) then
         raise exception 'Protected provider, refund, transfer-proof or reconciliation records prevent deletion.';
