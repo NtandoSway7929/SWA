@@ -93,6 +93,7 @@
         aiConversation: [],
         aiFocusedRecord: null,
         leadProposals: [],
+        leadProposalVersions: [],
         aiChatSessions: [],
         aiActiveChatId: "",
         aiBriefing: null,
@@ -4497,7 +4498,8 @@
             optionalApi("/rest/v1/budget_entries?select=*&order=transaction_date.desc,created_at.desc", []),
             optionalApi("/rest/v1/budget_category_allocations?select=*&order=period_month.desc,category.asc", []),
             optionalApi("/rest/v1/payment_refunds?select=*&order=created_at.desc", []),
-            optionalApi("/rest/v1/payment_attempts?select=id,invoice_id,payment_id,provider,environment,status&order=created_at.desc", [])
+            optionalApi("/rest/v1/payment_attempts?select=id,invoice_id,payment_id,provider,environment,status&order=created_at.desc", []),
+            optionalApi("/rest/v1/lead_proposal_versions?select=*&order=created_at.desc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -4521,6 +4523,7 @@
         state.budgetAllocations = results[18] || [];
         state.paymentRefunds = results[19] || [];
         state.paymentAttempts = results[20] || [];
+        state.leadProposalVersions = results[21] || [];
 
         await loadAdminNotifications();
 
@@ -21818,28 +21821,167 @@ function simpleBars(items, color) {
             state.leads.find(function (item) {
                 return item.id === proposal.lead_id;
             });
+
+        const sectionDefinitions = [
+            {
+                key: "project_overview",
+                label: "Project overview",
+                hint: "Summarise the engagement and the work being proposed.",
+                required: true
+            },
+            {
+                key: "business_understanding",
+                label: "What we understand about your business",
+                hint: "Use verified observations and clearly distinguish assumptions.",
+                required: true
+            },
+            {
+                key: "goals",
+                label: "Goals and intended outcomes",
+                hint: "Describe the priorities the proposed work is intended to address.",
+                required: true
+            },
+            {
+                key: "recommended_solution",
+                label: "Recommended solution",
+                hint: "Explain why this approach is appropriate for the stated needs.",
+                required: true
+            },
+            {
+                key: "scope_and_deliverables",
+                label: "Scope and deliverables",
+                hint: "List specific deliverables, quantities, revision limits and boundaries.",
+                required: true
+            },
+            {
+                key: "delivery_plan",
+                label: "Delivery plan and timeline",
+                hint: "Set out the stages, dependencies and realistic delivery windows.",
+                required: true
+            },
+            {
+                key: "client_responsibilities",
+                label: "Client responsibilities",
+                hint: "Record the information, access, feedback and approvals the client must provide.",
+                required: false
+            },
+            {
+                key: "assumptions_exclusions",
+                label: "Assumptions and exclusions",
+                hint: "State third-party costs, exclusions, dependencies and material assumptions.",
+                required: false
+            },
+            {
+                key: "validity",
+                label: "Proposal validity",
+                hint: "State the proposal's expiry date or validity period.",
+                required: true
+            },
+            {
+                key: "next_steps",
+                label: "Next steps",
+                hint: "Explain what happens after the prospect decides to proceed.",
+                required: true
+            }
+        ];
+
+        let structured = proposal.structured_content || {};
+        if (typeof structured === "string") {
+            try {
+                structured = JSON.parse(structured);
+            } catch (error) {
+                structured = {};
+            }
+        }
+
+        const hasStructuredSections =
+            structured &&
+            structured.schema_version === 1 &&
+            structured.sections &&
+            typeof structured.sections === "object" &&
+            !Array.isArray(structured.sections);
+
+        const sectionValues = {};
+        sectionDefinitions.forEach(function (definition) {
+            const savedValue =
+                hasStructuredSections
+                    ? structured.sections[definition.key]
+                    : definition.key === "project_overview"
+                        ? proposal.content
+                        : "";
+            sectionValues[definition.key] = String(savedValue || "");
+        });
+
         const isEditableDraft =
             String(proposal.status || "draft") === "draft";
+
+        const proposalVersions = (state.leadProposalVersions || [])
+            .filter(function (item) {
+                return String(item.proposal_id || "") === String(proposal.id);
+            })
+            .slice()
+            .sort(function (a, b) {
+                return Number(b.version_number || 0) - Number(a.version_number || 0);
+            });
 
         const modal = document.createElement("div");
         modal.className = "sway-modal sway-proposal-review-modal";
 
+        function renderSectionField(definition) {
+            return (
+                '<label class="sway-proposal-section-field">' +
+                    '<span>' + esc(definition.label) +
+                        (definition.required ? '<small class="sway-proposal-required">Required</small>' : '') +
+                    '</span>' +
+                    '<textarea data-proposal-section="' + esc(definition.key) + '" rows="4"' +
+                        (isEditableDraft ? "" : " readonly") + '>' +
+                        esc(sectionValues[definition.key]) +
+                    '</textarea>' +
+                    '<small>' + esc(definition.hint) + '</small>' +
+                '</label>'
+            );
+        }
+
+        const versionHistoryMarkup = proposalVersions.length
+            ? '<div class="sway-proposal-version-history">' +
+                proposalVersions.map(function (version) {
+                    return (
+                        '<details class="sway-proposal-version-item">' +
+                            '<summary>' +
+                                '<strong>Version ' + esc(version.version_number) + '</strong>' +
+                                '<span>' + esc(formatDisplayText(version.status || "draft")) + '</span>' +
+                                '<time>' + esc(date(version.created_at)) + '</time>' +
+                            '</summary>' +
+                            '<div class="sway-proposal-version-snapshot">' +
+                                '<strong>' + esc(version.title || "Untitled proposal") + '</strong>' +
+                                '<pre>' + esc(version.content || "No content was recorded for this version.") + '</pre>' +
+                                '<small>' + esc(version.change_reason || "Saved revision") + '</small>' +
+                            '</div>' +
+                        '</details>'
+                    );
+                }).join("") +
+              '</div>'
+            : '<p class="sway-proposal-review-note">No saved revision history is available yet.</p>';
+
         modal.innerHTML =
             '<div class="sway-modal-backdrop"></div>' +
-            '<div class="sway-modal-card sway-proposal-review-card" role="dialog" aria-modal="true">' +
+            '<div class="sway-modal-card sway-proposal-review-card" role="dialog" aria-modal="true" aria-labelledby="sway-proposal-review-heading">' +
                 '<div class="sway-modal-header">' +
                     '<div>' +
-                        '<span class="admin-label">INNERME · PROPOSAL DRAFT</span>' +
-                        '<h3>Review before approval</h3>' +
+                        '<span class="admin-label">SWAYPHICS · PROPOSAL WORKSPACE</span>' +
+                        '<h3 id="sway-proposal-review-heading">' +
+                            (isEditableDraft ? "Edit proposal draft" : "Review saved proposal") +
+                        '</h3>' +
                         '<p class="sway-proposal-review-lead">' +
                             esc(lead ? lead.business_name : "Lead") +
+                            ' · Version ' + esc(proposal.current_version || 1) +
                         '</p>' +
                     '</div>' +
                     '<button class="sway-modal-close" type="button" aria-label="Close">×</button>' +
                 '</div>' +
                 '<div class="sway-proposal-review-context">' +
-                    '<strong>Assessment used</strong>' +
-                    '<span>InnerMe drafted this from the lead assessment. Nothing has been sent.</span>' +
+                    '<strong>Internal proposal review</strong>' +
+                    '<span>Saving creates an immutable revision snapshot. Internal approval does not send the proposal to the prospect.</span>' +
                 '</div>' +
                 '<div class="sway-proposal-review-fields">' +
                     '<label>Proposal title<input id="sway-proposal-title" type="text" value="' +
@@ -21848,10 +21990,21 @@ function simpleBars(items, color) {
                     '<label>Email subject<input id="sway-proposal-subject" type="text" value="' +
                         esc(proposal.subject || "") +
                     '"' + (isEditableDraft ? "" : " readonly") + '></label>' +
-                    '<label>Proposal content<textarea id="sway-proposal-content" rows="18"' +
-                        (isEditableDraft ? "" : " readonly") + '>' +
-                        esc(proposal.content || "") +
-                    '</textarea></label>' +
+                    '<div class="sway-proposal-structure-heading">' +
+                        '<strong>Proposal sections</strong>' +
+                        '<span>Use evidence-backed, client-facing language. Leave optional sections blank when they do not apply.</span>' +
+                    '</div>' +
+                    '<div class="sway-proposal-sections">' +
+                        sectionDefinitions.map(renderSectionField).join("") +
+                    '</div>' +
+                    '<div class="sway-proposal-pricing-placeholder">' +
+                        '<strong>Commercial investment</strong>' +
+                        '<p>Pricing will be linked from the approved commercial quote in the pricing-engine stage. Do not enter totals here.</p>' +
+                    '</div>' +
+                    '<section class="sway-proposal-history-section">' +
+                        '<div><strong>Revision history</strong><span>Previous saved snapshots are read-only.</span></div>' +
+                        versionHistoryMarkup +
+                    '</section>' +
                 '</div>' +
                 '<div class="sway-proposal-review-actions">' +
                     (isEditableDraft
@@ -21862,11 +22015,11 @@ function simpleBars(items, color) {
                           '<button type="button" class="sway-workspace-button primary" data-proposal-approve="' +
                             esc(proposal.id) +
                           '">Approve proposal</button>'
-                        : '<p class="sway-proposal-review-note">This proposal is ' +
-                          esc(formatDisplayText(proposal.status || "not editable")) +
-                          ' and is read-only. Create a new revision to make changes.</p>') +
+                        : '<button type="button" class="sway-workspace-button primary" data-proposal-create-revision="' +
+                            esc(proposal.id) +
+                          '">Create draft revision</button>') +
                 '</div>' +
-                '<p class="sway-proposal-review-note">Saving keeps the proposal as an internal draft. Approval does not send an email to the lead.</p>' +
+                '<p class="sway-proposal-review-note">Customer delivery, quote acceptance and payment are separate stages. Nothing is sent from this editor.</p>' +
             '</div>';
 
         document.body.appendChild(modal);
@@ -21874,6 +22027,73 @@ function simpleBars(items, color) {
         const close = function () {
             modal.remove();
         };
+
+        function collectDraftPayload() {
+            const title = String(
+                modal.querySelector("#sway-proposal-title")?.value || ""
+            ).trim();
+            const subject = String(
+                modal.querySelector("#sway-proposal-subject")?.value || ""
+            ).trim();
+
+            const sections = {};
+            sectionDefinitions.forEach(function (definition) {
+                sections[definition.key] = String(
+                    modal.querySelector('[data-proposal-section="' + definition.key + '"]')?.value || ""
+                ).trim();
+            });
+
+            const content = sectionDefinitions
+                .filter(function (definition) {
+                    return Boolean(sections[definition.key]);
+                })
+                .map(function (definition) {
+                    return definition.label + "\n\n" + sections[definition.key];
+                })
+                .join("\n\n");
+
+            return {
+                title: title || "Swayphics Proposal",
+                subject: subject || "Swayphics | Proposal",
+                content: content,
+                structured_content: {
+                    schema_version: 1,
+                    sections: sections
+                }
+            };
+        }
+
+        function missingRequiredSections(payload) {
+            return sectionDefinitions
+                .filter(function (definition) {
+                    return definition.required && !payload.structured_content.sections[definition.key];
+                })
+                .map(function (definition) {
+                    return definition.label;
+                });
+        }
+
+        async function refreshProposalVersions() {
+            const rows = await api(
+                "/rest/v1/lead_proposal_versions?select=*&proposal_id=eq." +
+                encodeURIComponent(proposal.id) +
+                "&order=version_number.desc"
+            );
+            state.leadProposalVersions = (state.leadProposalVersions || [])
+                .filter(function (item) {
+                    return String(item.proposal_id || "") !== String(proposal.id);
+                })
+                .concat(Array.isArray(rows) ? rows : []);
+        }
+
+        function updateProposalInState(updatedProposal) {
+            const index = state.leadProposals.findIndex(function (item) {
+                return item.id === proposal.id;
+            });
+            if (index >= 0) {
+                state.leadProposals[index] = updatedProposal;
+            }
+        }
 
         modal.querySelector(".sway-modal-close")?.addEventListener("click", close);
         modal.querySelector(".sway-modal-backdrop")?.addEventListener("click", close);
@@ -21884,23 +22104,13 @@ function simpleBars(items, color) {
             async function () {
                 if (!isEditableDraft) return;
 
-                const title = String(
-                    modal.querySelector("#sway-proposal-title")?.value || ""
-                ).trim();
-                const subject = String(
-                    modal.querySelector("#sway-proposal-subject")?.value || ""
-                ).trim();
-                const content = String(
-                    modal.querySelector("#sway-proposal-content")?.value || ""
-                ).trim();
-
-                if (!content) {
-                    swayAlert("Add the proposal content before saving this draft.");
+                const payload = collectDraftPayload();
+                if (!payload.content) {
+                    swayAlert("Add proposal content before saving this draft.");
                     return;
                 }
 
-                const saveButton =
-                    modal.querySelector("[data-proposal-save-draft]");
+                const saveButton = modal.querySelector("[data-proposal-save-draft]");
                 saveButton.disabled = true;
                 saveButton.textContent = "Saving…";
 
@@ -21915,9 +22125,10 @@ function simpleBars(items, color) {
                                 "Prefer": "return=representation"
                             }),
                             body: JSON.stringify({
-                                title: title || "Swayphics Proposal",
-                                subject: subject || "Swayphics | Proposal",
-                                content,
+                                title: payload.title,
+                                subject: payload.subject,
+                                content: payload.content,
+                                structured_content: payload.structured_content,
                                 status: "draft",
                                 approved_by: null,
                                 approved_at: null,
@@ -21927,26 +22138,21 @@ function simpleBars(items, color) {
                     );
 
                     const updatedProposal =
-                        Array.isArray(updated)
-                            ? updated[0]
-                            : updated;
+                        Array.isArray(updated) ? updated[0] : updated;
 
                     if (!updatedProposal || !updatedProposal.id) {
                         throw new Error("The proposal draft could not be saved.");
                     }
 
-                    const index =
-                        state.leadProposals.findIndex(function (item) {
-                            return item.id === proposal.id;
-                        });
-
-                    if (index >= 0) {
-                        state.leadProposals[index] = updatedProposal;
-                    }
-
+                    updateProposalInState(updatedProposal);
+                    await refreshProposalVersions();
                     close();
                     renderView();
-                    swayAlert("Draft saved. It has not been approved or sent.");
+                    swayAlert(
+                        "Draft saved as version " +
+                        String(updatedProposal.current_version || "updated") +
+                        ". It has not been approved or sent."
+                    );
                 } catch (error) {
                     saveButton.disabled = false;
                     saveButton.textContent = "Save draft";
@@ -21958,32 +22164,73 @@ function simpleBars(items, color) {
             }
         );
 
+        modal.querySelector("[data-proposal-create-revision]")?.addEventListener(
+            "click",
+            async function () {
+                const createButton = modal.querySelector("[data-proposal-create-revision]");
+                createButton.disabled = true;
+                createButton.textContent = "Opening revision…";
+
+                try {
+                    const updated = await api(
+                        "/rest/v1/lead_proposals?id=eq." +
+                        encodeURIComponent(proposal.id),
+                        {
+                            method: "PATCH",
+                            headers: headers({
+                                "Content-Type": "application/json",
+                                "Prefer": "return=representation"
+                            }),
+                            body: JSON.stringify({
+                                status: "draft",
+                                approved_by: null,
+                                approved_at: null,
+                                updated_at: new Date().toISOString()
+                            })
+                        }
+                    );
+
+                    const updatedProposal =
+                        Array.isArray(updated) ? updated[0] : updated;
+
+                    if (!updatedProposal || !updatedProposal.id) {
+                        throw new Error("A new draft revision could not be opened.");
+                    }
+
+                    updateProposalInState(updatedProposal);
+                    close();
+                    renderView();
+                    openLeadProposalReview(updatedProposal.id);
+                } catch (error) {
+                    createButton.disabled = false;
+                    createButton.textContent = "Create draft revision";
+                    swayAlert(
+                        error.message ||
+                        "A new draft revision could not be opened."
+                    );
+                }
+            }
+        );
+
         modal.querySelector("[data-proposal-approve]")?.addEventListener(
             "click",
             async function () {
                 if (!isEditableDraft) {
-                    swayAlert("Only a saved draft can be approved. Approved proposals are read-only.");
+                    swayAlert("Only a draft revision can be approved.");
                     return;
                 }
 
-                const title = String(
-                    modal.querySelector("#sway-proposal-title")?.value || ""
-                ).trim();
-                const subject = String(
-                    modal.querySelector("#sway-proposal-subject")?.value || ""
-                ).trim();
-                const content = String(
-                    modal.querySelector("#sway-proposal-content")?.value || ""
-                ).trim();
-
-                if (!content) {
-                    swayAlert("The proposal cannot be approved while it is empty.");
+                const payload = collectDraftPayload();
+                const missing = missingRequiredSections(payload);
+                if (missing.length) {
+                    swayAlert(
+                        "Complete these required proposal sections before approval: " +
+                        missing.join(", ") + "."
+                    );
                     return;
                 }
 
-                const approveButton =
-                    modal.querySelector("[data-proposal-approve]");
-
+                const approveButton = modal.querySelector("[data-proposal-approve]");
                 approveButton.disabled = true;
                 approveButton.textContent = "Approving…";
 
@@ -21998,40 +22245,35 @@ function simpleBars(items, color) {
                                 "Prefer": "return=representation"
                             }),
                             body: JSON.stringify({
-                                title: title || "Swayphics Proposal",
-                                subject:
-                                    subject ||
-                                    "Swayphics | Proposal",
-                                content,
+                                title: payload.title,
+                                subject: payload.subject,
+                                content: payload.content,
+                                structured_content: payload.structured_content,
                                 status: "approved",
                                 approved_by:
-                                    state.currentUser &&
-                                    state.currentUser.id
+                                    state.currentUser && state.currentUser.id
                                         ? state.currentUser.id
                                         : null,
-                                approved_at:
-                                    new Date().toISOString()
+                                approved_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString()
                             })
                         }
                     );
 
                     const updatedProposal =
-                        Array.isArray(updated)
-                            ? updated[0]
-                            : updated;
+                        Array.isArray(updated) ? updated[0] : updated;
 
-                    const index =
-                        state.leadProposals.findIndex(function (item) {
-                            return item.id === proposal.id;
-                        });
-
-                    if (index >= 0 && updatedProposal) {
-                        state.leadProposals[index] = updatedProposal;
+                    if (!updatedProposal || !updatedProposal.id) {
+                        throw new Error("The proposal could not be approved.");
                     }
 
+                    updateProposalInState(updatedProposal);
+                    await refreshProposalVersions();
                     close();
                     swayAlert(
-                        "Proposal approved for review. It has not been sent."
+                        "Proposal version " +
+                        String(updatedProposal.current_version || "") +
+                        " approved internally. It has not been sent."
                     );
                     renderView();
                 } catch (error) {
@@ -22045,6 +22287,7 @@ function simpleBars(items, color) {
             }
         );
     }
+
 
     function exportWorkspaceJson() {
         const payload = {
