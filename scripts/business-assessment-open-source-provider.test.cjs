@@ -129,6 +129,20 @@ const assert = require("node:assert/strict");
     }, { includeDomains: "trusted.example" }), []);
 
     const noJsonProvider = createOpenSourceInspectionProvider({
+        fetchImpl: async () => new Response("<!doctype html><title>Forbidden</title>", {
+            status: 403,
+            headers: { "content-type": "text/html" }
+        }),
+        searchBaseUrl: "https://search.internal.example",
+        crawlBaseUrl: "https://crawl.internal.example",
+        crawlApiToken: "test-token"
+    });
+    await assert.rejects(
+        () => noJsonProvider.search("test"),
+        (error) => error.providerCode === "search_json_format_not_enabled"
+    );
+
+    const jsonErrorProvider = createOpenSourceInspectionProvider({
         fetchImpl: async () => new Response(JSON.stringify({ detail: "JSON disabled" }), {
             status: 403,
             headers: { "content-type": "application/json" }
@@ -138,7 +152,7 @@ const assert = require("node:assert/strict");
         crawlApiToken: "test-token"
     });
     await assert.rejects(
-        () => noJsonProvider.search("test"),
+        () => jsonErrorProvider.search("test"),
         (error) => error.providerCode === "search_json_format_not_enabled"
     );
 
