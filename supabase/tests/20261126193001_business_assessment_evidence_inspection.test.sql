@@ -3,7 +3,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(31);
+select extensions.plan(32);
 
 select extensions.has_table(
     'public',
@@ -25,6 +25,16 @@ select extensions.ok(
           and is_nullable='NO'
     ),
     'each inspection run records a mandatory written provider-agreement reference'
+);
+
+select extensions.ok(
+    exists (
+        select 1 from pg_constraint
+        where conrelid='public.business_assessment_inspections'::regclass
+          and conname='business_assessment_inspections_agreement_reference_nonblank'
+          and pg_get_constraintdef(oid) ilike '%btrim%'
+    ),
+    'the written provider-agreement reference cannot be blank'
 );
 
 select extensions.ok(
