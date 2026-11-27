@@ -79,7 +79,7 @@ create or replace function public.guard_lead_email_consent_fields()
 returns trigger
 language plpgsql
 set search_path = ''
-as $$$
+as $$
 begin
   if current_user not in ('postgres', 'service_role', 'supabase_admin')
      and (
@@ -118,7 +118,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = ''
-as $$$
+as $$
 declare
   v_lead public.leads%rowtype;
   v_decision text := lower(trim(coalesce(p_decision, '')));
