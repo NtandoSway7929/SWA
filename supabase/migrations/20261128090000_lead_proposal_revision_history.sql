@@ -197,7 +197,7 @@ execute function public.capture_lead_proposal_version();
 
 drop trigger if exists trg_prevent_lead_proposal_version_update
     on public.lead_proposal_versions;
-create trigger trg_prevent_lead_proposal_version_mutation
+create trigger trg_prevent_lead_proposal_version_update
 before update on public.lead_proposal_versions
 for each row
 execute function public.prevent_lead_proposal_version_update();
