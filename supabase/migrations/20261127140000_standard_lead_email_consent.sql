@@ -212,6 +212,61 @@ revoke all on function public.record_swayphics_lead_email_consent(uuid, text, te
 grant execute on function public.record_swayphics_lead_email_consent(uuid, text, text, text, text)
   to authenticated;
 
+-- The send-email Edge Function uses service_role to append the initial request event.
+-- This keeps event writes off the browser-facing Data API table surface.
+create or replace function public.record_swayphics_lead_email_request_sent(
+  p_lead_id uuid,
+  p_email_address text,
+  p_evidence text,
+  p_actor_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  v_lead public.leads%rowtype;
+  v_evidence text := trim(coalesce(p_evidence, ''));
+begin
+  if length(v_evidence) < 8 or length(v_evidence) > 8000 then
+    raise exception 'Permission request evidence must be between 8 and 8000 characters.';
+  end if;
+
+  select * into v_lead
+  from public.leads
+  where id = p_lead_id
+    and email_consent_required = true
+    and email_consent_status = 'requested'
+    and lower(coalesce(email, '')) = lower(coalesce(p_email_address, ''))
+  for update;
+
+  if not found then
+    raise exception 'A matching Standard Lead with a recorded permission request was not found.';
+  end if;
+
+  insert into public.lead_email_consent_events (
+    lead_id, business_name, email_address, event_type, channel,
+    evidence, actor_id, created_at
+  )
+  values (
+    v_lead.id, coalesce(v_lead.business_name, 'Unknown business'),
+    v_lead.email, 'request_sent', 'Email', v_evidence, p_actor_id, now()
+  );
+
+  return jsonb_build_object(
+    'success', true,
+    'lead_id', v_lead.id,
+    'event_type', 'request_sent'
+  );
+end;
+$;
+
+revoke all on function public.record_swayphics_lead_email_request_sent(uuid, text, text, uuid)
+  from public, anon, authenticated;
+grant execute on function public.record_swayphics_lead_email_request_sent(uuid, text, text, uuid)
+  to service_role;
+
 -- Only the specifically audited 30 cold-prospect records enter this
 -- consent-gated first-contact workflow. Existing customer and inbound leads
 -- are not changed by this migration.
