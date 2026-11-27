@@ -321,11 +321,15 @@ begin
         raise exception 'Protected provider, refund, transfer-proof or reconciliation records prevent deletion.';
     end if;
 
-    select coalesce(array_agg(id), array[]::uuid[])
-      into v_receipt_ids
+    perform 1
       from public.payment_receipts
      where payment_id = p_payment_id
      for update;
+
+    select coalesce(array_agg(id), array[]::uuid[])
+      into v_receipt_ids
+      from public.payment_receipts
+     where payment_id = p_payment_id;
 
     if exists (
         select 1
