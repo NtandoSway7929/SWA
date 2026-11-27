@@ -230,6 +230,9 @@ async function readJsonResponse(response, timeoutController) {
     try {
         return bodyText ? JSON.parse(bodyText) : null;
     } catch {
+        // Error responses need not be JSON (SearXNG commonly returns HTML for 403).
+        // Preserve the HTTP status so requestJson can map the provider error correctly.
+        if (!response.ok) return null;
         throw new Error("provider_invalid_json");
     }
 }
