@@ -194,6 +194,8 @@ select extensions.ok(
     'owner can void the specific R700 test EFT transaction'
 );
 
+reset role;
+
 select extensions.ok(
     (select status='voided_test' and notes like '%VOIDED TEST EFT%'
        from public.payments where id='4e8761b0-feec-429a-a690-7085b59aedcd'),
