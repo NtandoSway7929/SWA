@@ -283,7 +283,7 @@ select extensions.throws_ok(
     format(
         'select public.admin_save_swayphics_quote(%L::uuid,%L::jsonb,%L::jsonb)',
         (select id from saved_quote_id),
-        '{"title":"Attempted overwrite"}',
+        '{"title":"Attempted overwrite","lead_id":"99999999-9999-4999-8999-999999999913","client_id":"99999999-9999-4999-8999-999999999914"}',
         '[{"description":"Changed","quantity":1,"unit_price":1}]'
     ),
     '55000',
