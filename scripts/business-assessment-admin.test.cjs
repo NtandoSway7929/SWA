@@ -56,4 +56,49 @@ assert.match(nav, /Review assessment/,
 assert.match(css, /\.bfa-workspace/,
     "The admin review screen must have a responsive assessment workspace layout");
 
-console.log("Business Opportunity Finder admin access and navigation tests passed.");
+
+
+// Phase 4 admin evidence-panel contract.
+const inspectionStart = script.indexOf("async function renderInspectionSection(parent, item)");
+const inspectionEnd = script.indexOf("async function replaceInspectionSection(parent, oldSection, item)");
+assert.ok(inspectionStart >= 0 && inspectionEnd > inspectionStart,
+    "The admin viewer must keep its inspection panel in a dedicated render function");
+const inspectionPanel = script.slice(inspectionStart, inspectionEnd);
+const consentGuard = inspectionPanel.indexOf(
+    'if (presence.inspection_consent !== true ||'
+);
+const historyLookup = inspectionPanel.indexOf(
+    '"/rest/v1/business_assessment_inspections?select='
+);
+const inspectControl = inspectionPanel.indexOf(
+    'element("button", "bfa-inspection-primary"'
+);
+assert.ok(consentGuard >= 0 && consentGuard < historyLookup && consentGuard < inspectControl,
+    "The viewer must stop before history reads or inspection controls when consent is absent or outdated");
+assert.match(inspectionPanel, /presence\.inspection_consent_version !== "bof-public-presence-v1"/,
+    "The viewer must require the currently supported inspection consent version");
+assert.match(inspectionPanel, /No valid public-presence inspection permission is recorded/,
+    "The no-consent state must explicitly explain why no inspection is available");
+assert.match(inspectionPanel, /No independent website, Google Business Profile or social-profile check has been run/,
+    "The no-consent state must not imply that any source has been inspected");
+assert.match(inspectionPanel, /provider_agreement_reference/,
+    "The admin viewer must fetch the governing provider agreement reference with the inspection run");
+assert.match(inspectionPanel, /Provider agreement reference:/,
+    "The admin viewer must visibly display the provider agreement reference for audit");
+assert.match(inspectionPanel, /\["queued", "running"\]\.includes\(run\.status\)/,
+    "A queued or running inspection must not expose a second inspection action");
+assert.match(inspectionPanel, /provider_restricted_agreement_not_configured|message\.textContent = error\.message/,
+    "An agreement-gate refusal must be surfaced as an error rather than reported as accepted");
+assert.match(inspectionPanel, /The inspection request failed\./,
+    "The admin viewer must provide a clear fallback when an inspection request cannot start");
+
+assert.match(script, /if \(!\["https:", "http:"\]\.includes\(url\.protocol\)\) return/,
+    "Stored source links must reject non-web protocols before rendering");
+assert.match(script, /link\.rel = "noopener noreferrer nofollow"/,
+    "External evidence links must not inherit opener access or search-ranking endorsement");
+assert.match(script, /identity_match_basis/,
+    "The evidence viewer must display the basis for its source identity assessment");
+assert.match(script, /Identity match:/,
+    "The evidence viewer must make source identity status visible separately from fetch status");
+
+console.log("Business Opportunity Finder admin access, navigation and inspection-panel tests passed.");
