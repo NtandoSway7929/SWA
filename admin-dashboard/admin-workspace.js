@@ -19754,7 +19754,7 @@ function simpleBars(items, color) {
                     '</div>' +
                     '<div class="sway-record-card-actions"><span class="sway-record-card-open-hint">Open payment details</span>' +
                         '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
-                            '<button class="sway-row-action" data-edit="payments" data-id="' + esc(item.id) + '">Edit</button>' +
+                            (item.is_test === true ? "" : '<button class="sway-row-action" data-edit="payments" data-id="' + esc(item.id) + '">Edit</button>') +
                             refundAction +
                             (state.currentAdmin && state.currentAdmin.role === "owner" && item.provider == null && item.is_test !== true
                                 ? '<button type="button" class="sway-row-action" data-mark-test-payment="' + esc(item.id) + '">Mark as test data</button>'
