@@ -413,7 +413,7 @@ No revenue loss, conversion uplift, customer count, ROI, guarantee or performanc
 9. Verify a controlled test assessment end-to-end using public test pages and a test TinyFish key.
 10. Only then update proposal snapshot handoff and review the final migration/function deployment plan.
 
-**Release gate:** Phase 4 is not complete until the Swayphics administrator can trigger an inspection, view source-specific observed evidence and limitations, retry safely, and demonstrate that the same assessment's existing self-reported findings and CRM state remain unchanged.
+**Release gate:** Phase 4 is not complete until (1) the mandatory signed restricted-processing agreement is in force and its reference is recorded, (2) the server-side agreement gate is enabled only in the approved environment, (3) the Swayphics administrator can trigger an inspection, view source-specific observed evidence and limitations and retry safely, and (4) tests demonstrate that the same assessment's existing self-reported findings and CRM state remain unchanged. Without the signed agreement, TinyFish inspections remain disabled regardless of respondent consent or technical readiness.
 
 ## 13. Provider and platform references
 
