@@ -67,3 +67,25 @@ Upstream content is retained under its original licences. Review the pinned sour
 - The skill requires a separately installed Playwright CLI and Node.js 20+ according to its upstream documentation. Only the skill and reference documentation are vendored. No npm package, Node.js runtime, browser binary, MCP server, browser profile or persistent session has been installed or configured.
 - The local client-demo workflow restricts browser checks to isolated, non-persistent test sessions and prohibits access to personal browser credentials, real customer accounts and unapproved live transactions. These local rules take precedence over any broader upstream examples.
 
+
+
+## Dietrich Gebert: Ponytail coding discipline
+
+- Upstream repository: https://github.com/dietrichgebert/ponytail
+- Pinned source commit: `ebd8654c2c627f721eb8f9c0d1bd4090a29f9e10` (2026-11-22)
+- Local path: `.agents/skills/ponytail/`
+- Licence: MIT; the upstream root `LICENSE` is included.
+- The original upstream `skills/ponytail/SKILL.md` is retained as `UPSTREAM-SKILL.md`; the local `SKILL.md` wrapper and `SWAYPHICS-ADAPTATION.md` keep the discipline subordinate to the user's complete request, repository architecture, required safeguards and approval boundaries.
+- No root `AGENTS.md`, plugin installers, hooks or runtime tooling were imported or activated.
+
+## Nutlope: Hallmark design skill (explicit opt-in)
+
+- Upstream repository: https://github.com/nutlope/hallmark
+- Pinned source commit: `04977e15f3dfd6ee4b74c887dac3eb52665d6c92` (2026-11-11)
+- Upstream skill path: `skills/hallmark/`; local path: `.agents/skills/hallmark/`
+- Licence: MIT; the upstream skill-directory `LICENSE` is included.
+- Imported 178 of the 187 files in the pinned upstream skill directory: the original `SKILL.md` preserved as `UPSTREAM-SKILL.md`, all 101 Markdown reference files, all 50 theme preview JPGs, the theme index and photo catalogue, agent metadata, sample fixtures, and selected Node utilities/tests.
+- Nine optional files were deliberately excluded: `scripts/capture.mjs`, `scripts/capture.test.mjs`, `scripts/imagegen.mjs`, `scripts/fixtures/imagegen/imagegen.test.mjs`, `scripts/install.mjs`, `scripts/install-hook.mjs`, `scripts/lint-hook.mjs`, `scripts/sloplint-render.mjs`, and `scripts/sloplint-render.test.mjs`. These cover browser capture/rendering, API-backed image generation, installation and hooks.
+- The local `SKILL.md` is an explicit-opt-in wrapper. Read `SWAYPHICS-ADAPTATION.md` before the upstream prompt. The universal Swayphics art-direction standard, the client's verified identity, project instructions and user approvals take precedence over conflicting Hallmark defaults.
+- The static linter and local theme-selection/scaffold utilities are vendored, but no Node runtime or npm package was installed or run. Do not use the omitted browser/API/installer features. `scripts/picture.mjs` is retained as upstream material but requires a separately approved Puppeteer/Chrome environment and must not be invoked by default.
+- This is a selective skill-directory import, not a copy of Hallmark's root repository, site, plugin or installation system. No browser dependencies, API keys, MCP servers, hooks or installers were activated.
