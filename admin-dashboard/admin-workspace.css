@@ -11020,3 +11020,195 @@ body.sway-dark-mode .sway-proposal-version-snapshot pre {
     background: #162238;
     color: #C4D0E0;
 }
+
+/* Quote pricing editor */
+.sway-quote-editor-modal .sway-quote-editor-card {
+    width: min(1040px, calc(100vw - 30px));
+    max-height: min(92vh, 980px);
+    overflow: auto;
+}
+.sway-quote-editor-subtitle,
+.sway-quote-editor-note {
+    color: #6C7A90;
+    font-size: 0.74rem;
+    line-height: 1.6;
+}
+.sway-quote-fields,
+.sway-quote-tax-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.sway-quote-fields label,
+.sway-quote-tax-fields label,
+.sway-quote-line label {
+    display: grid;
+    gap: 6px;
+    color: #263852;
+    font-size: 0.73rem;
+    font-weight: 700;
+}
+.sway-quote-fields input,
+.sway-quote-fields select,
+.sway-quote-fields textarea,
+.sway-quote-tax-fields input,
+.sway-quote-line input,
+.sway-quote-line select {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 9px 10px;
+    border: 1px solid rgba(0,32,150,0.14);
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #17243B;
+    font: inherit;
+    font-size: 0.76rem;
+}
+.sway-quote-notes-field { grid-column: 1 / -1; }
+.sway-quote-lines-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+    margin-top: 22px;
+    margin-bottom: 10px;
+}
+.sway-quote-lines-heading > div { display: grid; gap: 4px; }
+.sway-quote-lines-heading strong { color: #142440; font-size: 0.86rem; }
+.sway-quote-lines-heading span,
+.sway-quote-price-hint {
+    color: #748196;
+    font-size: 0.68rem;
+    line-height: 1.5;
+}
+.sway-quote-line-list { display: grid; gap: 10px; }
+.sway-quote-line {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.1fr) minmax(180px, 1.5fr) 80px minmax(120px, .9fr) 115px auto;
+    align-items: end;
+    gap: 9px;
+    padding: 12px;
+    border: 1px solid rgba(0,32,150,0.11);
+    border-radius: 10px;
+    background: #F7F9FC;
+}
+.sway-quote-line-total {
+    padding-bottom: 10px;
+    color: #10234C;
+    font-size: 0.76rem;
+    white-space: nowrap;
+}
+.sway-quote-line .sway-row-action { min-height: 36px; padding: 0 8px; }
+.sway-quote-no-lines {
+    padding: 16px;
+    color: #748196;
+    text-align: center;
+    font-size: 0.76rem;
+}
+.sway-quote-financials {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, .8fr);
+    gap: 18px;
+    margin-top: 18px;
+    padding: 15px;
+    border: 1px solid rgba(0,32,150,0.1);
+    border-radius: 12px;
+    background: #F7F9FC;
+}
+.sway-quote-tax-fields { grid-template-columns: 1fr; align-content: start; }
+.sway-quote-tax-fields small {
+    color: #748196;
+    font-size: 0.66rem;
+    line-height: 1.5;
+}
+.sway-quote-totals { display: grid; gap: 9px; }
+.sway-quote-totals > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: #5B6A80;
+    font-size: 0.73rem;
+}
+.sway-quote-totals > div strong {
+    color: #17243B;
+    font-size: 0.75rem;
+    text-align: right;
+}
+.sway-quote-totals > .total {
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,32,150,0.14);
+    color: #142440;
+    font-weight: 800;
+}
+.sway-quote-totals > .total strong { color: #0052E8; font-size: 1rem; }
+.sway-quote-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+}
+.sway-quote-linked-proposals {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+.sway-proposal-linked-quote {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(0,32,150,0.11);
+    border-radius: 9px;
+}
+.sway-proposal-linked-quote > span {
+    display: grid;
+    flex: 1 1 170px;
+    gap: 3px;
+}
+.sway-proposal-linked-quote > span strong { color: #17243B; font-size: 0.74rem; }
+.sway-proposal-linked-quote > span small { color: #748196; font-size: 0.66rem; }
+.sway-proposal-linked-quote > strong { color: #17243B; font-size: 0.76rem; }
+.sway-proposal-pricing-placeholder > small {
+    display: block;
+    margin-top: 9px;
+    color: #6D7A90;
+    font-size: 0.66rem;
+    line-height: 1.55;
+}
+@media (max-width: 760px) {
+    .sway-quote-editor-modal .sway-quote-editor-card {
+        width: calc(100vw - 18px);
+        max-height: 94vh;
+    }
+    .sway-quote-line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sway-quote-line label:nth-child(2) { grid-column: 1 / -1; }
+    .sway-quote-line-total { padding: 10px 0; }
+    .sway-quote-financials { grid-template-columns: 1fr; }
+}
+body.sway-dark-mode .sway-quote-fields label,
+body.sway-dark-mode .sway-quote-tax-fields label,
+body.sway-dark-mode .sway-quote-line label { color: #D8E2F0; }
+body.sway-dark-mode .sway-quote-fields input,
+body.sway-dark-mode .sway-quote-fields select,
+body.sway-dark-mode .sway-quote-fields textarea,
+body.sway-dark-mode .sway-quote-tax-fields input,
+body.sway-dark-mode .sway-quote-line input,
+body.sway-dark-mode .sway-quote-line select {
+    border-color: #2A3A58;
+    background: #162238;
+    color: #EDF2F9;
+}
+body.sway-dark-mode .sway-quote-line,
+body.sway-dark-mode .sway-quote-financials {
+    border-color: #2A3A58;
+    background: #121D30;
+}
+body.sway-dark-mode .sway-quote-lines-heading strong,
+body.sway-dark-mode .sway-quote-totals > div strong,
+body.sway-dark-mode .sway-proposal-linked-quote > span strong,
+body.sway-dark-mode .sway-proposal-linked-quote > strong { color: #E5EBF5; }
+body.sway-dark-mode .sway-quote-totals > .total strong { color: #77C1FC; }
+body.sway-dark-mode .sway-proposal-linked-quote { border-color: #2A3A58; }
