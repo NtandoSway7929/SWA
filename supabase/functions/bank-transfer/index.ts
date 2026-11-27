@@ -535,23 +535,40 @@ async function adminQueue(admin: any) {
   });
 }
 
-async function dispatchPaymentReceipt(paymentId: string, logError: (...values: unknown[]) => void) {
+async function dispatchPaymentReceipt(
+  paymentId: string,
+  logError: (...values: unknown[]) => void,
+) {
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) {
-    logError("Receipt delivery could not be triggered: server configuration is unavailable.");
+    logError(
+      "Receipt delivery could not be triggered: server configuration is unavailable.",
+    );
     return;
   }
   try {
-    const response = await fetch((url.endsWith("/") ? url.slice(0, -1) : url) + "/functions/v1/deliver-payment-receipt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": key },
-      body: JSON.stringify({ action: "send", payment_id: paymentId }),
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!response.ok) logError("Receipt delivery is queued for retry after bank-transfer approval.", response.status);
+    const response = await fetch(
+      (url.endsWith("/") ? url.slice(0, -1) : url) +
+        "/functions/v1/deliver-payment-receipt",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": key },
+        body: JSON.stringify({ action: "send", payment_id: paymentId }),
+        signal: AbortSignal.timeout(20_000),
+      },
+    );
+    if (!response.ok) {
+      logError(
+        "Receipt delivery is queued for retry after bank-transfer approval.",
+        response.status,
+      );
+    }
   } catch (error) {
-    logError("Receipt delivery dispatch failed after bank-transfer approval.", error instanceof Error ? error.message : "Unknown error.");
+    logError(
+      "Receipt delivery dispatch failed after bank-transfer approval.",
+      error instanceof Error ? error.message : "Unknown error.",
+    );
   }
 }
 
