@@ -237,7 +237,21 @@ The Caddyfile accepts only `GET /search` and `POST /crawl`, and requires the Clo
 
 SearXNG's deployment settings enable JSON and its limiter. Valkey is reachable only on the internal search network and is configured as an ephemeral, memory-bounded limiter store. The limiter trusts only the fixed Caddy address `10.77.10.2/32`; the Caddy address and `limiter.toml` must be kept in sync.
 
-The Cloudflare Tunnel connector uses a remotely managed tunnel token mounted from a separate protected file via `--token-file`. The token is distinct from the Cloudflare Access service token. The example environment file contains no actual credentials. Caddy, Valkey and cloudflared are now pinned directly in Compose to the publisher-visible full multi-platform index digests listed above. No image variables or floating image tags are required.
+The Cloudflare Tunnel connector uses a remotely managed tunnel token mounted from a separate protected file via `--token-file`. The token is distinct from the Cloudflare Access service token. The example environment file contains no actual credentials. Caddy, Valkey and cloudflared are now pinned directly in Compose to the publisher-visible full multi-platform index digests listed above. No image variables or floating image tags are required. The connector is behind the opt-in Compose profile `tunnel`, so the internal gateway can be started and tested without a live Tunnel token or a public hostname.
+
+### Private-gateway internal runtime smoke test
+
+The isolated GitHub Actions workflow now also starts the private-gateway Compose stack without the `tunnel` profile. It reuses the same pinned SearXNG and Crawl4AI images as the provider integration job, starts Valkey and Caddy, and checks:
+
+- Valkey responds to its local health probe.
+- Provider, cache and gateway containers have no published host ports.
+- Each container is attached only to its intended internal/egress networks; Caddy has no outbound egress network.
+- The Cloudflare Tunnel connector is not started.
+- A disposable probe container attached only to `tunnel_internal` can reach the gateway, but cannot bypass it to connect directly to either provider.
+- Caddy returns 404 for unknown paths, disallowed methods and search requests without the expected Cloudflare client-IP header.
+- The allowed `GET /search` route returns SearXNG JSON for a generic query, and `POST /crawl` retrieves only the reserved `https://example.com/` test page using an ephemeral CI bearer token.
+
+This validates internal container networking and the actual Caddy-to-provider HTTP path in a temporary GitHub Actions Docker environment. It does **not** verify a Cloudflare Access policy, a live Tunnel, origin authentication, production rate-limit effectiveness, or the host firewall. The test supplies a synthetic `CF-Connecting-IP` value and temporary Access headers; it does not prove that Cloudflare supplies or protects those headers in a real deployment. It sends only a generic search query and the reserved test URL. Any public search engines enabled in SearXNG may receive the generic query.
 
 Before using this template, check that the three fixed Docker subnets (`10.77.10.0/24`, `10.77.20.0/24`, `10.77.30.0/24`) do not overlap with host, VPN or existing Docker networks. Change the Compose IPAM entries, Caddy address and limiter trusted-proxy entry together if a different subnet plan is required.
 
@@ -272,7 +286,7 @@ Railway private DNS names are scoped to services in the same Railway project and
 1. Confirm that the Swayphics-controlled domain can be used as an active Cloudflare zone and that the Cloudflare Access Free plan is actually available to the account.
 2. Obtain a final VM quote and confirm resource quotas, storage, backups/snapshots, network policy, support and any provider terms.
 3. Build the gateway and private Docker network so that neither SearXNG nor Crawl4AI publishes a public host port. The only inbound public hostname should terminate at Cloudflare Access; the tunnel connector initiates outbound connectivity.
-4. The private-gateway template now includes internal Valkey, enables SearXNG's limiter and forwards the Cloudflare client IP through a fixed Caddy address. The configuration is not yet runtime-validated; verify the IP chain and limiter behavior with actual requests before treating this control as complete.
+4. The private-gateway template now includes internal Valkey, enables SearXNG's limiter and forwards the Cloudflare client IP through a fixed Caddy address. CI now starts this stack and exercises the internal Caddy routes, checks network membership/no host-published ports and confirms Valkey responds. This still does not prove SearXNG's live rate-limit behaviour or the authenticity of the client-IP header chain; verify both with a real Cloudflare/Tunnel staging deployment.
 5. The isolated adapter now sends both Cloudflare Access headers on both service requests and fails closed when remote endpoints are configured without the complete credential pair. Tests cover missing and partial configuration, header forwarding, and exclusion from the crawl body. Staging must still verify that Cloudflare Access rejects missing, wrong and expired tokens with 401/403, and must confirm that no credentials are written to service or gateway logs.
 6. Configure the Edge Function with the gateway URL, Access Client ID/Secret and Crawl4AI bearer token as server-side secrets. Confirm the Edge Function's actual invocation region and measure search/crawl latency and request timeouts against the VM in Johannesburg.
 7. Complete network egress/SSRF, DNS-rebinding, Chromium sandbox, image/SBOM, secret-rotation, log-retention, backup/restore and outage-recovery tests in staging.
@@ -282,7 +296,7 @@ Supabase Edge Functions can make outbound HTTP requests to other APIs using `fet
 
 ### Remaining production blockers
 
-1. **SearXNG abuse controls:** the local CI setting still has `server.limiter: false`, but the separate private-gateway template enables the limiter and supplies internal Valkey plus a fixed trusted-proxy address. The deployment configuration still requires runtime validation of Valkey connectivity, Cloudflare client-IP forwarding and actual rate-limit behavior.
+1. **SearXNG abuse controls:** the private-gateway CI runtime test now confirms Valkey is healthy, the search route works through Caddy and the intended trusted-proxy configuration is present. It does not prove SearXNG is using Valkey for live limiter state, that the configured thresholds behave as intended, or that the forwarded IP is genuinely supplied by Cloudflare. Verify those behaviours against the protected Tunnel in staging.
 2. **Ingress and service identity:** the new deployment template has no public host-port mappings and routes through a private Caddy gateway and cloudflared connector. The live Cloudflare Access application, Service Auth policy, service token, Tunnel hostname, `Protect with Access` setting and origin behavior remain unconfigured and untested. SearXNG itself has no application token in this adapter contract; it must remain reachable only from Caddy on the internal search network.
 3. **Egress/SSRF:** retain Crawl4AI's v0.9.6 pinning egress protections. Add network-level egress restrictions so the crawler cannot reach private, loopback, link-local, metadata or Swayphics infrastructure ranges. Validate DNS-rebinding and redirect cases against the actual deployment network, not only URL-string validation in the adapter.
 4. **Chromium sandbox:** complete the upstream sandbox verification. The current container controls do not by themselves prove renderer sandboxing.
@@ -295,9 +309,9 @@ Supabase Edge Functions can make outbound HTTP requests to other APIs using `fet
 
 The current Crawl4AI image is the reviewed v0.9.6 release, which upstream marks as a security release. Continue tracking upstream advisories and releases; pinning a digest is a reproducibility control, not a guarantee that the image remains vulnerability-free.
 
-No production hostname, hosting provider, private networking, production secret, Valkey instance or deployment has been selected or provisioned. The repository now contains a private-gateway deployment template, but the template has not been started against real services or a host. These decisions remain open and must be completed before any production integration.
+No production hostname, hosting provider, private networking, production secret, Valkey instance or deployment has been selected or provisioned. The private-gateway template is now exercised in an ephemeral GitHub Actions Docker environment, but it has not been deployed or validated on a selected hosting VM, behind Cloudflare, or from a deployed Supabase Edge Function. These decisions remain open and must be completed before any production integration.
 
-The GitHub Actions workflow runs both the mocked adapter tests and this Docker smoke test on the isolated POC branch.
+The GitHub Actions workflow runs the mocked adapter contract, the provider Docker smoke/benchmark tests, and the private-gateway internal runtime smoke test on the isolated POC branch.
 
 **Interpretation:** a successful run proves that the adapter can communicate with the selected service versions and retrieve a known public test page. It does not establish South African search coverage, non-empty search results, business identity accuracy, website coverage, compliance, production security or service-level reliability.
 

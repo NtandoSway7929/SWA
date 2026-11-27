@@ -11,6 +11,7 @@ on:
       - "scripts/business-assessment-open-source-provider.integration.cjs"
       - "scripts/business-assessment-open-source-provider.search-benchmark.cjs"
       - "scripts/business-assessment-open-source-provider.fetch-benchmark.cjs"
+      - "scripts/business-assessment-private-gateway.integration.cjs"
       - "scripts/bof-open-source-provider-poc/**"
       - "docs/business-opportunity-finder-open-source-provider-poc.md"
       - ".github/workflows/business-opportunity-finder-open-source-provider-poc.yml"
@@ -152,6 +153,102 @@ jobs:
           SEARXNG_BASE_URL: http://127.0.0.1:8080
           CRAWL4AI_BASE_URL: http://127.0.0.1:11235
         run: node scripts/business-assessment-open-source-provider.fetch-benchmark.cjs
+ 
+      - name: Stop loopback provider containers before private gateway runtime test
+        run: |
+          docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml down --volumes --remove-orphans || true
+          docker compose --project-name bof-private-gateway-ci --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml down --volumes --remove-orphans || true
+
+      - name: Generate private gateway CI-only credentials and tunnel placeholder
+        shell: bash
+        run: |
+          set -euo pipefail
+          searx_secret="$(openssl rand -hex 32)"
+          crawl_token="$(openssl rand -hex 32)"
+          echo "::add-mask::$searx_secret"
+          echo "::add-mask::$crawl_token"
+          token_file="$RUNNER_TEMP/cloudflared-tunnel-placeholder"
+          : > "$token_file"
+          chmod 600 "$token_file"
+          echo "SEARXNG_SECRET=$searx_secret" >> "$GITHUB_ENV"
+          echo "CRAWL4AI_API_TOKEN=$crawl_token" >> "$GITHUB_ENV"
+          echo "BOF_GATEWAY_PUBLIC_URL=https://bof-inspect.swayphics.co.za" >> "$GITHUB_ENV"
+          echo "CLOUDFLARED_TUNNEL_TOKEN_FILE=$token_file" >> "$GITHUB_ENV"
+
+      - name: Start pinned private gateway services without a live tunnel
+        run: |
+          docker compose --project-name bof-private-gateway-ci --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml config --quiet
+          docker compose --project-name bof-private-gateway-ci --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml up --detach valkey searxng crawl4ai gateway
+
+      - name: Verify private gateway health, network boundaries and unpublished ports
+        shell: bash
+        run: |
+          set -euo pipefail
+          compose=(docker compose --project-name bof-private-gateway-ci --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml)
+
+          ready=false
+          for attempt in $(seq 1 60); do
+            crawl_id="$("\${compose[@]}" ps -q crawl4ai)"
+            if [ -n "$crawl_id" ]; then
+              health="$(docker inspect --format '{{.State.Health.Status}}' "$crawl_id" 2>/dev/null || true)"
+              if [ "$health" = "healthy" ]; then
+                ready=true
+                break
+              fi
+            fi
+            sleep 5
+          done
+          if [ "$ready" != true ]; then
+            "\${compose[@]}" ps
+            exit 1
+          fi
+
+          valkey_reply="$("\${compose[@]}" exec -T valkey valkey-cli ping)"
+          test "$valkey_reply" = "PONG"
+
+          check_networks() {
+            local service="$1"
+            shift
+            local container_id
+            container_id="$("\${compose[@]}" ps -q "$service")"
+            test -n "$container_id"
+            local bindings
+            bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$container_id")"
+            if [ "$bindings" != "null" ] && [ "$bindings" != "{}" ]; then
+              echo "$service unexpectedly publishes host ports: $bindings"
+              exit 1
+            fi
+            local actual expected
+            actual="$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$container_id" | sort)"
+            expected="$(printf '%s\n' "$@" | sort)"
+            if [ "$actual" != "$expected" ]; then
+              echo "Unexpected network membership for $service"
+              printf 'Expected:\n%s\nActual:\n%s\n' "$expected" "$actual"
+              exit 1
+            fi
+          }
+
+          prefix="bof-private-gateway-ci_"
+          check_networks gateway "\${prefix}tunnel_internal" "\${prefix}search_internal" "\${prefix}crawl_internal"
+          check_networks searxng "\${prefix}search_internal" "\${prefix}search_egress"
+          check_networks crawl4ai "\${prefix}crawl_internal" "\${prefix}crawl_egress"
+          check_networks valkey "\${prefix}search_internal"
+
+          tunnel_id="$(docker ps --filter "label=com.docker.compose.project=bof-private-gateway-ci" --filter "label=com.docker.compose.service=cloudflared" -q)"
+          test -z "$tunnel_id"
+          echo "Private gateway boundaries verified: Valkey healthy; no published ports; Caddy has no egress; providers and cache have only their assigned networks; cloudflared was not started."
+
+      - name: Exercise private gateway search and crawler routes from tunnel-only network
+        shell: bash
+        run: |
+          docker run --rm \
+            --network bof-private-gateway-ci_tunnel_internal \
+            --volume "$PWD/scripts/business-assessment-private-gateway.integration.cjs:/test/integration.cjs:ro" \
+            --env BOF_GATEWAY_INTERNAL_URL=http://10.77.30.2:8080 \
+            --env BOF_GATEWAY_PUBLIC_HOST=bof-inspect.swayphics.co.za \
+            --env CRAWL4AI_API_TOKEN="$CRAWL4AI_API_TOKEN" \
+            node:22-alpine node /test/integration.cjs
+
 
       - name: Collect provider logs on failure
         if: failure()

@@ -396,6 +396,8 @@ const path = require("node:path");
     assert.ok(tunnelService, "The private Compose file must define a Cloudflare Tunnel connector");
     assert.match(tunnelService, /tunnel_internal/);
     assert.match(tunnelService, /cloudflare_egress/);
+    assert.match(tunnelService, /profiles:\s*\n\s+- tunnel/,
+        "The tunnel connector must be opt-in so CI can test the private gateway without a live tunnel token");
     assert.doesNotMatch(tunnelService, /ports:/);
 
     assert.match(privateCaddyfile, /path \/search/);
