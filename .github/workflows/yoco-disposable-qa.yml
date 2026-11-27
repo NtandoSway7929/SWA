@@ -16,6 +16,7 @@ on:
       - "scripts/yoco-invoice-settings.test.cjs"
       - "scripts/yoco-reconciliation-ui.test.cjs"
       - "scripts/bank-transfer-review.test.cjs"
+      - "scripts/payment-receipt-delivery.test.cjs"
       - ".github/workflows/yoco-disposable-qa.yml"
   pull_request:
     branches:
@@ -80,7 +81,8 @@ jobs:
             supabase/functions/yoco-payment-webhook/index.ts \
             supabase/functions/get-payment-status/index.ts \
             supabase/functions/reconcile-payment/index.ts \
-            supabase/functions/bank-transfer/index.ts
+            supabase/functions/bank-transfer/index.ts \
+            supabase/functions/deliver-payment-receipt/index.ts
 
       - name: Run Yoco Deno tests
         env:
@@ -183,9 +185,9 @@ jobs:
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           mapfile -t migrations < <(find supabase/migrations -maxdepth 1 -type f \
-            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' -o -name '202611210001_payment_receipt_email_delivery.sql' -o -name '202611210002_admin_manual_payment_recording.sql' -o -name '202611220001_manual_payment_request_indexes.sql' -o -name '202611220002_payment_receipt_client_snapshot.sql' -o -name '202611220003_payment_receipt_delivery_tracking.sql' -o -name '20261126163829_admin_archived_invoice_permanent_delete.sql' -o -name '20261127110000_admin_yoco_test_payment_cleanup.sql' \) \
+            \( -name '202611110*_yoco*.sql' -o -name '202611120001_yoco_refund_event_idempotency.sql' -o -name '20261113084221_bank_transfer_submissions.sql' -o -name '20261113090000_bank_transfer_portal_token_grants.sql' -o -name '202611210001_payment_receipt_email_delivery.sql' -o -name '202611210002_admin_manual_payment_recording.sql' -o -name '202611220001_manual_payment_request_indexes.sql' -o -name '202611220002_payment_receipt_client_snapshot.sql' -o -name '202611220003_payment_receipt_delivery_tracking.sql' -o -name '20261126163829_admin_archived_invoice_permanent_delete.sql' -o -name '20261127110000_admin_yoco_test_payment_cleanup.sql' -o -name '20261127115000_admin_void_manual_test_eft.sql' \) \
             | sort)
-          test "${#migrations[@]}" -eq 22
+          test "${#migrations[@]}" -eq 23
           for migration in "${migrations[@]}"; do
             echo "Applying $migration"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
@@ -268,7 +270,8 @@ jobs:
             supabase/tests/yoco-source/202611110011_yoco_reconciliation_admin_workflow.test.sql \
             supabase/tests/yoco-source/202611120002_bank_transfer_submissions.test.sql \
             supabase/tests/yoco-source/20261126190001_admin_archived_invoice_permanent_delete.test.sql \
-            supabase/tests/yoco-source/20261127110001_admin_yoco_test_payment_cleanup.test.sql
+            supabase/tests/yoco-source/20261127110001_admin_yoco_test_payment_cleanup.test.sql \
+            supabase/tests/yoco-source/20261127115001_admin_void_manual_test_eft.test.sql
 
       - name: Run Yoco webhook lease transaction scenarios
         shell: bash
