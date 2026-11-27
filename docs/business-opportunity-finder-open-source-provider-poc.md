@@ -144,7 +144,7 @@ A focused follow-up was added for Kalm's official `/pages/our-stores` page. The 
 
 
 
-The SearXNG test config disables the request limiter only to keep the ephemeral test deterministic. It is not a production configuration. The SearXNG limiter requires a Valkey database and correct trusted-proxy IP handling. A production design must provision Valkey privately, enable the limiter, configure the trusted proxy chain accurately, restrict network access and review all external search engines.
+The SearXNG test config disables the request limiter only to keep the ephemeral test deterministic. It is not a production configuration. The SearXNG limiter requires a Valkey database and correct trusted-proxy IP handling. A production design must either provision Valkey privately and enable the limiter with correct trusted-proxy configuration, or enforce equivalent per-client rate limiting at a private authenticated gateway and document why the built-in limiter is not used. In either case, restrict network access and review all external search engines.
 
 ## Security and deployment-readiness review — 27 November 2026
 
@@ -152,7 +152,7 @@ The SearXNG test config disables the request limiter only to keep the ephemeral 
 
 ### Controls now applied to the isolated Crawl4AI container
 
-The POC Compose service now mirrors the relevant upstream hardened Compose posture:
+The POC Compose service now mirrors the relevant upstream hardened Compose posture, and CI inspects the running Crawl4AI container plus verifies both service ports are bound to host loopback:
 
 - Crawl4AI v0.9.6 is pinned to its multi-architecture image manifest digest.
 - The container runs as the non-root `appuser`.
@@ -165,7 +165,7 @@ These checks intentionally stop short of claiming that Chromium itself is sandbo
 
 ### Remaining production blockers
 
-1. **SearXNG abuse controls:** the test setting has `server.limiter: false`. Production requires a private Valkey service, the limiter enabled, trusted proxy configuration for client-IP handling and an independently tested rate-limit policy. Do not simply set `limiter: true` without the Valkey dependency and proxy headers.
+1. **SearXNG abuse controls:** the test setting has `server.limiter: false`. Either add a private Valkey service, enable the SearXNG limiter and set trusted proxy headers correctly, or place SearXNG behind a private authenticated gateway with independently tested per-client rate limiting. Do not simply set `limiter: true` without the Valkey dependency and proxy headers.
 2. **Ingress and service identity:** both POC ports bind to host loopback. A deployment must keep both services private, allow only the Swayphics Edge Function or its private gateway to call them, terminate TLS, enforce authentication at the service boundary and prevent direct public access. SearXNG has no application token in this adapter contract; protect it with private ingress or an authenticated gateway.
 3. **Egress/SSRF:** retain Crawl4AI's v0.9.6 pinning egress protections. Add network-level egress restrictions so the crawler cannot reach private, loopback, link-local, metadata or Swayphics infrastructure ranges. Validate DNS-rebinding and redirect cases against the actual deployment network, not only URL-string validation in the adapter.
 4. **Chromium sandbox:** complete the upstream sandbox verification. The current container controls do not by themselves prove renderer sandboxing.

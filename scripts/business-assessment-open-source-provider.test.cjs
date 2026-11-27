@@ -25,6 +25,10 @@ const path = require("node:path");
         "Crawl4AI output writes must use a private tmpfs mount");
     assert.match(compose, /pids:\s*512/,
         "Crawl4AI must have a PID limit");
+    assert.match(compose, /127\.0\.0\.1:\$\{SEARXNG_PORT/,
+        "SearXNG must bind only to host loopback in the isolated POC");
+    assert.match(compose, /127\.0\.0\.1:\$\{CRAWL4AI_PORT/,
+        "Crawl4AI must bind only to host loopback in the isolated POC");
 
     const searchResults = __testing.normaliseSearxngResults({
         results: [

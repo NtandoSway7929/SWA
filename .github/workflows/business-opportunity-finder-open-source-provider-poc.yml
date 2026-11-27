@@ -110,6 +110,13 @@ jobs:
           pids_limit="$(docker inspect --format '{{.HostConfig.PidsLimit}}' "$container_id")"
           test "$pids_limit" -gt 0
           echo "Crawl4AI container posture verified: read-only rootfs, non-root user, dropped capabilities, no-new-privileges and resource limits."
+          searxng_id="$(docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml ps -q searxng)"
+          test -n "$searxng_id"
+          for service_id in "$container_id" "$searxng_id"; do
+            published_ports="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$service_id")"
+            echo "$published_ports" | grep -q '"HostIp":"127.0.0.1"'
+          done
+          echo "Both provider services are published only on host loopback."
 
       - name: Run live provider integration smoke test
         env:
