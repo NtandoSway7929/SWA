@@ -1,0 +1,37 @@
+name: BOF open-source provider POC
+
+on:
+  push:
+    branches:
+      - poc/bof-open-source-inspection-providers
+    paths:
+      - "supabase/functions/_shared/business-assessment-open-source-provider.mjs"
+      - "supabase/functions/_shared/business-assessment-evidence.mjs"
+      - "scripts/business-assessment-open-source-provider.test.cjs"
+      - "docs/business-opportunity-finder-open-source-provider-poc.md"
+      - ".github/workflows/business-opportunity-finder-open-source-provider-poc.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bof-open-source-provider-poc-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  adapter-contract:
+    name: Mocked provider adapter contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run isolated mocked tests
+        run: node scripts/business-assessment-open-source-provider.test.cjs
