@@ -201,7 +201,7 @@ assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-record-card/);
 assert.match(css, /@media \(max-width: 620px\)/);
 assert.match(css, /prefers-reduced-motion/);
 
-assert.match(html, /admin-workspace\.js\?v=20261126-archived-invoice-purge-1/,
+assert.match(html, /admin-workspace\.js\?v=20261127-test-payment-deletion-1/,
     "the communication viewer workspace script must use a refreshed cache key");
 
 console.log("Admin record-card contract tests passed for 15 dashboard views and communication viewing.");
