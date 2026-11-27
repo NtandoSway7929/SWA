@@ -136,6 +136,10 @@ for (const view of ["tasks", "followups", "communications"]) {
 const clientDeleteHandler = section(
     workspace, "    async function removeRecord(type, id)", "record deletion handler"
 );
+const paymentDeleteHandler = clientDeleteHandler.slice(
+    clientDeleteHandler.indexOf('if (type === "payments")'),
+    clientDeleteHandler.indexOf('\n        if (\n            type === "team"')
+);
 assert.match(clientDeleteHandler, /state\.invoices\.filter/);
 assert.match(clientDeleteHandler, /state\.payments\.filter/);
 assert.match(clientDeleteHandler, /clientInvoices\.length/);
@@ -146,7 +150,7 @@ assert.match(clientDeleteHandler, /if \(type === "payments"\)/,
 assert.match(clientDeleteHandler, /Only the Swayphics owner can manage payment records/);
 assert.match(clientDeleteHandler, /protects receipts, approved bank-transfer evidence, refunds and reconciliation history/);
 assert.match(clientDeleteHandler, /Dedicated test-payment cleanup is not yet available/);
-assert.doesNotMatch(clientDeleteHandler, /method: "DELETE"/,
+assert.doesNotMatch(paymentDeleteHandler, /method: "DELETE"/,
     "the payment delete handler must never send a generic DELETE request");
 assert.match(clientDeleteHandler, /No payment data was changed/);
 assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\)/,
