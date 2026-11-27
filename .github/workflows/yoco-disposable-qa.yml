@@ -11,6 +11,8 @@ on:
       - "admin-dashboard/yoco-invoice-settings.js"
       - "admin-dashboard/yoco-reconciliation.js"
       - "admin-dashboard/index.html"
+      - "admin-dashboard/payment-receipts.js"
+      - "scripts/payment-receipt-delivery.test.cjs"
       - "scripts/yoco-invoice-settings.test.cjs"
       - "scripts/yoco-reconciliation-ui.test.cjs"
       - "scripts/bank-transfer-review.test.cjs"
@@ -128,6 +130,11 @@ jobs:
 
       - name: Parse Yoco migrations and SQL tests
         run: python supabase/tests/yoco_sql_syntax_check.py
+      
+      - name: Validate Yoco test cleanup dashboard integration
+        run: |
+          node --check admin-dashboard/payment-receipts.js
+          node scripts/payment-receipt-delivery.test.cjs
 
   disposable-database:
     name: Disposable Supabase migrations and SQL tests
