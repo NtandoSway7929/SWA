@@ -258,7 +258,7 @@ async function clientDetails(admin: any, clientId: string, invoiceId: string) {
       "bank_name,account_name,account_type,account_number,branch_code,swift_bic,payment_instructions",
     ).eq("id", 1).maybeSingle(),
     admin.from("bank_transfer_submissions").select(
-      "id,invoice_id,amount,bank_reference,status,submitted_at,reviewed_at,rejection_reason,payment_id",
+      "id,invoice_id,amount,bank_reference,status,submitted_at,reviewed_at,rejection_reason,payment_id,voided_at,void_reason",
     ).eq("client_id", clientId).eq("invoice_id", invoiceId).order(
       "submitted_at",
       { ascending: false },
@@ -318,6 +318,8 @@ async function clientDetails(admin: any, clientId: string, invoiceId: string) {
       reviewed_at: row.reviewed_at,
       rejection_reason: row.rejection_reason,
       payment_id: row.payment_id,
+      voided_at: row.voided_at || null,
+      void_reason: row.void_reason || null,
     })),
   });
 }
