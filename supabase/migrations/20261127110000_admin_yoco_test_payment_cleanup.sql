@@ -119,6 +119,107 @@ $function$;
 revoke all on function innerme_private.guard_yoco_financial_ledger()
     from public, anon, authenticated, service_role;
 
+create or replace function public.admin_list_yoco_test_payment_cleanup_candidates()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_payments jsonb;
+begin
+    if auth.uid() is null
+       or not coalesce(public.is_swayphics_owner(), false) then
+        raise exception 'Active Swayphics owner access is required.'
+            using errcode = '42501';
+    end if;
+
+    select coalesce(
+        jsonb_agg(
+            jsonb_build_object(
+                'payment_id', p.id,
+                'invoice_id', i.id,
+                'invoice_number', i.invoice_number,
+                'client_name', coalesce(nullif(c.business_name, ''), c.contact_name, 'Client'),
+                'amount', p.amount,
+                'currency', p.currency,
+                'paid_at', p.paid_at,
+                'receipt_number', pr.receipt_number
+            )
+            order by p.paid_at desc nulls last, p.created_at desc
+        ),
+        '[]'::jsonb
+    )
+    into v_payments
+    from public.payments p
+    join public.payment_attempts pa
+      on pa.payment_id = p.id
+     and pa.provider = 'yoco'
+     and pa.environment = 'test'
+     and pa.status = 'succeeded'
+    join public.invoices i
+      on i.id = p.invoice_id
+    join public.clients c
+      on c.id = p.client_id
+    join public.payment_receipts pr
+      on pr.payment_id = p.id
+    where p.provider = 'yoco'
+      and p.status = 'paid'
+      and p.method = 'Card'
+      and pa.invoice_id = p.invoice_id
+      and pa.client_id = p.client_id
+      and pa.provider_checkout_id is not null
+      and pa.provider_checkout_id = p.provider_checkout_id
+      and round(p.amount * 100)::bigint = pa.amount_cents
+      and upper(coalesce(p.currency, '')) = pa.currency
+      and exists (
+          select 1
+            from public.payment_webhook_events e
+           where e.payment_attempt_id = pa.id
+             and e.provider = 'yoco'
+             and e.environment = 'test'
+             and e.event_type = 'payment.succeeded'
+             and e.signature_verified is true
+             and e.processing_status = 'processed'
+      )
+      and not exists (
+          select 1
+            from public.payment_webhook_events e
+           where e.payment_attempt_id = pa.id
+             and (e.provider is distinct from 'yoco'
+                  or e.environment is distinct from 'test')
+      )
+      and not exists (
+          select 1 from public.payment_refunds r
+           where r.payment_id = p.id
+      )
+      and not exists (
+          select 1 from public.payment_reconciliation rc
+           where rc.payment_id = p.id
+              or rc.payment_attempt_id = pa.id
+      )
+      and not exists (
+          select 1 from public.payment_reconciliation_actions ra
+           where ra.related_payment_id = p.id
+      )
+      and not exists (
+          select 1 from public.bank_transfer_submissions bts
+           where bts.payment_id = p.id
+              or bts.invoice_id = i.id
+      );
+
+    return jsonb_build_object('ok', true, 'payments', v_payments);
+end;
+$function$;
+
+revoke all on function public.admin_list_yoco_test_payment_cleanup_candidates()
+    from public, anon;
+grant execute on function public.admin_list_yoco_test_payment_cleanup_candidates()
+    to authenticated;
+
+comment on function public.admin_list_yoco_test_payment_cleanup_candidates() is
+    'Owner-only listing of fully verified Yoco test-mode payments eligible for the dedicated cleanup RPC.';
+
 create or replace function public.admin_cleanup_yoco_test_payment(
     p_payment_id uuid,
     p_confirmation text,
