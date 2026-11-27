@@ -244,7 +244,7 @@ function summarise(items) {
     };
 
     const evaluated = {
-        benchmarkVersion: "bof-public-page-fetch-v3-identity",
+        benchmarkVersion: "bof-public-page-fetch-v4-followup",
         scope: "Five independently verified Pretoria business websites; public URLs only; no assessment answers, respondent contact details or customer-submitted destinations.",
         provider: "Crawl4AI through the isolated Swayphics adapter",
         batchSizes: [3, 2],
@@ -297,7 +297,8 @@ function summarise(items) {
             "- Existing Swayphics identity matcher — confirmed: **" + evaluated.summary.identityMatchCounts.confirmed + "**; ambiguous: **" + evaluated.summary.identityMatchCounts.ambiguous + "**; rejected: **" + evaluated.summary.identityMatchCounts.rejected + "**; not evaluated after fetch failure: **" + evaluated.summary.identityMatchCounts.not_evaluated_fetch_failed + "**\n" +
             "- Final-domain mismatches: **" + evaluated.summary.finalDomainMismatch + "**\n\n" +
             "**Identity matching:** statuses are produced by the existing `matchBusinessIdentity()` function from Swayphics' evidence module. Inputs are the public business name/location in this test case, fetched title and up to 12,000 extracted characters. A confirmed result exercises the current rules; it is not independent proof of legal ownership.\n\n" +
-            "**Interpretation:** the usable-page check is a diagnostic gate, not proof of full page completeness or legal ownership. HTTP error/redirect pages with short or unrelated text must not be treated as successful website evidence. Individual site blocking or content differences are reported, not treated as provider API failures.\n";
+            "**Interpretation:** the usable-page check is a diagnostic gate, not proof of full page completeness or legal ownership. HTTP error/redirect pages with short or unrelated text must not be treated as successful website evidence. Individual site blocking or content differences are reported, not treated as provider API failures.\n" +
+            secondarySummary;
 
         await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, summary, "utf8");
     }
