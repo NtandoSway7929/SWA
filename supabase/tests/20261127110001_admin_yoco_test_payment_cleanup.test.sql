@@ -364,6 +364,7 @@ select extensions.ok(
            and a.payment_snapshot ? 'provider'
            and a.receipt_snapshot ? 'receipt_number'
            and jsonb_array_length(a.webhook_event_snapshots) > 0
+           and jsonb_array_length(a.receipt_delivery_snapshot->'deliveries') > 0
     ),
     'private cleanup audit retains payment, receipt, and webhook snapshots'
 );
