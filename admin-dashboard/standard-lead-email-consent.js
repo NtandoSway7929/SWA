@@ -329,7 +329,7 @@
       : null;
     if (!emailButton) return;
     const id = String(emailButton.dataset.leadEmailId || "");
-    if (!loaded && !loading) {
+    if (!loaded) {
       event.preventDefault();
       event.stopPropagation();
       if (event.stopImmediatePropagation) event.stopImmediatePropagation();
