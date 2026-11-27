@@ -57,7 +57,7 @@ jobs:
             CLOUDFLARED_IMAGE="cloudflare/cloudflared:2026.11.2@sha256:$digest_stub" \
             CLOUDFLARED_TUNNEL_TOKEN_FILE="$token_file" \
             docker compose --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml config --quiet
-          docker run --rm --network none \
+          docker run --rm --network none --entrypoint caddy \
             --volume "$PWD/scripts/bof-open-source-provider-poc/private-gateway/gateway:/etc/caddy:ro" \
             caddy:2.11.9-alpine \
             validate --config /etc/caddy/Caddyfile --adapter caddyfile
