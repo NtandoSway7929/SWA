@@ -261,7 +261,7 @@ begin
                 or bts.invoice_id = v_invoice.id
        )
        then
-        raise exception 'This payment has refund, reconciliation, bank-transfer, or manual-payment evidence. It cannot be cleaned up.';
+        raise exception 'This payment has refund, reconciliation, or bank-transfer evidence. It cannot be cleaned up.';
     end if;
 
     select pr.* into v_receipt
