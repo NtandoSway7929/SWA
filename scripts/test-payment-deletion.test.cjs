@@ -17,6 +17,11 @@ const html = fs.readFileSync(
     path.join(root, "admin-dashboard/index.html"),
     "utf8"
 );
+const edge = fs.readFileSync(
+    path.join(root, "supabase/functions/admin-delete-test-payment/index.ts"),
+    "utf8"
+);
+const config = fs.readFileSync(path.join(root, "supabase/config.toml"), "utf8");
 
 assert.match(migration, /add column if not exists is_test boolean not null default false/i);
 assert.match(migration, /public\.is_swayphics_owner\(\)/);
@@ -36,6 +41,10 @@ assert.match(migration, /grant execute on function public\.admin_permanently_del
 assert.match(migration, /and p\.is_test is false/);
 assert.match(migration, /and rp\.is_test is false/);
 assert.match(migration, /Payments must be deleted through an authorized test-payment or archived-invoice purge workflow/);
+assert.match(edge, /storage\\.from\\(String\\(row\\.bucket_id\\)\\)\\s*\\.remove/);
+assert.match(edge, /retry_cleanup/);
+assert.match(edge, /admin_permanently_delete_test_payment/);
+assert.match(config, /\\[functions\\.admin-delete-test-payment\\]\\s*verify_jwt = true/);
 
 const rendererStart = workspace.indexOf("    function renderPayments()");
 const rendererEnd = workspace.indexOf("\n    function ", rendererStart + 10);
@@ -50,6 +59,8 @@ assert.doesNotMatch(renderer, /data-delete="payments"/);
 
 assert.match(workspace, /admin_mark_payment_as_test/);
 assert.match(workspace, /admin_permanently_delete_test_payment/);
+assert.match(workspace, /functions\\/v1\\/admin-delete-test-payment/);
+assert.match(workspace, /data-retry-test-payment-cleanup/);
 assert.match(workspace, /payment\.is_test === true/);
 assert.match(workspace, /payment\.is_test !== true/);
 assert.match(workspace, /type === "payments"[\s\S]*?owner explicitly classifies them as test data/);
