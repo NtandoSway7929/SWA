@@ -5,6 +5,7 @@
   var PUBLISHABLE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QbH";
   var quoteRows = new Map();
   var responseRows = new Map();
+  var reviewLinkRows = new Map();
   var refreshInFlight = null;
   var observer = null;
   var renderTimer = null;
@@ -60,9 +61,10 @@
       if (window.swayphicsAdminSessionReady) {
         await window.swayphicsAdminSessionReady;
       }
-      var [quotes, responses] = await Promise.all([
+      var [quotes, responses, links] = await Promise.all([
         request("/rest/v1/quotes?select=id,status,quote_number,proposal_id,proposal_version_id,valid_until&order=created_at.desc"),
-        request("/rest/v1/quote_review_responses?select=quote_id,decision,respondent_name,respondent_email,message,submitted_at&order=submitted_at.desc")
+        request("/rest/v1/quote_review_responses?select=quote_id,decision,respondent_name,respondent_email,message,submitted_at&order=submitted_at.desc"),
+        request("/rest/v1/quote_review_links?select=id,quote_id,expires_at,revoked_at,responded_at&order=created_at.desc")
       ]);
       quoteRows = new Map((Array.isArray(quotes) ? quotes : []).map(function (row) {
         return [String(row.id), row];
@@ -71,6 +73,11 @@
       (Array.isArray(responses) ? responses : []).forEach(function (row) {
         var key = String(row.quote_id);
         if (!responseRows.has(key)) responseRows.set(key, row);
+      });
+      reviewLinkRows = new Map();
+      (Array.isArray(links) ? links : []).forEach(function (row) {
+        var key = String(row.quote_id);
+        if (!reviewLinkRows.has(key)) reviewLinkRows.set(key, row);
       });
     })();
     try {
@@ -102,9 +109,26 @@
       action.textContent = "Send for review";
       action.addEventListener("click", function () { sendForReview(quoteId, row, action); });
     } else if (row.status === "sent") {
-      action.textContent = "Awaiting response";
+      var activeLink = reviewLinkRows.get(quoteId);
+      var expiresAt = activeLink && activeLink.expires_at ? new Date(activeLink.expires_at) : null;
+      var isActive = activeLink && !activeLink.revoked_at && !activeLink.responded_at &&
+        expiresAt && !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now();
+      action.textContent = isActive ? "Awaiting response" : "Review link unavailable";
       action.disabled = true;
       action.classList.add("proposal-delivery-static");
+      editButton.insertAdjacentElement("afterend", action);
+      if (isActive) {
+        var revoke = document.createElement("button");
+        revoke.type = "button";
+        revoke.className = "sway-row-action danger";
+        revoke.setAttribute("data-proposal-revoke-action", quoteId);
+        revoke.textContent = "Revoke link";
+        revoke.addEventListener("click", function () {
+          revokeReviewLink(quoteId, activeLink, revoke);
+        });
+        action.insertAdjacentElement("afterend", revoke);
+      }
+      return;
     } else {
       return;
     }
@@ -223,6 +247,29 @@
       button.disabled = false;
       button.textContent = originalText;
       notify((error && error.message ? error.message : "The proposal could not be sent.") + recoveryMessage);
+    }
+  }
+
+  async function revokeReviewLink(quoteId, link, button) {
+    if (!link || !link.id) return;
+    if (!window.confirm("Revoke this proposal review link? The client will no longer be able to open it, and the quote will return to draft.")) return;
+    button.disabled = true;
+    button.textContent = "Revoking...";
+    try {
+      var result = await rpc("admin_revoke_swayphics_quote_review", {
+        p_review_link_id: link.id,
+        p_reason: "Revoked by a Swayphics administrator."
+      });
+      if (!result || result.success !== true) {
+        throw new Error(result && result.message ? result.message : "The review link could not be revoked.");
+      }
+      await refreshQuoteState();
+      renderActions();
+      notify("The proposal review link has been revoked. The quote is back in draft and can be revised before sending again.");
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = "Revoke link";
+      notify(error && error.message ? error.message : "Unable to revoke this review link.");
     }
   }
 
