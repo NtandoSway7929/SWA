@@ -52,11 +52,15 @@ jobs:
         with:
           node-version: 22
 
-      - name: Generate ephemeral service credentials
+      - name: Generate and mask ephemeral service credentials
         shell: bash
         run: |
-          echo "SEARXNG_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "CRAWL4AI_API_TOKEN=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          searx_secret="$(openssl rand -hex 32)"
+          crawl_token="$(openssl rand -hex 32)"
+          echo "::add-mask::$searx_secret"
+          echo "::add-mask::$crawl_token"
+          echo "SEARXNG_SECRET=$searx_secret" >> "$GITHUB_ENV"
+          echo "CRAWL4AI_API_TOKEN=$crawl_token" >> "$GITHUB_ENV"
 
       - name: Start pinned local provider containers
         run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml up --detach
