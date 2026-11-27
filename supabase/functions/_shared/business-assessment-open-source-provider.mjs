@@ -168,14 +168,20 @@ function normaliseCrawlResult(item, requestedUrl) {
 
     const text = markdownText(item?.markdown) ||
         (typeof item?.extracted_content === "string" ? item.extracted_content : "");
+    const statusCode = Number.isInteger(item?.status_code) ? item.status_code : null;
+    const httpStatusAcceptable = statusCode === null || (statusCode >= 200 && statusCode < 300);
+    const hasReadableText = Boolean(text.trim());
+    const success = item?.success === true && httpStatusAcceptable && hasReadableText;
+    const errorCode = item?.success !== true
+        ? "fetch_error"
+        : !httpStatusAcceptable ? "http_status_" + statusCode
+            : !hasReadableText ? "empty_content" : null;
 
     return {
         url: requestedUrl,
         final_url: finalUrl,
-        success: item?.success === true && Boolean(text.trim()),
-        error_code: item?.success === true
-            ? (text.trim() ? null : "empty_content")
-            : "fetch_error",
+        success,
+        error_code: errorCode,
         title: typeof metadata.title === "string" ? metadata.title.slice(0, 300) : "",
         description: typeof metadata.description === "string"
             ? metadata.description.slice(0, 1000)
@@ -185,7 +191,7 @@ function normaliseCrawlResult(item, requestedUrl) {
         links: flattenCrawlLinks(item?.links),
         etag: responseHeader(item?.response_headers, "etag"),
         last_modified: responseHeader(item?.response_headers, "last-modified"),
-        status_code: Number.isInteger(item?.status_code) ? item.status_code : null
+        status_code: statusCode
     };
 }
 
