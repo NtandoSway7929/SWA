@@ -5,7 +5,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(24);
+select extensions.plan(26);
 
 select extensions.has_table(
     'innerme_private',
@@ -247,6 +247,23 @@ select extensions.ok(
        from public.bank_transfer_submissions where id='1eca46ef-3c9e-4e04-a72e-907431ad7bc6'),
     'bank transfer approval, proof path and reviewer history are retained on the voided test submission'
 );
+select extensions.throws_ok(
+    $ update public.payments
+          set notes = coalesce(notes,'') || ' attempted edit'
+        where id = '4e8761b0-feec-429a-a690-7085b59aedcd' $,
+    '55000',
+    'Voided test payments are immutable and cannot be reactivated or edited.',
+    'a voided test payment cannot be edited or restored to paid'
+);
+select extensions.throws_ok(
+    $ update public.bank_transfer_submissions
+          set status = 'approved'
+        where id = '1eca46ef-3c9e-4e04-a72e-907431ad7bc6' $,
+    '55000',
+    'Voided test bank-transfer submissions are immutable.',
+    'a voided test bank-transfer submission cannot be re-approved'
+);
+
 select extensions.ok(
     exists (
         select 1 from innerme_private.manual_test_eft_void_audit a
