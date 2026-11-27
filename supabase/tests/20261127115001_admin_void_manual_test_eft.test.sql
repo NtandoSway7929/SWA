@@ -5,7 +5,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(21);
+select extensions.plan(24);
 
 select extensions.has_table(
     'innerme_private',
@@ -223,7 +223,7 @@ select extensions.ok(
         select 1 from innerme_private.manual_test_eft_void_audit a
          where a.original_payment_id='4e8761b0-feec-429a-a690-7085b59aedcd'
            and a.payment_snapshot->>'status'='paid'
-           and a.invoice_snapshot->>'amount_paid'='700'
+           and (a.invoice_snapshot->>'amount_paid')::numeric=700
            and a.receipt_snapshot->>'receipt_number'='SW-RCPT-2026-000001'
            and a.bank_transfer_snapshot->>'status'='approved'
            and a.proof_storage_path='f8ce9e4a-127f-404b-8741-130d3d7e085c/1eca46ef-3c9e-4e04-a72e-907431ad7bc6/proof.jpg'
