@@ -12,7 +12,7 @@ const dashboard = fs.readFileSync(path.join(root, "admin-dashboard", "index.html
 
 test("manual payment recording is launched from Sales & Billing, not a floating shortcut", () => {
   assert.match(manual, /data-nav-menu="billing"/);
-  assert.match(manual, /button\\.dataset\\.view = "manual-payment-record"/);
+  assert.match(manual, /button\.dataset\.view = "manual-payment-record"/);
   assert.match(manual, /textContent = "Record payment"/);
   assert.match(manual, /stopImmediatePropagation\(\)/);
   assert.match(manual, /\.mp-launch\{display:none;/);
@@ -21,7 +21,7 @@ test("manual payment recording is launched from Sales & Billing, not a floating 
 
 test("payment receipt management is launched from Sales & Billing, not a floating shortcut", () => {
   assert.match(receipts, /data-nav-menu="billing"/);
-  assert.match(receipts, /button\\.dataset\\.view = "payment-receipts"/);
+  assert.match(receipts, /button\.dataset\.view = "payment-receipts"/);
   assert.match(receipts, /textContent = "Payment receipts"/);
   assert.match(receipts, /stopImmediatePropagation\(\)/);
   assert.match(receipts, /\.pr-launch\{display:none;/);
