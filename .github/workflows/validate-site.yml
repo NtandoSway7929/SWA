@@ -85,6 +85,9 @@ jobs:
       - name: Test admin communication record viewing
         run: node scripts/admin-record-cards.test.cjs
 
+      - name: Test quote pricing and invoice conversion contracts
+        run: node scripts/quote-pricing-engine.test.cjs
+
       - name: Test admin lead cards and proposal draft workflow
         run: node scripts/admin-lead-cards.test.cjs
       - name: Test premium invoice PDF and email design
