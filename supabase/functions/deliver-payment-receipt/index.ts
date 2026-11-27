@@ -156,7 +156,7 @@ async function listReceipts(admin: any) {
   const paymentMap = new Map((payments || []).map((row: any) => [row.id, row]));
   const clientMap = new Map((clients || []).map((row: any) => [row.id, row]));
   return json({ ok: true, receipts: (rows || []).map((row: any) => {
-    const payment = paymentMap.get(row.payment_id);
+    const payment: any = paymentMap.get(row.payment_id);
     return {
       id: row.id,
       payment_id: row.payment_id,
