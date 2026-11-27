@@ -91,6 +91,8 @@ docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml do
 
 The integration smoke test sends one generic query (`Crawl4AI open source web crawler`) through SearXNG and fetches only `https://example.com/` through Crawl4AI. It does not send assessment answers, prospect identifiers, respondent contact details or customer-submitted URLs. External search engines configured in SearXNG may receive that generic query.
 
+The same ephemeral run then executes `scripts/business-assessment-open-source-provider.search-benchmark.cjs`, using five public, well-indexed South African brands (Dis-Chem, Sorbet, Clicks, Planet Fitness and NetFlorist). The benchmark records the rank of each expected official domain in the top ten, along with the returned top-five domains and titles. It reports top-five and top-ten hit rates in the GitHub Actions job summary. This is a baseline for a well-indexed national-brand dataset, **not** a representative benchmark of independent small businesses or the BOF's full lead market. A non-empty generic SearXNG result set is not treated as evidence of search accuracy.
+
 The SearXNG test config disables the request limiter only to keep the ephemeral test deterministic. It is not a production configuration. Production must restore rate limiting, restrict network access, configure abuse controls and review all external search engines.
 
 The GitHub Actions workflow runs both the mocked adapter tests and this Docker smoke test on the isolated POC branch.
@@ -133,7 +135,7 @@ The mocked adapter test checks:
 - Missing Crawl4AI token handling.
 - SearXNG JSON-disabled error mapping.
 
-The Docker integration test checks actual SearXNG JSON API compatibility and actual Crawl4AI retrieval of the reserved `example.com` page. A zero-result SearXNG response is reported as a discovery-quality warning rather than proof of useful search coverage.
+The Docker integration test checks actual SearXNG JSON API compatibility and actual Crawl4AI retrieval of the reserved `example.com` page. The search benchmark then measures whether five expected official South African brand domains appear within the top ten, including their rank. A zero-result SearXNG response is reported as a discovery-quality warning rather than proof of useful search coverage.
 
 These checks do not prove live discovery quality, identity matching accuracy, provider privacy, production security or deployment readiness.
 
