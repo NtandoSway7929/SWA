@@ -48,7 +48,7 @@ const cards = {
         'data-invoice-action=\"delete\"'
     ],
     services: ['data-edit=\"services\"', 'data-delete=\"services\"'],
-    payments: ['data-edit=\"payments\"', 'data-delete=\"payments\"'],
+    payments: ['data-edit=\"payments\"' , "Financial record · deletion protected"],
     enquiries: ["data-enquiry-status=", 'data-status-next=\"contacted\"', 'data-status-next=\"closed\"'],
     communications: [
         "data-admin-table-row=\"communications\"", "data-admin-table-select=\"communications\"",
