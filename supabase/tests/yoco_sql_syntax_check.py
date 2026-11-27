@@ -15,11 +15,13 @@ MIGRATIONS = (
     sorted((ROOT / "supabase" / "migrations").glob("*_yoco_*.sql"))
     + sorted((ROOT / "supabase" / "migrations").glob("*_bank_transfer_*.sql"))
     + sorted((ROOT / "supabase" / "migrations").glob("*_archived_invoice_permanent_delete.sql"))
+    + sorted((ROOT / "supabase" / "migrations").glob("*_manual_test_eft_void.sql"))
 )
 TESTS = (
     sorted((ROOT / "supabase" / "tests").glob("*yoco*.sql"))
     + sorted((ROOT / "supabase" / "tests").glob("*bank_transfer*.sql"))
     + sorted((ROOT / "supabase" / "tests").glob("*archived_invoice_permanent_delete.test.sql"))
+    + sorted((ROOT / "supabase" / "tests").glob("*_manual_test_eft_void.test.sql"))
 )
 
 
