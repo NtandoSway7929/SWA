@@ -1,10 +1,30 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 (async () => {
     const providerModule = await import("../supabase/functions/_shared/business-assessment-open-source-provider.mjs");
     const { createOpenSourceInspectionProvider, __testing } = providerModule;
+
+    const compose = fs.readFileSync(path.join(
+        __dirname, "bof-open-source-provider-poc", "docker-compose.yml"
+    ), "utf8");
+    assert.match(compose, /unclecode\/crawl4ai:0\.9\.6@sha256:4603d7c4d69769673dfa1214fa9abbcac2a874d4d9af07d784782af528b65c68/,
+        "The Crawl4AI security release must be pinned by multi-architecture digest");
+    assert.match(compose, /cap_drop:\s*\n\s*- ALL/,
+        "Crawl4AI must drop all Linux capabilities");
+    assert.match(compose, /no-new-privileges:true/,
+        "Crawl4AI must prohibit privilege escalation");
+    assert.match(compose, /read_only:\s*true/,
+        "Crawl4AI must use a read-only root filesystem");
+    assert.match(compose, /user:\s*"appuser"/,
+        "Crawl4AI must run as the non-root application user");
+    assert.match(compose, /\/var\/lib\/crawl4ai\/outputs:uid=999,gid=999,mode=0700/,
+        "Crawl4AI output writes must use a private tmpfs mount");
+    assert.match(compose, /pids:\s*512/,
+        "Crawl4AI must have a PID limit");
 
     const searchResults = __testing.normaliseSearxngResults({
         results: [

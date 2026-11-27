@@ -93,6 +93,24 @@ jobs:
             exit 1
           fi
 
+      - name: Verify Crawl4AI container security posture
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_id="$(docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml ps -q crawl4ai)"
+          test -n "$container_id"
+          test "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$container_id")" = "true"
+          test "$(docker inspect --format '{{.Config.User}}' "$container_id")" = "appuser"
+          cap_drop="$(docker inspect --format '{{json .HostConfig.CapDrop}}' "$container_id")"
+          echo "$cap_drop" | grep -q '"ALL"'
+          security_opt="$(docker inspect --format '{{json .HostConfig.SecurityOpt}}' "$container_id")"
+          echo "$security_opt" | grep -q 'no-new-privileges'
+          memory_limit="$(docker inspect --format '{{.HostConfig.Memory}}' "$container_id")"
+          test "$memory_limit" -gt 0
+          pids_limit="$(docker inspect --format '{{.HostConfig.PidsLimit}}' "$container_id")"
+          test "$pids_limit" -gt 0
+          echo "Crawl4AI container posture verified: read-only rootfs, non-root user, dropped capabilities, no-new-privileges and resource limits."
+
       - name: Run live provider integration smoke test
         env:
           SEARXNG_BASE_URL: http://127.0.0.1:8080

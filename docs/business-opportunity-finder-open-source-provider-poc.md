@@ -69,7 +69,7 @@ The POC Docker environment is under `scripts/bof-open-source-provider-poc/`.
 It pins:
 
 - SearXNG image tag `2026.11.23-a7163d091` with an amd64 image digest.
-- Crawl4AI image tag `0.9.6`, the upstream security release dated 20 November 2026.
+- Crawl4AI image tag `0.9.6` pinned to multi-architecture manifest digest `sha256:4603d7c4d69769673dfa1214fa9abbcac2a874d4d9af07d784782af528b65c68`, the upstream security release dated 20 November 2026.
 
 Crawl4AI 0.9.6 includes security fixes for multiple Docker-server advisories. Do not substitute an older image. Review later security releases before any deployment.
 
@@ -144,7 +144,41 @@ A focused follow-up was added for Kalm's official `/pages/our-stores` page. The 
 
 
 
-The SearXNG test config disables the request limiter only to keep the ephemeral test deterministic. It is not a production configuration. Production must restore rate limiting, restrict network access, configure abuse controls and review all external search engines.
+The SearXNG test config disables the request limiter only to keep the ephemeral test deterministic. It is not a production configuration. The SearXNG limiter requires a Valkey database and correct trusted-proxy IP handling. A production design must provision Valkey privately, enable the limiter, configure the trusted proxy chain accurately, restrict network access and review all external search engines.
+
+## Security and deployment-readiness review — 27 November 2026
+
+**Status: not approved for production deployment.** The passing CI suite verifies the adapter contract, isolated service communication and a subset of container posture. It is not a penetration test, a full host hardening review or a production readiness attestation.
+
+### Controls now applied to the isolated Crawl4AI container
+
+The POC Compose service now mirrors the relevant upstream hardened Compose posture:
+
+- Crawl4AI v0.9.6 is pinned to its multi-architecture image manifest digest.
+- The container runs as the non-root `appuser`.
+- All Linux capabilities are dropped and privilege escalation is disabled.
+- The root filesystem is read-only; the documented working/output directories use restricted tmpfs mounts.
+- Shared memory is bounded, and memory/PID limits are declared.
+- CI inspects the running Docker container to verify read-only root, user, capability drop, no-new-privileges and resource limits.
+
+These checks intentionally stop short of claiming that Chromium itself is sandboxed. Upstream Crawl4AI still documents `--no-sandbox` as the default. Before production, test the `CRAWL4AI_CHROMIUM_SANDBOX=true` path with a supported unprivileged user namespace or a reviewed seccomp profile, following the upstream security verification runbook. Record the host/kernel and browser-start results. If this cannot be demonstrated, treat it as an explicit residual risk requiring a documented decision and compensating isolation controls.
+
+### Remaining production blockers
+
+1. **SearXNG abuse controls:** the test setting has `server.limiter: false`. Production requires a private Valkey service, the limiter enabled, trusted proxy configuration for client-IP handling and an independently tested rate-limit policy. Do not simply set `limiter: true` without the Valkey dependency and proxy headers.
+2. **Ingress and service identity:** both POC ports bind to host loopback. A deployment must keep both services private, allow only the Swayphics Edge Function or its private gateway to call them, terminate TLS, enforce authentication at the service boundary and prevent direct public access. SearXNG has no application token in this adapter contract; protect it with private ingress or an authenticated gateway.
+3. **Egress/SSRF:** retain Crawl4AI's v0.9.6 pinning egress protections. Add network-level egress restrictions so the crawler cannot reach private, loopback, link-local, metadata or Swayphics infrastructure ranges. Validate DNS-rebinding and redirect cases against the actual deployment network, not only URL-string validation in the adapter.
+4. **Chromium sandbox:** complete the upstream sandbox verification. The current container controls do not by themselves prove renderer sandboxing.
+5. **Secrets and rotation:** store the SearXNG secret, Crawl4AI API token and any gateway credentials in a managed secret store. Define rotation, least-privilege access and emergency revocation. Never put them in browser code, Git history or assessment payloads.
+6. **Search-engine disclosure:** self-hosting SearXNG does not prevent its configured external engines from receiving search queries. Review and minimise the enabled engine list; document which providers receive business names/locations, their retention and terms before real prospect data is used.
+7. **Logs/cache/retention:** define what each service logs or caches, retention durations, deletion procedure, access to logs, and whether request URLs or fetched page text can contain personal information.
+8. **Licensing:** obtain a commercial licence review for SearXNG's AGPL-3.0 obligations and check Crawl4AI's Apache-2.0 licence and the selected images' dependency notices. Do not infer that self-hosting removes licence obligations.
+9. **Operational resilience:** choose the host/network topology, CPU/RAM budget, concurrency, queue limits, health monitoring, backups where applicable, alerting and failure behaviour. Confirm the Supabase Edge Function can reach the private services with acceptable timeouts. The local Docker ports in this test are not reachable from Supabase.
+10. **Operational acceptance:** scan and record image provenance/SBOM, vulnerability results and digest; test upgrade/rollback; verify rate-limit, authentication, denial of private network targets, TLS, resource exhaustion and service recovery.
+
+The current Crawl4AI image is the reviewed v0.9.6 release, which upstream marks as a security release. Continue tracking upstream advisories and releases; pinning a digest is a reproducibility control, not a guarantee that the image remains vulnerability-free.
+
+No production hostname, hosting provider, private networking, production secret, Valkey instance or deployment has been selected or provisioned. These decisions remain open and must be completed before any production integration.
 
 The GitHub Actions workflow runs both the mocked adapter tests and this Docker smoke test on the isolated POC branch.
 

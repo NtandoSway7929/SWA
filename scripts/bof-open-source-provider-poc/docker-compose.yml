@@ -12,10 +12,38 @@ services:
 
   crawl4ai:
     # 0.9.6 is the upstream security release dated 20 November 2026.
-    image: unclecode/crawl4ai:0.9.6
+    # Multi-architecture manifest digest for the reviewed v0.9.6 security release.
+    image: unclecode/crawl4ai:0.9.6@sha256:4603d7c4d69769673dfa1214fa9abbcac2a874d4d9af07d784782af528b65c68
     environment:
       CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:?Set CRAWL4AI_API_TOKEN before starting the POC}
     ports:
       - "127.0.0.1:${CRAWL4AI_PORT:-11235}:11235"
     shm_size: "1gb"
+    # Mirror Crawl4AI's upstream least-privilege container posture.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/lib/redis:uid=999,gid=999,mode=0700
+      - /var/lib/crawl4ai/outputs:uid=999,gid=999,mode=0700
+      - /home/appuser/.crawl4ai:uid=999,gid=999,mode=0700
+      - /home/appuser/.cache/url_seeder:uid=999,gid=999,mode=0700
+      - /home/appuser/.gunicorn:uid=999,gid=999,mode=0700
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          pids: 512
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    user: "appuser"
     restart: "no"
