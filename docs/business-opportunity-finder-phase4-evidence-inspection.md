@@ -89,7 +89,7 @@ At minimum, the written agreement must:
 
 - Restrict use of submitted business/customer data to processing necessary to provide the specific inspection requested by Swayphics.
 - Expressly prohibit using that data to train, fine-tune or evaluate any AI or machine-learning model, including model development or improvement.
-- Prohibit using that data for unrelated product or service improvement, analytics or development not necessary to deliver the requested inspection.
+- Prohibit using that data for unrelated product or service improvement, general analytics, benchmarking, feature development or any independent purpose not necessary to deliver the requested inspection, including creation or use of aggregated or de-identified data derived from it.
 - Apply the same restrictions to relevant subprocessors and prevent onward use inconsistent with the agreement.
 - Define retention, deletion, security, incident notification, subprocessors and cross-border processing arrangements sufficiently for Swayphics to assess its legal and operational obligations.
 
