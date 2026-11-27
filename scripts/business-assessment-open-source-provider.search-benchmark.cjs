@@ -168,9 +168,16 @@ function summarise(items, prefix) {
             try {
                 const response = await provider.search(item.query, { maxResults: 10 });
                 const results = response.results.slice(0, 10);
+                const candidateAliasRanks = Object.fromEntries(
+                    (testCase.candidateAliasDomains || []).map((domain) => [
+                        domain,
+                        domainRank(results, domain)
+                    ])
+                );
                 attempts.push({
                     kind: item.kind,
                     rank: domainRank(results, testCase.expectedDomain),
+                    candidateAliasRanks,
                     resultCount: results.length,
                     results: topResults(results)
                 });
@@ -190,19 +197,12 @@ function summarise(items, prefix) {
             .map((item) => item.rank)
             .filter((rank) => rank !== null);
         const bestRank = successfulRanks.length ? Math.min(...successfulRanks) : null;
-        const bestAttempt = attempts.find((item) => item.rank === bestRank) || null;
+        const bestAttempt = bestRank === null ? null : attempts.find((item) => item.rank === bestRank) || null;
         const aliasRanks = {};
         for (const aliasDomain of testCase.candidateAliasDomains || []) {
-            const ranks = attempts.map((attempt) => {
-                const index = attempt.results.findIndex((item) => {
-                    try {
-                        return hostMatchesDomain(new URL("https://" + item.domain).hostname.toLowerCase(), aliasDomain);
-                    } catch {
-                        return false;
-                    }
-                });
-                return index < 0 ? null : index + 1;
-            }).filter((rank) => rank !== null);
+            const ranks = attempts
+                .map((attempt) => attempt.candidateAliasRanks?.[aliasDomain] ?? null)
+                .filter((rank) => rank !== null);
             aliasRanks[aliasDomain] = ranks.length ? Math.min(...ranks) : null;
         }
 

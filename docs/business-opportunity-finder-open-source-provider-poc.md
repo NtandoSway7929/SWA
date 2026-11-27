@@ -91,7 +91,7 @@ docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml do
 
 The integration smoke test sends one generic query (`Crawl4AI open source web crawler`) through SearXNG and fetches only `https://example.com/` through Crawl4AI. It does not send assessment answers, prospect identifiers, respondent contact details or customer-submitted URLs. External search engines configured in SearXNG may receive that generic query.
 
-The same ephemeral run then executes `scripts/business-assessment-open-source-provider.search-benchmark.cjs`, with two separate datasets. The national-brand baseline covers Dis-Chem, Sorbet, Clicks, Planet Fitness and NetFlorist. The Pretoria locally operated/independent pilot covers The Cure Spa, Charis Nail & Beauty Studio, Jacqueline's Chapter One Hair and Beauty Salon, Huba Fleurs and Kalm Skin + Body Studio. The second group was selected using public evidence of local operation, family ownership, owner operation or independent-salon positioning, and each has a separately verified official domain. The benchmark records the rank of each expected official domain in the top ten, the returned top-five domains and titles, and per-dataset top-five and top-ten hit rates in the GitHub Actions job summary. The Pretoria group is a small, curated pilot, not a representative sample of all independent South African businesses or the BOF's full lead market. A non-empty generic SearXNG result set is not treated as evidence of search accuracy.
+The same ephemeral run then executes `scripts/business-assessment-open-source-provider.search-benchmark.cjs`, with two separate datasets. The national-brand baseline covers Dis-Chem, Sorbet, Clicks, Planet Fitness and NetFlorist. The Pretoria locally operated/independent pilot covers The Cure Spa, Charis Nail & Beauty Studio, Jacqueline's Chapter One Hair and Beauty Salon, Huba Fleurs and Kalm Skin + Body Studio. The second group was selected using public evidence of local operation, family ownership, owner operation or independent-salon positioning, and each has a separately verified current domain. The national-brand cases use one primary query each; each Pretoria case uses a primary query plus two alternate public-information query formulations. The report separates the primary-query rank from the best rank across all query attempts, records the top-five domains and titles for each attempt, and calculates per-dataset top-five and top-ten hit rates. Candidate alias domains are recorded separately and are not automatically accepted as official or same-owner domains. The Pretoria group is a small, curated pilot, not a representative sample of all independent South African businesses or the BOF's full lead market. A non-empty generic SearXNG result set is not treated as evidence of search accuracy.
 
 ### Public source trail for the Pretoria pilot
 
@@ -106,6 +106,18 @@ The expected domains and independent/local-operation indicators were checked aga
 | Kalm Skin + Body Studio | `kalm-studio.co.za` | https://www.kalm-studio.co.za/pages/about-us — describes the business as locally owned and operated and created by a husband-and-wife team |
 
 These checks establish that the benchmark cases and expected domains have a public basis. They do not independently verify corporate registration status, employee count or revenue. The set is therefore labelled locally operated/independent pilot rather than a statistically defined microbusiness sample.
+
+### Search benchmark results
+
+The pinned Docker/API smoke test and mocked adapter contract both passed in [GitHub Actions run 13](https://github.com/NtandoSway7929/SWA/actions/runs/45920990251). The first ten-case search baseline found all five national-brand domains in the top five. For the Pretoria pilot, primary queries found three of five expected domains in the top five and four of five in the top ten.
+
+The expanded 20-search run passed in [GitHub Actions run 14](https://github.com/NtandoSway7929/SWA/actions/runs/45921272694). The five national brands remained five of five in the top five and top ten. The Pretoria primary-query scores remained three of five in the top five and four of five in the top ten; the best result across each case's primary and alternate queries improved to four of five in the top five and five of five in the top ten.
+
+The material recovery was Huba Fleurs: the primary query did not surface `hubafleurs.online` in the top ten, while the alternate query `Huba Fleurs Pretoria flower delivery bouquets` surfaced it at rank one. This shows that discovery can be query-sensitive and supports testing a bounded fallback-query strategy. It does not prove that every fallback query will improve real lead discovery.
+
+Charis remains an identity-review case. The current `charisbeauty.co.za` domain ranked tenth across the tested query formulations, while `charisnails.co.za` ranked first. The latter page uses the older “Charis Nail & Body Studio” name but public pages show matching business-location and phone details. Treat it as a possible legacy/alternate candidate only; do not silently substitute it for the current website or automatically merge the domains without manual identity verification.
+
+These results are limited to five national brands and five curated Pretoria businesses, a single run per query set and the configured SearXNG engine mix at the time of testing. They are a search-discovery pilot, not a representative market accuracy estimate, a BOF lead-market coverage result or proof of identity-matching accuracy.
 
 The SearXNG test config disables the request limiter only to keep the ephemeral test deterministic. It is not a production configuration. Production must restore rate limiting, restrict network access, configure abuse controls and review all external search engines.
 
@@ -149,7 +161,7 @@ The mocked adapter test checks:
 - Missing Crawl4AI token handling.
 - SearXNG JSON-disabled error mapping.
 
-The Docker integration test checks actual SearXNG JSON API compatibility and actual Crawl4AI retrieval of the reserved `example.com` page. The search benchmark measures whether expected official domains appear within the top ten, separately for five large national brands and five locally operated/independent Pretoria businesses. A zero-result SearXNG response is reported as a discovery-quality warning rather than proof of useful search coverage.
+The Docker integration test checks actual SearXNG JSON API compatibility and actual Crawl4AI retrieval of the reserved `example.com` page. The search benchmark measures expected official-domain rank for five large national brands and five locally operated/independent Pretoria businesses. The Pretoria set is tested using one primary and two alternate queries per business; primary-query and best-across-query metrics are kept separate, and candidate alias domains are surfaced for review without being counted as official-domain hits. A zero-result SearXNG response is reported as a discovery-quality warning rather than proof of useful search coverage.
 
 These checks do not prove live discovery quality, identity matching accuracy, provider privacy, production security or deployment readiness.
 
