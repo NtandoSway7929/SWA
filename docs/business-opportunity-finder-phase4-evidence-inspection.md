@@ -402,8 +402,8 @@ No revenue loss, conversion uplift, customer count, ROI, guarantee or performanc
 
 ## 12. Implementation sequence and release gate
 
-1. Review TinyFish's current self-service data terms before sending any assessment-related information. Its published Terms of Service allow submitted Customer Data to be used for service operation and improvement, including AI-model training/evaluation. Confirm this is acceptable for Swayphics and the intended business-assessment data, or obtain a separate written agreement with suitable data-use restrictions. Do not enable live inspections until this decision is recorded.
-2. Confirm TinyFish REST API account access and configure `TINYFISH_API_KEY` in a non-production Supabase environment. The key must never be pasted into chat or committed.
+1. Obtain and review a signed written agreement with TinyFish that overrides conflicting standard terms, limits processing to delivery of the requested inspections, prohibits AI/ML training, fine-tuning, evaluation and unrelated product/service improvement using submitted data, and addresses subprocessors, security, retention/deletion and cross-border processing. If these terms are not agreed in writing, do not use TinyFish for live inspections.
+2. Record the signed agreement reference in Swayphics' controlled records. Only after approval, configure `TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_APPROVED=true` and `TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_REFERENCE` in the relevant Supabase environment. Configure `TINYFISH_API_KEY` separately; credentials must never be pasted into chat or committed.
 3. Add optional public-source URLs and versioned inspection consent to the isolated assessment form, with provider-use disclosures in the Swayphics Privacy Policy and the consent notice.
 4. Add a reviewed migration for the inspection-run and evidence tables, RLS, indexes and admin read policies. Do not apply it to production before approval and a clean migration-history reconciliation.
 5. Add deterministic URL validation and provider contract helpers with mocked tests.
