@@ -154,7 +154,7 @@
     var style = document.createElement("style");
     style.textContent = `
       #sway-payment-receipts{position:fixed;right:22px;bottom:84px;z-index:9998;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-      #sway-payment-receipts .pr-launch{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:#081533;color:#fff;box-shadow:0 12px 34px rgba(8,21,51,.22);font-size:11px;font-weight:800;cursor:pointer}
+      #sway-payment-receipts .pr-launch{display:none;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:#081533;color:#fff;box-shadow:0 12px 34px rgba(8,21,51,.22);font-size:11px;font-weight:800;cursor:pointer}
       #sway-payment-receipts .pr-count{min-width:22px;height:22px;display:grid;place-items:center;padding:0 6px;border-radius:99px;background:#fff;color:#081533;font-size:11px}
       #sway-payment-receipts .pr-panel{display:none;position:fixed;right:22px;bottom:140px;width:min(620px,calc(100vw - 28px));max-height:min(78vh,760px);overflow:auto;background:#fff;border:1px solid #dfe5ea;border-radius:20px;padding:20px;box-shadow:0 24px 70px #07163835}
       #sway-payment-receipts[data-open=true] .pr-panel{display:block}
@@ -203,6 +203,30 @@
       '<div class="pr-list" data-pr-list><div class="pr-empty">Open the panel to load receipts.</div></div><p data-pr-status role="status" aria-live="polite"></p></section>';
     document.body.appendChild(root);
     root.addEventListener("click",handleClick);
+
+    function addBillingNavigationItem() {
+      var menu = document.querySelector('[data-nav-menu="billing"]');
+      if (!menu) return;
+      var anchor = menu.querySelector('[data-view="invoice-settings"]');
+      if (!anchor || menu.querySelector('[data-view="payment-receipts"]')) return;
+      var button = anchor.cloneNode(true);
+      button.dataset.view = "payment-receipts";
+      button.removeAttribute("aria-current");
+      button.textContent = "Payment receipts";
+      button.setAttribute("aria-label", "Payment receipts");
+      anchor.insertAdjacentElement("afterend", button);
+    }
+    addBillingNavigationItem();
+    var navObserver = new MutationObserver(addBillingNavigationItem);
+    navObserver.observe(document.body, {childList:true,subtree:true});
+    document.addEventListener("click", function(event) {
+      var button = event.target.closest('[data-view="payment-receipts"]');
+      if (!button) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      root.setAttribute("data-open","true");
+      load();
+    }, true);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded",mount);
   else mount();

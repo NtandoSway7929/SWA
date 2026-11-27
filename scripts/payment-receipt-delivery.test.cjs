@@ -26,8 +26,9 @@ assert.match(migration, /alter table public\.payment_receipt_delivery_attempts e
 assert.match(migration, /values \('swayphics-payment-receipts'.*false/s);
 assert.match(migration, /after insert on public\.payment_receipts/);
 assert.match(migration, /insert into public\.payment_receipt_deliveries[\s\S]*?on conflict \(receipt_id\) do nothing/);
-assert.match(trackingMigration, /attempt_count = d\.attempt_count \+ 1/);
 assert.match(trackingMigration, /create or replace function public\.claim_payment_receipt_delivery/);
+assert.match(trackingMigration, /set status = 'sending'[\s\S]*?attempt_count = d\.attempt_count \+ 1/);
+assert.match(trackingMigration, /insert into public\.payment_receipt_delivery_attempts\(receipt_id,status\)[\s\S]*?values \(p_receipt_id,'sending'\)/);
 assert.match(trackingMigration, /payment_receipt_provider_events/);
 assert.match(trackingMigration, /enable row level security/);
 
@@ -43,7 +44,6 @@ assert.match(delivery, /https:\/\/api\.resend\.com\/emails/);
 assert.match(delivery, /Idempotency-Key/);
 assert.match(delivery, /claim_payment_receipt_delivery/);
 assert.match(delivery, /name: "receipt_id", value: receipt.id/);
-assert.match(delivery, /status: "sending"/);
 assert.match(delivery, /status: "sent"/);
 assert.match(delivery, /status: "failed"/);
 assert.match(delivery, /serviceKey && apiKey === serviceKey/);

@@ -145,7 +145,7 @@
     var style = document.createElement("style");
     style.textContent = `
       #sway-manual-payments{position:fixed;left:22px;bottom:84px;z-index:9997;font-family:Montserrat,system-ui,-apple-system,"Segoe UI",sans-serif}
-      #sway-manual-payments .mp-launch{min-height:44px;padding:0 17px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:#081533;color:#fff;box-shadow:0 12px 34px rgba(8,21,51,.2);font-size:11px;font-weight:800;cursor:pointer}
+      #sway-manual-payments .mp-launch{display:none;min-height:44px;padding:0 17px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:#081533;color:#fff;box-shadow:0 12px 34px rgba(8,21,51,.2);font-size:11px;font-weight:800;cursor:pointer}
       #sway-manual-payments .mp-panel{display:none;position:fixed;left:22px;bottom:140px;width:min(520px,calc(100vw - 28px));max-height:min(80vh,760px);overflow:auto;background:#fff;border:1px solid #dfe5ea;border-radius:20px;padding:20px;box-shadow:0 24px 70px #07163835}
       #sway-manual-payments[data-open=true] .mp-panel{display:block}
       #sway-manual-payments .mp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
@@ -190,6 +190,33 @@
       root.querySelector("[name=reference]").required = this.value === "EFT";
     });
     document.body.appendChild(root);
+
+    function addBillingNavigationItem() {
+      var menu = document.querySelector('[data-nav-menu="billing"]');
+      if (!menu) return;
+      var anchor = menu.querySelector('[data-view="invoice-settings"]');
+      if (!anchor) return;
+      if (!menu.querySelector('[data-view="manual-payment-record"]')) {
+        var button = anchor.cloneNode(true);
+        button.dataset.view = "manual-payment-record";
+        button.removeAttribute("aria-current");
+        button.textContent = "Record payment";
+        button.setAttribute("aria-label", "Record payment");
+        anchor.insertAdjacentElement("afterend", button);
+        anchor = button;
+      }
+    }
+    addBillingNavigationItem();
+    var navObserver = new MutationObserver(addBillingNavigationItem);
+    navObserver.observe(document.body, {childList:true,subtree:true});
+    document.addEventListener("click", function(event) {
+      var button = event.target.closest('[data-view="manual-payment-record"]');
+      if (!button) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      root.setAttribute("data-open","true");
+      load();
+    }, true);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded",mount);
   else mount();
