@@ -9,7 +9,10 @@ const corsHeaders = {
 };
 
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
+  const payload = body && typeof body === "object" && "error" in body && !("message" in body)
+    ? { ...body, message: String((body as { error: unknown }).error || "Request failed.") }
+    : body;
+  return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
