@@ -35,6 +35,22 @@ create table public.clients (
     source_lead_id uuid references public.leads(id) on delete set null
 );
 
+create table public.lead_proposals (
+    id uuid primary key default gen_random_uuid(),
+    lead_id uuid not null references public.leads(id) on delete cascade,
+    title text not null default 'Swayphics Proposal',
+    subject text,
+    content text not null,
+    status text not null default 'draft'
+        check (status in ('draft','approved','rejected')),
+    assessment_snapshot jsonb not null default '{}'::jsonb,
+    created_by uuid references public.admin_users(user_id) on delete set null,
+    approved_by uuid references public.admin_users(user_id) on delete set null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    approved_at timestamptz
+);
+
 create table public.services (
     id uuid primary key default gen_random_uuid(),
     name text not null,
@@ -119,10 +135,6 @@ create table public.quotes (
     updated_at timestamptz not null default now()
 );
 
-alter table public.lead_proposals
-    add constraint lead_proposals_lead_id_fkey
-    foreign key (lead_id) references public.leads(id) on delete cascade;
-
 alter table public.lead_proposals enable row level security;
 create policy "Swayphics admins can manage lead proposals"
     on public.lead_proposals
@@ -141,6 +153,7 @@ create policy "Swayphics admins can manage quotes"
 
 grant select,insert,update,delete on public.leads,public.clients,public.services,
     public.lead_proposals,public.quotes,public.invoices,public.invoice_items to authenticated;
+
 grant execute on function public.is_swayphics_admin() to authenticated;
 
 insert into public.leads (id,business_name)
