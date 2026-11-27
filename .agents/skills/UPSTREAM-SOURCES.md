@@ -34,6 +34,36 @@ This file is a maintenance and attribution record for third-party skills vendore
 
 ## Local policy precedence
 
+- The root repository's `.agents/product-marketing.md`, if present, describes Swayphics only. A client must have a separately scoped context; never reuse Swayphics positioning, brand voice, customer evidence or strategy for a prospect.
+- Marketing-skill recommendations must distinguish observed evidence, reasoned implications and untested hypotheses. Never fabricate conversion, SEO, revenue, traffic, uplift or experimentation metrics.
+- Playwright documentation does not mean the CLI or browser tooling is installed. Never install it or access personal browser state without explicit user approval. Keep testing isolated from live customer data and operations.
+
 The repository's existing Swayphics art-direction standard remains in force. In particular, its 15 banned design tropes, client-specific brand separation, technology constraints and approval boundaries take precedence over conflicting recommendations in upstream material.
 
 Upstream content is retained under its original licences. Review the pinned source commit and licence before updating or redistributing a skill. No runtime installer, external hook, downloaded binary, live browser editor, accessibility package installation or production deployment was run as part of this import.
+
+
+## Corey Haines: marketing, conversion and SEO skills
+
+- Upstream repository: https://github.com/coreyhaines31/marketingskills
+- Pinned source commit: `2bf95edb4ebd37198ab7fd18b99ba95c2145ec64`
+- Local paths:
+  - `.agents/skills/cro/` (CRO skill and both referenced playbooks)
+  - `.agents/skills/seo-audit/` (SEO audit skill and all five direct reference files plus the local SEO profile/citations companion)
+  - `.agents/skills/ab-testing/` (A/B-testing skill and both referenced guides)
+  - `.agents/skills/product-marketing/` (product-marketing skill and brand-voice reference)
+  - `.agents/skills/marketingskills/LICENSE`
+- Licence: MIT; the upstream `LICENSE` is included.
+- Imported the four selected skills and every local reference linked by their `SKILL.md` files. This is a **selective import**, not the full marketing library. Related skills mentioned in prose (for example, `signup`, `popups`, `copywriting`, `analytics`, `ai-seo`, and `schema`) were not imported as part of this change. Optional partner integrations, MCP servers, credentials and marketing accounts were not installed or connected.
+- Source repository had approximately 62.8k GitHub stars when checked on 2026-11-27; star counts are mutable and are recorded only as selection context.
+
+## Microsoft: Playwright CLI browser automation skill
+
+- Upstream repository: https://github.com/microsoft/playwright-cli
+- Pinned source commit: `dc5f4d5616ab5a28ded12fd7101a4d49bd59a820`
+- Local path: `.agents/skills/playwright-cli/` (upstream `SKILL.md` and all ten referenced guides)
+- Licence: Apache-2.0; the upstream `LICENSE` is included.
+- Source repository had approximately 15.5k GitHub stars when checked on 2026-11-27; star counts are mutable and are recorded only as selection context.
+- The skill requires a separately installed Playwright CLI and Node.js 20+ according to its upstream documentation. Only the skill and reference documentation are vendored. No npm package, Node.js runtime, browser binary, MCP server, browser profile or persistent session has been installed or configured.
+- The local client-demo workflow restricts browser checks to isolated, non-persistent test sessions and prohibits access to personal browser credentials, real customer accounts and unapproved live transactions. These local rules take precedence over any broader upstream examples.
+
