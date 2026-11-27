@@ -20,9 +20,13 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ??
     Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "";
 const TINYFISH_API_KEY = Deno.env.get("TINYFISH_API_KEY") ?? "";
-// Default-off legal/data-governance gate. Set only after Swayphics records approval.
-const TINYFISH_DATA_USE_APPROVED =
-    Deno.env.get("TINYFISH_DATA_USE_APPROVED") === "true";
+// Default-off contract gate. This approval is valid only while a signed written
+// agreement prohibits AI/ML training, evaluation and unrelated product improvement.
+const TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_REFERENCE =
+    Deno.env.get("TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_REFERENCE")?.trim() ?? "";
+const TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_APPROVED =
+    Deno.env.get("TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_APPROVED") === "true" &&
+    TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_REFERENCE.length > 0;
 const ALLOWED_ORIGINS = new Set([
     "https://swayphics.co.za",
     "https://www.swayphics.co.za"
@@ -690,10 +694,10 @@ Deno.serve(async (request) => {
         }, 409, origin);
     }
 
-    if (!TINYFISH_DATA_USE_APPROVED) {
+    if (!TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_APPROVED) {
         return jsonResponse({
-            code: "provider_data_use_not_approved",
-            error: "Live public-source inspection is disabled until Swayphics approves the provider data-use terms or obtains an appropriate written agreement."
+            code: "provider_restricted_agreement_not_configured",
+            error: "Live public-source inspection is disabled until Swayphics has a signed written TinyFish agreement prohibiting AI/ML training, evaluation and unrelated product improvement, and its agreement reference is configured."
         }, 503, origin);
     }
 
@@ -757,7 +761,8 @@ Deno.serve(async (request) => {
             idempotency_key: body.idempotency_key,
             requested_by: adminUserId,
             consent_version: CONSENT_VERSION,
-            provider: "tinyfish"
+            provider: "tinyfish",
+            provider_agreement_reference: TINYFISH_RESTRICTED_PROCESSING_AGREEMENT_REFERENCE
         })
         .select("id, status")
         .single();
