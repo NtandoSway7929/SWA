@@ -260,10 +260,7 @@ begin
              where bts.payment_id = p_payment_id
                 or bts.invoice_id = v_invoice.id
        )
-       or exists (
-            select 1 from public.manual_payment_record_requests mr
-             where mr.payment_id = p_payment_id
-       ) then
+       then
         raise exception 'This payment has refund, reconciliation, bank-transfer, or manual-payment evidence. It cannot be cleaned up.';
     end if;
 
