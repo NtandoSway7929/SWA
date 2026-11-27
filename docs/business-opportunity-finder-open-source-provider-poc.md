@@ -129,7 +129,9 @@ The initial adapter version treated a provider response as successful whenever C
 
 The isolated adapter contract has therefore been tightened: a Crawl4AI item is successful only when it has readable text and its reported HTTP status is either absent or in the 2xx range. A non-2xx status is returned as `http_status_<status>`; it is not silently accepted as an extracted website. The mocked test now includes the observed 302 suspension-style response. The page-retrieval benchmark also reports a separate basic usable-page diagnostic requiring a successful fetch, expected domain, a business-name cue in the title or text and at least 150 extracted characters.
 
-The run 18 output is a baseline observation from before this classification correction. The corrected adapter and benchmark require a subsequent CI run before their new success counts can be treated as verified. The five-site set remains a small diagnostic pilot, not a representative sample of South African business websites or proof of identity matching.
+The corrected adapter and v2 retrieval benchmark were verified in [GitHub Actions run 24](https://github.com/NtandoSway7929/SWA/actions/runs/45922391596): four of five pages were successful 2xx retrievals and passed the basic usable-page diagnostic. Huba Fleurs was correctly classified as unsuccessful with `http_status_302`, status 302, title `Account Suspended` and no business-name cue. This confirms that the adapter no longer counts the hosting suspension page as successful content.
+
+The v3 identity benchmark invokes the existing Swayphics `matchBusinessIdentity()` function on each successfully retrieved business page. It passes the test case's public business name and location, the fetched title, up to 12,000 characters of page text, `sourceType: website` and the final public URL. A failed page fetch is marked `not_evaluated_fetch_failed`, not ambiguous or rejected. This measures the current matcher without changing its code or persisting any evidence. Its confirmed/ambiguous/rejected counts are test outputs, not independent proof of legal ownership. The five-site set remains a small diagnostic pilot, not a representative sample of South African business websites.
 
 
 
@@ -175,8 +177,9 @@ The mocked adapter test checks:
 - Missing Crawl4AI token handling.
 - SearXNG JSON-disabled error mapping.
 - Non-2xx Crawl4AI page responses are not counted as successful extractions.
+- The existing Swayphics `matchBusinessIdentity()` function confirms a matching name/locality/title/domain case, leaves third-party and missing-locality cases ambiguous, and rejects a page matching neither the business name nor location.
 
-The Docker integration test checks actual SearXNG JSON API compatibility and actual Crawl4AI retrieval of the reserved `example.com` page. The search benchmark measures expected official-domain rank for five large national brands and five locally operated/independent Pretoria businesses. The Pretoria set is tested using one primary and two alternate queries per business; primary-query and best-across-query metrics are kept separate, and candidate alias domains are surfaced for review without being counted as official-domain hits. A zero-result SearXNG response is reported as a discovery-quality warning rather than proof of useful search coverage.
+The Docker integration test checks actual SearXNG JSON API compatibility and actual Crawl4AI retrieval of the reserved `example.com` page. The public-page benchmark also invokes the production identity matcher in memory on five independently verified Pretoria business pages; it does not persist evidence or change the Edge Function. The search benchmark measures expected official-domain rank for five large national brands and five locally operated/independent Pretoria businesses. The Pretoria set is tested using one primary and two alternate queries per business; primary-query and best-across-query metrics are kept separate, and candidate alias domains are surfaced for review without being counted as official-domain hits. A zero-result SearXNG response is reported as a discovery-quality warning rather than proof of useful search coverage.
 
 These checks do not prove live discovery quality, identity matching accuracy, provider privacy, production security or deployment readiness.
 

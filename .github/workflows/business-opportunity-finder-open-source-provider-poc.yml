@@ -104,7 +104,7 @@ jobs:
           SEARXNG_BASE_URL: http://127.0.0.1:8080
         run: node scripts/business-assessment-open-source-provider.search-benchmark.cjs
 
-      - name: Benchmark official website page retrieval
+      - name: Benchmark public website retrieval and business identity
         env:
           SEARXNG_BASE_URL: http://127.0.0.1:8080
           CRAWL4AI_BASE_URL: http://127.0.0.1:11235

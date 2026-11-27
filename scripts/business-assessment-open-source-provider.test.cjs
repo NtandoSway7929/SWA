@@ -185,6 +185,54 @@ const assert = require("node:assert/strict");
         (error) => error.providerCode === "search_json_format_not_enabled"
     );
 
+    const { matchBusinessIdentity } = await import(
+        "../supabase/functions/_shared/business-assessment-evidence.mjs"
+    );
+
+    const confirmedIdentity = matchBusinessIdentity({
+        businessName: "The Cure Spa",
+        location: "Waterkloof Glen Pretoria",
+        title: "Beauty Business | The Cure Spa | Pretoria",
+        text: "The Cure Spa provides beauty treatments in Waterkloof Glen, Pretoria.",
+        sourceType: "website",
+        sourceUrl: "https://www.thecurespa.co.za/"
+    });
+    assert.equal(confirmedIdentity.status, "confirmed");
+
+    const thirdPartyIdentity = matchBusinessIdentity({
+        businessName: "The Cure Spa",
+        location: "Waterkloof Glen Pretoria",
+        title: "The Cure Spa | Waterkloof Glen Pretoria",
+        text: "The Cure Spa provides beauty treatments in Waterkloof Glen, Pretoria.",
+        sourceType: "website",
+        sourceUrl: "https://www.fresha.com/"
+    });
+    assert.equal(thirdPartyIdentity.status, "ambiguous",
+        "A third-party directory must not be confirmed as the business's own website");
+
+    const missingLocationIdentity = matchBusinessIdentity({
+        businessName: "The Cure Spa",
+        location: "Soweto",
+        title: "The Cure Spa | Pretoria",
+        text: "The Cure Spa provides beauty treatments in Pretoria.",
+        sourceType: "website",
+        sourceUrl: "https://www.thecurespa.co.za/"
+    });
+    assert.equal(missingLocationIdentity.status, "ambiguous",
+        "A business-name/domain match without the supplied locality must remain ambiguous");
+
+    const rejectedIdentity = matchBusinessIdentity({
+        businessName: "The Cure Spa",
+        location: "Soweto",
+        title: "Kalm Skin + Body Studio",
+        text: "Kalm Skin + Body Studio offers skincare in Pretoria.",
+        sourceType: "website",
+        sourceUrl: "https://www.kalm-studio.co.za/"
+    });
+    assert.equal(rejectedIdentity.status, "rejected",
+        "A page matching neither the business name nor location must be rejected");
+
+    console.log("Swayphics business identity matcher contract tests passed.");
     console.log("Business Opportunity Finder open-source provider adapter tests passed.");
 })().catch((error) => {
     console.error(error);

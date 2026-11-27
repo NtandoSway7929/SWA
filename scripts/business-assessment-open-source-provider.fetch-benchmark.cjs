@@ -6,6 +6,7 @@ const cases = [
         business: "The Cure Spa",
         url: "https://www.thecurespa.co.za/",
         expectedDomain: "thecurespa.co.za",
+        location: "Waterkloof Glen Pretoria",
         identityTerms: ["the cure spa"]
     },
     {
@@ -13,6 +14,7 @@ const cases = [
         business: "Charis Nail & Beauty Studio",
         url: "https://www.charisbeauty.co.za/",
         expectedDomain: "charisbeauty.co.za",
+        location: "Pretoria East",
         identityTerms: ["charis"]
     },
     {
@@ -20,6 +22,7 @@ const cases = [
         business: "Jacqueline's Chapter One Hair and Beauty Salon",
         url: "https://chapteronehairandbeauty.co.za/",
         expectedDomain: "chapteronehairandbeauty.co.za",
+        location: "Montana Park Pretoria",
         identityTerms: ["chapter one"]
     },
     {
@@ -27,6 +30,7 @@ const cases = [
         business: "Huba Fleurs",
         url: "https://hubafleurs.online/",
         expectedDomain: "hubafleurs.online",
+        location: "Pretoria Central",
         identityTerms: ["huba fleurs"]
     },
     {
@@ -34,6 +38,7 @@ const cases = [
         business: "Kalm Skin + Body Studio",
         url: "https://www.kalm-studio.co.za/",
         expectedDomain: "kalm-studio.co.za",
+        location: "Elarduspark Pretoria",
         identityTerms: ["kalm"]
     }
 ];
@@ -69,6 +74,12 @@ function summarise(items) {
     const succeeded = items.filter((item) => item.success).length;
     const identityCue = items.filter((item) => item.titleIdentityCue || item.contentIdentityCue).length;
     const usableBusinessPages = items.filter((item) => item.usableBusinessPage).length;
+    const identityMatchCounts = {
+        confirmed: items.filter((item) => item.identityMatchStatus === "confirmed").length,
+        ambiguous: items.filter((item) => item.identityMatchStatus === "ambiguous").length,
+        rejected: items.filter((item) => item.identityMatchStatus === "rejected").length,
+        not_evaluated_fetch_failed: items.filter((item) => item.identityMatchStatus === "not_evaluated_fetch_failed").length
+    };
     const wrongDomain = items.filter((item) => item.finalDomainMatches === false).length;
     return {
         total,
@@ -79,6 +90,7 @@ function summarise(items) {
         anyIdentityCue: identityCue,
         usableBusinessPages,
         usableBusinessPageRate: total ? Number((usableBusinessPages / total).toFixed(3)) : 0,
+        identityMatchCounts,
         finalDomainMismatch: wrongDomain
     };
 }
@@ -93,6 +105,9 @@ function summarise(items) {
 
     const { createOpenSourceInspectionProvider } = await import(
         "../supabase/functions/_shared/business-assessment-open-source-provider.mjs"
+    );
+    const { matchBusinessIdentity } = await import(
+        "../supabase/functions/_shared/business-assessment-evidence.mjs"
     );
 
     const provider = createOpenSourceInspectionProvider({
@@ -120,19 +135,36 @@ function summarise(items) {
             ? hostMatchesDomain(finalHost, testCase.expectedDomain)
             : false;
         const titleIdentityCue = containsIdentityCue(result.title, testCase.identityTerms);
-        const contentIdentityCue = containsIdentityCue(result.text, testCase.identityTerms);
-        const textCharacters = String(result.text || "").length;
+        const text = String(result.text || "");
+        const contentIdentityCue = containsIdentityCue(text, testCase.identityTerms);
+        const textCharacters = text.length;
         const success = result.success === true;
+        const usableBusinessPage = success && finalDomainMatches &&
+            (titleIdentityCue || contentIdentityCue) && textCharacters >= 150;
+        const identity = success
+            ? matchBusinessIdentity({
+                businessName: testCase.business,
+                location: testCase.location,
+                title: result.title,
+                text: text.slice(0, 12_000),
+                sourceType: "website",
+                sourceUrl: result.final_url
+            })
+            : null;
         return {
             dataset: testCase.dataset,
             business: testCase.business,
             expectedDomain: testCase.expectedDomain,
+            locationTested: testCase.location,
             requestedUrl: testCase.url,
             finalHost,
             finalDomainMatches,
             success,
-            usableBusinessPage: success && finalDomainMatches &&
-                (titleIdentityCue || contentIdentityCue) && textCharacters >= 150,
+            usableBusinessPage,
+            identityMatchStatus: identity?.status || "not_evaluated_fetch_failed",
+            identityMatchBasis: identity?.basis || [
+                "Identity matching was not evaluated because the HTTP page retrieval did not succeed."
+            ],
             errorCode: result.error_code || null,
             statusCode: result.status_code ?? null,
             title: String(result.title || "").slice(0, 180),
@@ -145,7 +177,7 @@ function summarise(items) {
     });
 
     const evaluated = {
-        benchmarkVersion: "bof-public-page-fetch-v2",
+        benchmarkVersion: "bof-public-page-fetch-v3-identity",
         scope: "Five independently verified Pretoria business websites; public URLs only; no assessment answers, respondent contact details or customer-submitted destinations.",
         provider: "Crawl4AI through the isolated Swayphics adapter",
         batchSizes: [3, 2],
@@ -168,18 +200,22 @@ function summarise(items) {
             (item.titleIdentityCue ? "Yes" : "No") + " | " +
             (item.contentIdentityCue ? "Yes" : "No") + " | " +
             (item.usableBusinessPage ? "Yes" : "No") + " | " +
+            item.identityMatchStatus + " | " +
             (item.errorCode || "—") + " |"
         ).join("\n");
         const summary =
-            "\n## BOF public-business page retrieval benchmark\n\n" +
-            "| Business | Fetch OK | HTTP | Final host | Text chars | Title cue | Content cue | Page usable | Error |\n" +
-            "|---|---:|---:|---|---:|---:|---:|---:|---|\n" +
+            "\n## BOF public-business page retrieval and identity benchmark\n\n" +
+            "| Business | Fetch OK | HTTP | Final host | Text chars | Title cue | Content cue | Page usable | Production identity match | Error |\n" +
+            "|---|---:|---:|---|---:|---:|---:|---:|---|---|\n" +
             rows + "\n\n" +
             "- Successful 2xx page extractions: **" + evaluated.summary.succeeded + "/" + evaluated.summary.total + "**\n" +
             "- Business-name cue present in page content: **" + evaluated.summary.contentIdentityCue + "/" + evaluated.summary.total + "**\n" +
-            "- Pages passing the basic usable-page check (successful fetch, expected domain, identity cue and at least 150 text characters): **" + evaluated.summary.usableBusinessPages + "/" + evaluated.summary.total + "**\n" +
+            "- Pages passing the basic usable-page check: **" + evaluated.summary.usableBusinessPages + "/" + evaluated.summary.total + "**\n" +
+            "- Existing Swayphics identity matcher — confirmed: **" + evaluated.summary.identityMatchCounts.confirmed + "**; ambiguous: **" + evaluated.summary.identityMatchCounts.ambiguous + "**; rejected: **" + evaluated.summary.identityMatchCounts.rejected + "**; not evaluated after fetch failure: **" + evaluated.summary.identityMatchCounts.not_evaluated_fetch_failed + "**\n" +
             "- Final-domain mismatches: **" + evaluated.summary.finalDomainMismatch + "**\n\n" +
-            "**Interpretation:** the usable-page check is a diagnostic gate, not proof of full page completeness, legal ownership or confirmed business identity. HTTP error/redirect pages with short or unrelated text must not be treated as successful website evidence. Individual site blocking or content differences are reported, not treated as provider API failures.\n";
+            "**Identity matching:** statuses are produced by the existing `matchBusinessIdentity()` function from Swayphics' evidence module. Inputs are the public business name/location in this test case, fetched title and up to 12,000 extracted characters. A confirmed result exercises the current rules; it is not independent proof of legal ownership.\n\n" +
+            "**Interpretation:** the usable-page check is a diagnostic gate, not proof of full page completeness or legal ownership. HTTP error/redirect pages with short or unrelated text must not be treated as successful website evidence. Individual site blocking or content differences are reported, not treated as provider API failures.\n";
+
         await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, summary, "utf8");
     }
 })().catch((error) => {
