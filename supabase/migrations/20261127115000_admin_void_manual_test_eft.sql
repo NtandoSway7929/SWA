@@ -298,8 +298,8 @@ begin
 
     if new.amount > v_available_balance then
         raise exception
-            'Payment exceeds the available invoice balance of R%.2f.',
-            v_available_balance;
+            'Payment exceeds the available invoice balance of R%.',
+            to_char(v_available_balance, 'FM9999999990.00');
     end if;
 
     new.client_id := v_invoice_client_id;
