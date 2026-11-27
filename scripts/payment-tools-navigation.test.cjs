@@ -29,9 +29,11 @@ test("payment receipt management is launched from Sales & Billing, not a floatin
   assert.match(receipts, /data-view="yoco-test-payment-cleanup"/);
   assert.match(receipts, /textContent = "Test payment cleanup"/);
   assert.match(receipts, /admin_list_yoco_test_payment_cleanup_candidates/);
+  assert.match(receipts, /data-view="manual-test-eft-void"/);
+  assert.match(receipts, /admin_void_manual_test_eft/);
 });
 
 test("dashboard refreshes both payment module scripts after navigation changes", () => {
-  assert.match(dashboard, /payment-receipts\.js\?v=20261127-yoco-test-cleanup-1/);
+  assert.match(dashboard, /payment-receipts\.js\?v=20261127-manual-test-eft-void-1/);
   assert.match(dashboard, /admin-manual-payments\.js\?v=20261127-sales-billing-nav-1/);
 });

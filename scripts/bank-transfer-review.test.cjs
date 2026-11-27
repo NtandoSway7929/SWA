@@ -20,6 +20,8 @@ test("client portal offers EFT only for invoices with a remaining balance", () =
   assert.match(portal, /bank-transfer-amount/);
   assert.match(portal, /bank-transfer-reference/);
   assert.match(portal, /bank-transfer-proof/);
+  assert.match(portal, /Test submission voided · no payment received/);
+  assert.match(edge, /voided_at,void_reason/);
 });
 
 test("client uploads use a portal token and do not write to the payments ledger", () => {

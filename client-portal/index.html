@@ -1700,7 +1700,7 @@ return result;
 }
 function renderBankTransferSubmissionHistory(rows){
 if(!Array.isArray(rows)||!rows.length)return '<div class="bank-transfer-status-item">No bank transfer proof has been submitted for this invoice.</div>';
-return '<div class="bank-transfer-status">'+rows.map(function(row){const label=row.status==="pending_review"?"Awaiting Swayphics review":(row.status==="approved"?"Payment confirmed":"Proof not accepted");return '<div class="bank-transfer-status-item"><strong>'+esc(label)+'</strong><br>'+esc(financialMoney(row.amount,"ZAR"))+' · '+esc(date(row.submitted_at))+' · Reference '+esc(row.bank_reference||"Not recorded")+(row.rejection_reason?'<br><span>'+esc(row.rejection_reason)+'</span>':"")+'</div>'}).join("")+'</div>';
+return '<div class="bank-transfer-status">'+rows.map(function(row){const label=row.status==="pending_review"?"Awaiting Swayphics review":(row.status==="approved"?"Payment confirmed":(row.status==="voided_test"?"Test submission voided · no payment received":"Proof not accepted"));const detail=row.status==="voided_test"?(row.void_reason||"This was a test transaction and did not represent a bank deposit."):row.rejection_reason;return '<div class="bank-transfer-status-item"><strong>'+esc(label)+'</strong><br>'+esc(financialMoney(row.amount,"ZAR"))+' · '+esc(date(row.submitted_at))+' · Reference '+esc(row.bank_reference||"Not recorded")+(row.voided_at?'<br>Voided '+esc(date(row.voided_at)):"")+(detail?'<br><span>'+esc(detail)+'</span>':"")+'</div>'}).join("")+'</div>';
 }
 function openBankTransferModal(invoice,details,trigger){
 document.getElementById("portal-bank-transfer-modal")?.remove();

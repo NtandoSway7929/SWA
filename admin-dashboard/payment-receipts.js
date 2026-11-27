@@ -7,7 +7,7 @@
   var SUPABASE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QhB";
   var ACCESS_KEY = "swayphics_admin_access_token";
   var REFRESH_KEY = "swayphics_admin_refresh_token";
-  var root = null, receipts = [], busy = false, cleanupPayments = [], cleanupBusy = false;
+  var root = null, receipts = [], busy = false, cleanupPayments = [], cleanupBusy = false, manualVoidBusy = false;
 
   function esc(value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, function (c) {
@@ -80,6 +80,12 @@
     node.textContent = message || "";
     node.setAttribute("data-error",bad ? "true" : "false");
   }
+  function manualEftVoidStatus(message, bad) {
+    var node = root && root.querySelector("[data-pr-manual-eft-status]");
+    if (!node) return;
+    node.textContent = message || "";
+    node.setAttribute("data-error",bad ? "true" : "false");
+  }
   function render() {
     var list = root.querySelector("[data-pr-list]");
     if (!receipts.length) {
@@ -89,23 +95,27 @@
     list.innerHTML = receipts.map(function (row) {
       var client = row.client || {}, delivery = row.delivery || {};
       var state = String(delivery.status || "pending");
-      var label = state === "sent" ? "Accepted by Resend" : state === "failed" ? "Delivery failed" : state === "sending" ? "Sending" : "Awaiting delivery";
+      var isVoided = Boolean(row.voided_at) || row.payment_status === "voided_test";
+      var label = isVoided ? "VOIDED · TEST TRANSACTION" :
+        state === "sent" ? "Accepted by Resend" : state === "failed" ? "Delivery failed" : state === "sending" ? "Sending" : "Awaiting delivery";
       var providerState = String(delivery.provider_delivery_status || "unknown");
-      var providerLabel = providerState === "delivered" ? "Delivered to recipient mail server" :
+      var providerLabel = isVoided && state === "sent" ? "Previously emailed · the original email cannot be recalled" :
+        providerState === "delivered" ? "Delivered to recipient mail server" :
         providerState === "delayed" ? "Delivery delayed by recipient mail server" :
         providerState === "bounced" ? "Email bounced" :
         providerState === "complained" ? "Recipient marked email as spam" :
         state === "sent" ? "Awaiting provider delivery confirmation" : "";
-      var canSend = state !== "sent" && state !== "sending";
+      var canSend = !isVoided && state !== "sent" && state !== "sending";
       return '<article class="pr-item">' +
         '<div class="pr-item-head"><div><strong>' + esc(row.receipt_number) + '</strong><small>' + esc(client.business_name || client.contact_name || "Client") + ' · ' + esc(date(row.issued_at)) + '</small></div>' +
         '<b>' + esc(money(row.amount,row.currency)) + '</b></div>' +
         '<div class="pr-meta"><span>Payment method</span><strong>' + esc(row.method || "—") + '</strong></div>' +
         '<div class="pr-meta"><span>Recipient</span><strong>' + esc(delivery.recipient_email || client.email || "No email address") + '</strong></div>' +
-        '<div class="pr-status" data-state="' + esc(state) + '">' + esc(label) + (delivery.attempt_count ? ' · ' + esc(delivery.attempt_count) + ' attempt(s)' : '') + '</div>' +
+        '<div class="pr-status" data-state="' + (isVoided ? "voided" : esc(state)) + '">' + esc(label) + (delivery.attempt_count ? ' · ' + esc(delivery.attempt_count) + ' attempt(s)' : '') + '</div>' +
+        (isVoided ? '<div class="pr-provider-status">Voided ' + esc(date(row.voided_at)) + ' · ' + esc(row.void_reason || "Owner-confirmed test transaction; no funds were received.") + '</div>' : '') +
         (providerLabel ? '<div class="pr-provider-status" data-provider-state="' + esc(providerState) + '">' + esc(providerLabel) + (providerState === "delivered" && delivery.provider_delivered_at ? ' · ' + esc(date(delivery.provider_delivered_at)) : '') + '</div>' : '') +
         (delivery.last_error ? '<p class="pr-error">' + esc(delivery.last_error) + '</p>' : '') +
-        '<div class="pr-actions">' + (canSend ? '<button type="button" data-pr-send="' + esc(row.payment_id) + '">' + (state === "failed" ? "Retry email" : "Send receipt") + '</button>' : '<span class="pr-sent">Sent ' + esc(date(delivery.sent_at)) + '</span>') + '</div>' +
+        '<div class="pr-actions">' + (isVoided ? '<span class="pr-voided">Voided · resend disabled</span>' : canSend ? '<button type="button" data-pr-send="' + esc(row.payment_id) + '">' + (state === "failed" ? "Retry email" : "Send receipt") + '</button>' : '<span class="pr-sent">Sent ' + esc(date(delivery.sent_at)) + '</span>') + '</div>' +
       '</article>';
     }).join("");
   }
@@ -142,6 +152,74 @@
       cleanupStatus(error.message || "Unable to load eligible Yoco test payments.",true);
     }
   }
+
+  function renderManualVoidStatus(data) {
+    var card = root && root.querySelector("[data-pr-manual-eft-card]");
+    if (!card) return;
+    var completed = data.payment_status === "voided_test" &&
+      Boolean(data.receipt_voided_at) &&
+      data.bank_transfer_status === "voided_test" &&
+      Boolean(data.audit_id);
+    if (completed) {
+      card.innerHTML = '<article class="pr-item">' +
+        '<div class="pr-item-head"><div><strong>R700.00 · SWY-2026-0010</strong><small>' + esc(data.receipt_number || "SW-RCPT-2026-000001") + '</small></div><b>VOIDED</b></div>' +
+        '<div class="pr-meta"><span>Payment record</span><strong>Voided test EFT</strong></div>' +
+        '<div class="pr-meta"><span>Bank-transfer proof</span><strong>Retained · voided test submission</strong></div>' +
+        '<div class="pr-meta"><span>Invoice outstanding</span><strong>' + esc(money(data.invoice_amount_outstanding,"ZAR")) + '</strong></div>' +
+        '<div class="pr-meta"><span>Audit reference</span><strong>' + esc(data.audit_id) + '</strong></div>' +
+        '<p class="pr-voided">Original payment, receipt, approval, proof and delivery history are retained. No further receipt emails can be sent.</p>' +
+        '</article>';
+      return;
+    }
+    var ready = data.payment_id === "4e8761b0-feec-429a-a690-7085b59aedcd" &&
+      data.payment_status === "paid" &&
+      data.payment_provider == null &&
+      Number(data.amount) === 700 &&
+      data.currency === "ZAR" &&
+      data.method === "EFT" &&
+      data.reference === "SWY" &&
+      data.invoice_id === "19c2cc60-89d9-4a7e-b609-a33ca33b2dbb" &&
+      data.invoice_number === "SWY-2026-0010" &&
+      data.invoice_status === "paid" &&
+      Number(data.invoice_amount_paid) === 700 &&
+      Number(data.invoice_amount_outstanding) === 0 &&
+      data.invoice_archived === true &&
+      data.receipt_number === "SW-RCPT-2026-000001" &&
+      !data.receipt_voided_at &&
+      data.bank_transfer_submission_id === "1eca46ef-3c9e-4e04-a72e-907431ad7bc6" &&
+      data.bank_transfer_status === "approved" &&
+      !data.bank_transfer_voided_at;
+    if (!ready) {
+      card.innerHTML = '<div class="pr-empty"><strong>Manual EFT void unavailable</strong><p>The specific R700 transaction no longer matches the expected pre-void state. No automatic changes will be made. Review the payment and audit history before proceeding.</p></div>';
+      return;
+    }
+    card.innerHTML = '<article class="pr-item">' +
+      '<div class="pr-item-head"><div><strong>R700.00 · SWY-2026-0010</strong><small>' + esc(data.receipt_number || "SW-RCPT-2026-000001") + '</small></div><b>TEST EFT</b></div>' +
+      '<div class="pr-meta"><span>Payment method</span><strong>EFT · Reference SWY</strong></div>' +
+      '<div class="pr-meta"><span>Current payment status</span><strong>' + esc(data.payment_status) + '</strong></div>' +
+      '<div class="pr-meta"><span>Linked transfer</span><strong>' + esc(data.bank_transfer_status) + '</strong></div>' +
+      '<div class="pr-meta"><span>Invoice balance before void</span><strong>' + esc(money(data.invoice_amount_outstanding,"ZAR")) + '</strong></div>' +
+      '<p>The owner-confirmed test will be marked void. The original records and uploaded proof stay in place; the invoice is recalculated from valid payments.</p>' +
+      '<div class="pr-actions"><button type="button" data-pr-void-manual-eft>Void this R700 test EFT</button></div>' +
+      '</article>';
+  }
+
+  async function loadManualEftVoidStatus() {
+    var node = root && root.querySelector("[data-pr-manual-eft-status]");
+    if (node) { node.textContent = "Checking the specific R700 EFT record…"; node.setAttribute("data-error","false"); }
+    try {
+      var data = await rpc("admin_get_manual_test_eft_void_status",{});
+      if (!data || data.ok !== true) throw new Error("The manual test EFT status response is incomplete.");
+      renderManualVoidStatus(data);
+      if (node) {
+        node.textContent = data.payment_status === "voided_test" ? "The test EFT has already been voided." : "Only the specifically identified R700 manual EFT test transaction is available here.";
+      }
+    } catch (error) {
+      var card = root && root.querySelector("[data-pr-manual-eft-card]");
+      if (card) card.innerHTML = '<div class="pr-empty"><strong>Unable to verify the R700 EFT record</strong><p>' + esc(error.message || "Owner access is required.") + '</p></div>';
+      if (node) { node.textContent = error.message || "The status could not be checked."; node.setAttribute("data-error","true"); }
+    }
+  }
   async function load() {
     status("Loading issued receipts…",false);
     try {
@@ -149,14 +227,52 @@
       if (!Array.isArray(data.receipts)) throw new Error("Receipt list response is incomplete.");
       receipts = data.receipts;
       render();
-      root.querySelector("[data-pr-count]").textContent = String(receipts.filter(function (r) { return !r.delivery || r.delivery.status !== "sent"; }).length);
-      status(receipts.length + " issued receipt(s).",false);
+      root.querySelector("[data-pr-count]").textContent = String(receipts.filter(function (r) { return !r.voided_at && r.payment_status !== "voided_test" && (!r.delivery || r.delivery.status !== "sent"); }).length);
+      status(receipts.length + " issued receipt record(s), including any voided test receipts.",false);
     } catch (error) { status(error.message || "Unable to load receipts.",true); }
   }
   async function handleClick(event) {
     if (event.target.closest("[data-pr-close]")) { root.setAttribute("data-open","false"); return; }
     if (event.target.closest("[data-pr-cleanup-close]")) { root.setAttribute("data-cleanup-open","false"); return; }
-    if (event.target.closest("[data-pr-open]")) { root.setAttribute("data-cleanup-open","false"); root.setAttribute("data-open","true"); load(); return; }
+    if (event.target.closest("[data-pr-manual-eft-close]")) { root.setAttribute("data-manual-eft-open","false"); return; }
+    if (event.target.closest("[data-pr-open]")) { root.setAttribute("data-cleanup-open","false"); root.setAttribute("data-manual-eft-open","false"); root.setAttribute("data-open","true"); load(); return; }
+
+    var manualVoidButton = event.target.closest("[data-pr-void-manual-eft]");
+    if (manualVoidButton && !manualVoidBusy) {
+      var expectedVoidConfirmation = "VOID TEST EFT PAYMENT 4e8761b0-feec-429a-a690-7085b59aedcd";
+      var actualVoidConfirmation = window.prompt("Type this exact confirmation to void only the R700 test EFT:\\n" + expectedVoidConfirmation);
+      if (actualVoidConfirmation !== expectedVoidConfirmation) {
+        manualEftVoidStatus("Confirmation did not match. No financial records were changed.",true);
+        return;
+      }
+      var approvedVoid = window.confirm(
+        "Void the R700 EFT transaction for invoice SWY-2026-0010?\\n\\n" +
+        "This records the payment, issued receipt and approved bank-transfer submission as VOIDED TEST. " +
+        "The original proof, approval history, receipt email delivery log and PDF are retained. " +
+        "The invoice balance is recalculated. The receipt email previously accepted on 22 November 2026 cannot be recalled."
+      );
+      if (!approvedVoid) return;
+      manualVoidBusy = true;
+      manualVoidButton.disabled = true;
+      manualVoidButton.textContent = "Voiding test transaction…";
+      try {
+        var voidResult = await rpc("admin_void_manual_test_eft",{
+          p_payment_id:"4e8761b0-feec-429a-a690-7085b59aedcd",
+          p_confirmation:expectedVoidConfirmation,
+          p_reason:"Owner-confirmed entire EFT transaction was a test; no funds were received."
+        });
+        if (!voidResult || voidResult.ok !== true) throw new Error(voidResult && voidResult.message || "The test EFT void was not completed.");
+        await loadManualEftVoidStatus();
+        await load();
+        manualEftVoidStatus("Test EFT voided. Audit reference: " + (voidResult.audit_id || "recorded") + ".",false);
+      } catch (error) {
+        await loadManualEftVoidStatus();
+        manualEftVoidStatus(error.message || "The test EFT could not be voided.",true);
+      } finally {
+        manualVoidBusy = false;
+      }
+      return;
+    }
 
     var cleanupButton = event.target.closest("[data-pr-cleanup-id]");
     if (cleanupButton && !cleanupBusy) {
@@ -248,8 +364,9 @@
       #sway-payment-receipts .pr-launch{display:none;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:#081533;color:#fff;box-shadow:0 12px 34px rgba(8,21,51,.22);font-size:11px;font-weight:800;cursor:pointer}
       #sway-payment-receipts .pr-count{min-width:22px;height:22px;display:grid;place-items:center;padding:0 6px;border-radius:99px;background:#fff;color:#081533;font-size:11px}
       #sway-payment-receipts .pr-panel{display:none;position:fixed;right:22px;bottom:140px;width:min(620px,calc(100vw - 28px));max-height:min(78vh,760px);overflow:auto;background:#fff;border:1px solid #dfe5ea;border-radius:20px;padding:20px;box-shadow:0 24px 70px #07163835}
-      #sway-payment-receipts[data-open=true] .pr-panel:not(.pr-cleanup-panel){display:block}
+      #sway-payment-receipts[data-open=true] .pr-panel:not(.pr-cleanup-panel):not(.pr-manual-eft-panel){display:block}
       #sway-payment-receipts[data-cleanup-open=true] .pr-cleanup-panel{display:block}
+      #sway-payment-receipts[data-manual-eft-open=true] .pr-manual-eft-panel{display:block}
       #sway-payment-receipts .pr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
       #sway-payment-receipts h2{font-size:18px;margin:0 0 5px;color:#081533}
       #sway-payment-receipts p{font-size:12px;line-height:1.55;color:#66717B}
@@ -279,6 +396,8 @@
       #sway-payment-receipts .pr-actions button{min-height:34px;padding:0 13px;border:0;border-radius:9px;background:#0152F4;color:#fff;font-size:10px;font-weight:800;cursor:pointer}
       #sway-payment-receipts .pr-actions button:disabled{opacity:.55;cursor:wait}
       #sway-payment-receipts .pr-sent{font-size:10px;color:#18764B;font-weight:700}
+      #sway-payment-receipts .pr-voided{font-size:10px;color:#9A2525;font-weight:800}
+      #sway-payment-receipts .pr-status[data-state=voided]{color:#9A2525}
       #sway-payment-receipts .pr-empty{padding:28px 8px;text-align:center}
       #sway-payment-receipts .pr-empty strong{font-size:13px;color:#081533}
       #sway-payment-receipts [data-pr-status]{margin-top:12px;font-size:11px;color:#56616B;line-height:1.5}
@@ -296,7 +415,10 @@
       '<div class="pr-list" data-pr-list><div class="pr-empty">Open the panel to load receipts.</div></div><p data-pr-status role="status" aria-live="polite"></p></section>' +
       '<section class="pr-panel pr-cleanup-panel" aria-label="Yoco test payment cleanup"><div class="pr-head"><div><h2>Yoco test payment cleanup</h2><p>Remove only fully verified Yoco TEST payments after owner confirmation. Provider and receipt audit history is retained.</p></div><button type="button" class="pr-close" data-pr-cleanup-close aria-label="Close">×</button></div>' +
       '<p class="pr-test-note">Paystack live payments, manually recorded payments and bank transfers are not eligible. If a payment has refunds or reconciliation history, cleanup is blocked.</p>' +
-      '<div class="pr-list" data-pr-cleanup-list><div class="pr-empty">Open this view to check for eligible test payments.</div></div><p data-pr-cleanup-status role="status" aria-live="polite"></p></section>';
+      '<div class="pr-list" data-pr-cleanup-list><div class="pr-empty">Open this view to check for eligible test payments.</div></div><p data-pr-cleanup-status role="status" aria-live="polite"></p></section>' +
+      '<section class="pr-panel pr-manual-eft-panel" aria-label="Manual EFT test payment void"><div class="pr-head"><div><h2>Manual EFT test payment void</h2><p>Void only the specifically identified R700 owner-confirmed EFT test transaction. Source records and audit evidence are retained.</p></div><button type="button" class="pr-close" data-pr-manual-eft-close aria-label="Close">×</button></div>' +
+      '<p class="pr-test-note">This is not the Yoco cleanup workflow. It is restricted to invoice SWY-2026-0010, receipt SW-RCPT-2026-000001 and the linked approved EFT submission. The original receipt email sent on 22 November 2026 cannot be recalled.</p>' +
+      '<div class="pr-list" data-pr-manual-eft-card><div class="pr-empty">Open this view to verify the specific R700 EFT record.</div></div><p data-pr-manual-eft-status role="status" aria-live="polite"></p></section>';
     document.body.appendChild(root);
     root.addEventListener("click",handleClick);
 
@@ -314,24 +436,44 @@
         receiptsButton.setAttribute("aria-label", "Payment receipts");
         anchor.insertAdjacentElement("afterend", receiptsButton);
       }
-      if (!menu.querySelector('[data-view="yoco-test-payment-cleanup"]')) {
-        var cleanupNav = receiptsButton.cloneNode(true);
+      var cleanupNav = menu.querySelector('[data-view="yoco-test-payment-cleanup"]');
+      if (!cleanupNav) {
+        cleanupNav = receiptsButton.cloneNode(true);
         cleanupNav.dataset.view = "yoco-test-payment-cleanup";
         cleanupNav.removeAttribute("aria-current");
         cleanupNav.textContent = "Test payment cleanup";
         cleanupNav.setAttribute("aria-label", "Test payment cleanup");
         receiptsButton.insertAdjacentElement("afterend", cleanupNav);
       }
+      if (!menu.querySelector('[data-view="manual-test-eft-void"]')) {
+        var manualVoidNav = cleanupNav.cloneNode(true);
+        manualVoidNav.dataset.view = "manual-test-eft-void";
+        manualVoidNav.removeAttribute("aria-current");
+        manualVoidNav.textContent = "Manual EFT test void";
+        manualVoidNav.setAttribute("aria-label", "Manual EFT test void");
+        cleanupNav.insertAdjacentElement("afterend", manualVoidNav);
+      }
     }
     addBillingNavigationItem();
     var navObserver = new MutationObserver(addBillingNavigationItem);
     navObserver.observe(document.body, {childList:true,subtree:true});
     document.addEventListener("click", function(event) {
+      var manualVoidNav = event.target.closest('[data-view="manual-test-eft-void"]');
+      if (manualVoidNav) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        root.setAttribute("data-open","false");
+        root.setAttribute("data-cleanup-open","false");
+        root.setAttribute("data-manual-eft-open","true");
+        loadManualEftVoidStatus();
+        return;
+      }
       var cleanupNav = event.target.closest('[data-view="yoco-test-payment-cleanup"]');
       if (cleanupNav) {
         event.preventDefault();
         event.stopImmediatePropagation();
         root.setAttribute("data-open","false");
+        root.setAttribute("data-manual-eft-open","false");
         root.setAttribute("data-cleanup-open","true");
         loadCleanup();
         return;
@@ -341,6 +483,7 @@
       event.preventDefault();
       event.stopImmediatePropagation();
       root.setAttribute("data-cleanup-open","false");
+      root.setAttribute("data-manual-eft-open","false");
       root.setAttribute("data-open","true");
       load();
     }, true);

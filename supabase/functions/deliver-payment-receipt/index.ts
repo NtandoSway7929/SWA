@@ -136,7 +136,7 @@ async function buildReceiptPdf(receipt: any, payment: any, client: any, invoice:
 
 async function listReceipts(admin: any) {
   const { data: rows, error } = await admin.from("payment_receipts")
-    .select("id,payment_id,receipt_number,issued_at,snapshot")
+    .select("id,payment_id,receipt_number,issued_at,snapshot,voided_at,voided_by,void_reason")
     .order("issued_at", { ascending: false }).limit(100);
   if (error) return json({ ok: false, error: "Receipts could not be loaded." }, 503);
   if (!rows?.length) return json({ ok: true, receipts: [] });
@@ -156,12 +156,16 @@ async function listReceipts(admin: any) {
   const paymentMap = new Map((payments || []).map((row: any) => [row.id, row]));
   const clientMap = new Map((clients || []).map((row: any) => [row.id, row]));
   return json({ ok: true, receipts: (rows || []).map((row: any) => {
-    const payment = paymentMap.get(row.payment_id);
+    const payment: any = paymentMap.get(row.payment_id);
     return {
       id: row.id,
       payment_id: row.payment_id,
       receipt_number: row.receipt_number,
       issued_at: row.issued_at,
+      voided_at: row.voided_at || null,
+      voided_by: row.voided_by || null,
+      void_reason: row.void_reason || null,
+      payment_status: payment?.status ?? null,
       amount: payment?.amount ?? row.snapshot?.amount ?? null,
       currency: payment?.currency ?? row.snapshot?.currency ?? "ZAR",
       method: payment?.method ?? row.snapshot?.method ?? null,
@@ -182,9 +186,12 @@ async function sendReceipt(admin: any, paymentId: string) {
     return json({ ok: false, error: "Only a recorded, paid payment can receive a receipt." }, 409);
   }
   const { data: receipt, error: receiptError } = await admin.from("payment_receipts")
-    .select("id,payment_id,receipt_number,issued_at,snapshot")
+    .select("id,payment_id,receipt_number,issued_at,snapshot,voided_at,void_reason")
     .eq("payment_id", paymentId).maybeSingle();
   if (receiptError || !receipt) return json({ ok: false, error: "A receipt has not been issued for this payment." }, 404);
+  if (receipt.voided_at || payment.status === "voided_test") {
+    return json({ ok: false, error: "This receipt has been voided as a test transaction and cannot be sent or resent." }, 409);
+  }
   const { error: ensureError } = await admin.from("payment_receipt_deliveries")
     .upsert({ receipt_id: receipt.id, status: "pending" }, { onConflict: "receipt_id", ignoreDuplicates: true });
   if (ensureError) return json({ ok: false, error: "Receipt delivery could not be prepared." }, 503);
