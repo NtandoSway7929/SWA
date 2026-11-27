@@ -559,10 +559,23 @@ Deno.serve(async (req) => {
 
     let contactError: unknown = null;
 
+    type ResolvedEmailContact = {
+      id: string;
+      business_name?: string | null;
+      contact_name?: string | null;
+      email?: string | null;
+      email_consent_required?: boolean | null;
+      email_consent_status?: string | null;
+    };
+
     const lookupTable =
       async (
         tableName: "leads" | "clients",
-      ) => {
+      ): Promise<{
+        contact: ResolvedEmailContact;
+        error: unknown;
+        type: "lead" | "client";
+      } | null> => {
         if (contactId) {
           const byId =
             await supabase
@@ -573,7 +586,7 @@ Deno.serve(async (req) => {
 
           if (byId.data) {
             return {
-              contact: byId.data,
+              contact: byId.data as unknown as ResolvedEmailContact,
               error: byId.error || null,
               type:
                 tableName === "clients"
@@ -596,7 +609,7 @@ Deno.serve(async (req) => {
 
           if (byEmail.data) {
             return {
-              contact: byEmail.data,
+              contact: byEmail.data as unknown as ResolvedEmailContact,
               error: byEmail.error || null,
               type:
                 tableName === "clients"
@@ -983,16 +996,18 @@ Deno.serve(async (req) => {
         .select("id,business_name,email")
         .maybeSingle();
 
-      emailConsentRecorded = Boolean(consentUpdate.data && !consentUpdate.error);
-      if (!emailConsentRecorded) {
+      if (consentUpdate.error || !consentUpdate.data) {
+        emailConsentRecorded = false;
         emailConsentRecordError = consentUpdate.error?.message ||
           "The email was sent, but the consent request could not be recorded. Do not send a second request; reconcile the lead record first.";
       } else {
+        emailConsentRecorded = true;
+        const savedLead = consentUpdate.data;
         const eventInsert = await supabase
           .from("lead_email_consent_events")
           .insert({
             lead_id: contact.id,
-            business_name: consentUpdate.data.business_name || recipientBusinessName || "Unknown business",
+            business_name: savedLead.business_name || recipientBusinessName || "Unknown business",
             email_address: recipientEmail,
             event_type: "request_sent",
             channel: "Email",
