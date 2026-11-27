@@ -22,7 +22,7 @@ for (const contract of [
     "revoke all on table public.lead_proposal_versions",
     "create or replace function public.prepare_lead_proposal_version()",
     "create or replace function public.capture_lead_proposal_version()",
-    "create or replace function public.prevent_lead_proposal_version_mutation()",
+    "create or replace function public.prevent_lead_proposal_version_update()",
     "new.current_version := old.current_version + 1",
     "Create a draft revision before editing an approved or rejected proposal.",
     "Lead proposal revision history is immutable."
