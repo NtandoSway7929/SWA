@@ -372,6 +372,8 @@ const path = require("node:path");
     assert.match(privateCompose, /--maxmemory/);
     assert.match(privateCompose, /allkeys-lru/);
     assert.match(privateCompose, /memory: 384M/);
+    assert.match(privateCompose, /--appendonly/);
+    assert.match(privateCompose, /--save/);
     assert.match(privateCompose, /CADDY_IMAGE:\?/);
     assert.match(privateCompose, /VALKEY_IMAGE:\?/);
     assert.match(privateCompose, /CLOUDFLARED_IMAGE:\?/);
