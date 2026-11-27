@@ -169,7 +169,7 @@ $function$;
 revoke all on function public.capture_lead_proposal_version()
     from public, anon, authenticated, service_role;
 
-create or replace function public.prevent_lead_proposal_version_mutation()
+create or replace function public.prevent_lead_proposal_version_update()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -180,7 +180,7 @@ begin
 end;
 $function$;
 
-revoke all on function public.prevent_lead_proposal_version_mutation()
+revoke all on function public.prevent_lead_proposal_version_update()
     from public, anon, authenticated, service_role;
 
 drop trigger if exists trg_prepare_lead_proposal_version on public.lead_proposals;
@@ -195,15 +195,15 @@ after insert or update on public.lead_proposals
 for each row
 execute function public.capture_lead_proposal_version();
 
-drop trigger if exists trg_prevent_lead_proposal_version_mutation
+drop trigger if exists trg_prevent_lead_proposal_version_update
     on public.lead_proposal_versions;
 create trigger trg_prevent_lead_proposal_version_mutation
-before update or delete on public.lead_proposal_versions
+before update on public.lead_proposal_versions
 for each row
-execute function public.prevent_lead_proposal_version_mutation();
+execute function public.prevent_lead_proposal_version_update();
 
 comment on table public.lead_proposal_versions is
-    'Append-only snapshots of each saved Swayphics lead proposal version and its approval state.';
+    'Append-only snapshots of each saved Swayphics lead proposal version and its approval state while the parent proposal exists. Existing lead/proposal deletion cascades remain in effect.';
 comment on column public.lead_proposals.structured_content is
     'Versioned JSON structure for proposal sections; content remains a plain-text compatibility rendering.';
 comment on column public.lead_proposals.current_version is
