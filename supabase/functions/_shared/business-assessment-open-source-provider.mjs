@@ -357,8 +357,8 @@ export function createOpenSourceInspectionProvider({
 
             return {
                 requestId,
-                results: normalisedUrls.map((requestedUrl, index) => {
-                    const item = byRequestedUrl.get(requestedUrl) || results[index] || null;
+                results: normalisedUrls.map((requestedUrl) => {
+                    const item = byRequestedUrl.get(requestedUrl) || null;
                     if (!item) {
                         return {
                             url: requestedUrl,
