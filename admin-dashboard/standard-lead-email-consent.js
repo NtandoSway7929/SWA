@@ -178,6 +178,7 @@
       emailConsentAction: "permission_request",
       allowProposalTypes: false,
       onSent: async function (result) {
+        await loadRecords(true);
         if (!result || result.email_consent_recorded !== true) {
           throw new Error(
             result && result.email_consent_record_error
@@ -185,7 +186,6 @@
               : "The permission-request email was sent, but its consent status could not be verified. Reconcile the record before attempting another request."
           );
         }
-        await loadRecords(true);
       }
     });
   }
@@ -211,10 +211,14 @@
   }
 
   async function recordResponse(lead, decision) {
-    const responseName = window.prompt("Full name of the person who replied:");
-    if (responseName === null || !responseName.trim()) return;
-    const responseRole = window.prompt("Their designation or authority to respond for the business:");
-    if (responseRole === null || !responseRole.trim()) return;
+    const responseName = window.prompt("Full name of the person who replied (required for a grant; otherwise enter what is known):");
+    if (responseName === null) return;
+    const responseRole = window.prompt("Their designation or authority to respond for the business (required for a grant; otherwise enter what is known):");
+    if (responseRole === null) return;
+    if (decision === "grant" && (!responseName.trim() || !responseRole.trim())) {
+      window.alert("A full name and designation are required to record marketing consent.");
+      return;
+    }
     const evidence = window.prompt(
       decision === "grant"
         ? "Paste the exact written reply confirming consent to receive email marketing from Swayphics:"
