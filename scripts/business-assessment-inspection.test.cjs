@@ -14,6 +14,7 @@ const providerFacade = read("supabase/functions/inspect-business-assessment/prov
 const migration = read("supabase/migrations/20261126193000_business_assessment_evidence_inspection.sql");
 const submissionRules = read("supabase/functions/submit-business-assessment/rules.mjs");
 const publicForm = read("business-opportunity-finder/index.html");
+const privacyPolicy = read("privacy-policy/index.html");
 const publicScript = read("business-opportunity-finder/business-opportunity-finder.js");
 const adminScript = read("admin-dashboard/business-assessments.js");
 const adminCss = read("admin-dashboard/business-assessments.css");
@@ -124,6 +125,18 @@ assert.match(publicForm, /bof-inspection-consent/,
     "The public assessment must present a separate inspection permission control");
 assert.match(publicForm, /separate from any request for Swayphics to contact me/i,
     "The public notice must explicitly separate inspection consent from contact permission");
+assert.match(publicForm, /signed written agreement/i,
+    "The public consent notice must state that inspections only occur under a signed restricted-processing agreement");
+assert.match(publicForm, /prohibits using this data to train, fine-tune or evaluate AI or machine-learning models/i,
+    "The public consent notice must prohibit AI/ML training and evaluation");
+assert.match(publicForm, /aggregated or de-identified data derived from this assessment/i,
+    "The public consent notice must disclose restrictions on independent secondary use of derived data");
+assert.match(privacyPolicy, /Business Opportunity Finder public-presence inspection is not yet enabled/i,
+    "The Privacy Policy must not describe TinyFish inspections as an active service before rollout");
+assert.match(privacyPolicy, /Swayphics will not use TinyFish for Business Opportunity Finder inspections under those broader permissions/i,
+    "The Privacy Policy must reject the standard TinyFish data-use permissions for this workflow");
+assert.match(privacyPolicy, /independent use of aggregated or de-identified data derived from it/i,
+    "The Privacy Policy must disclose the restriction on independent secondary use");
 assert.match(publicScript, /buildPublicPresencePayload/,
     "The public page must only submit the optional public-presence payload through the assessment flow");
 assert.match(publicScript, /inspection_consent: false/,
