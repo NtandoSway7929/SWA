@@ -23,7 +23,7 @@ alter table public.quotes
     drop constraint if exists quotes_invoice_id_fkey;
 alter table public.quotes
     add constraint quotes_invoice_id_fkey
-    foreign key (invoice_id) references public.invoices(id) on delete set null;
+    foreign key (invoice_id) references public.invoices(id) on delete restrict;
 
 alter table public.quotes
     drop constraint if exists quotes_proposal_id_fkey;
@@ -582,10 +582,14 @@ begin
     where qi.quote_id = v_quote.id
     order by qi.position, qi.created_at;
 
+    perform pg_catalog.set_config('swayphics.quote_invoice_conversion', 'on', true);
+
     update public.quotes
        set invoice_id = v_invoice_id,
            updated_at = now()
      where id = v_quote.id;
+
+    perform pg_catalog.set_config('swayphics.quote_invoice_conversion', 'off', true);
 
     return jsonb_build_object(
         'invoice_id', v_invoice_id,
@@ -616,10 +620,10 @@ begin
 
     if old.status <> 'draft' then
         if new.title is distinct from old.title
-           or new.lead_id is distinct from old.lead_id
-           or new.client_id is distinct from old.client_id
-           or new.proposal_id is distinct from old.proposal_id
-           or new.proposal_version_id is distinct from old.proposal_version_id
+           or (new.lead_id is distinct from old.lead_id and new.lead_id is not null)
+           or (new.client_id is distinct from old.client_id and new.client_id is not null)
+           or (new.proposal_id is distinct from old.proposal_id and new.proposal_id is not null)
+           or (new.proposal_version_id is distinct from old.proposal_version_id and new.proposal_version_id is not null)
            or new.valid_until is distinct from old.valid_until
            or new.notes is distinct from old.notes
            or new.amount is distinct from old.amount
@@ -635,9 +639,9 @@ begin
         end if;
     end if;
 
-    if old.invoice_id is not null
-       and new.invoice_id is distinct from old.invoice_id then
-        raise exception 'An invoice relationship already recorded on a quote cannot be changed.'
+    if new.invoice_id is distinct from old.invoice_id
+       and current_setting('swayphics.quote_invoice_conversion', true) is distinct from 'on' then
+        raise exception 'Quote-to-invoice links can only be created by the atomic conversion workflow.'
             using errcode = '55000';
     end if;
 
