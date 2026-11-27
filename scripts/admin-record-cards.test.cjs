@@ -144,9 +144,10 @@ assert.match(clientDeleteHandler, /archive the client/i);
 assert.match(clientDeleteHandler, /if \(type === "payments"\)/,
     "payment deletion must use a dedicated financial-history guard");
 assert.match(clientDeleteHandler, /Only the Swayphics owner can manage payment records/);
-assert.match(clientDeleteHandler, /payment_receipts/);
-assert.match(clientDeleteHandler, /bank_transfer_submissions/);
-assert.match(clientDeleteHandler, /Permanent payment deletion is disabled unless the record is explicitly verified/);
+assert.match(clientDeleteHandler, /protects receipts, approved bank-transfer evidence, refunds and reconciliation history/);
+assert.match(clientDeleteHandler, /Dedicated test-payment cleanup is not yet available/);
+assert.doesNotMatch(clientDeleteHandler, /method: "DELETE"/,
+    "the payment delete handler must never send a generic DELETE request");
 assert.match(clientDeleteHandler, /No payment data was changed/);
 assert.doesNotMatch(clientDeleteHandler, /for \(const invoice of clientInvoices\)/,
     "client deletion must not cascade-delete invoice history");
