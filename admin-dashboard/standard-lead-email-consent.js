@@ -76,7 +76,7 @@
   function statusText(status) {
     return ({
       not_requested: "Email consent not requested",
-      requested: "Permission requested · awaiting reply",
+      requested: "Permission requested · awaiting response",
       granted: "Email consent recorded",
       declined: "Email marketing declined",
       revoked: "Email consent withdrawn"
@@ -112,7 +112,8 @@
         emailButton.insertAdjacentElement("afterend", chip);
       }
       chip.dataset.consentState = lead.email_consent_status || "not_requested";
-      chip.textContent = statusText(lead.email_consent_status);
+      const chipLabel = statusText(lead.email_consent_status);
+      if (chip.textContent !== chipLabel) chip.textContent = chipLabel;
 
       let consentAction = actions.querySelector('[data-lead-consent-action="' + id + '"]');
       const neededAction = lead.email_consent_status === "requested"
@@ -134,7 +135,8 @@
         actions.appendChild(consentAction);
       } else if (neededAction && consentAction) {
         consentAction.dataset.leadConsentActionType = neededAction;
-        consentAction.textContent = neededAction === "record" ? "Record response" : "Withdraw consent";
+        const actionLabel = neededAction === "record" ? "Record response" : "Withdraw consent";
+        if (consentAction.textContent !== actionLabel) consentAction.textContent = actionLabel;
       }
     });
   }
