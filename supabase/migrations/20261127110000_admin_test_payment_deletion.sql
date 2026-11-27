@@ -9,6 +9,34 @@ alter table public.payments
 comment on column public.payments.is_test is
   'Owner-classified test-only payment. Test payments are excluded from revenue reporting and may be permanently purged through the guarded admin RPC.';
 
+create or replace function innerme_private.swayphics_invoice_net_paid(p_invoice_id uuid)
+returns numeric
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+    select greatest(
+        coalesce((
+            select sum(p.amount)
+            from public.payments p
+            where p.invoice_id = p_invoice_id
+              and p.status in ('paid', 'partially paid')
+              and p.is_test is false
+        ), 0)
+        -
+        coalesce((
+            select sum(r.amount)
+            from public.payment_refunds r
+            join public.payments rp on rp.id = r.payment_id
+            where rp.invoice_id = p_invoice_id
+              and rp.is_test is false
+              and r.status = 'succeeded'
+        ), 0),
+        0
+    )::numeric(12,2);
+$function$;
+
 create or replace function public.enforce_swayphics_payment_invoice_integrity()
 returns trigger
 language plpgsql
