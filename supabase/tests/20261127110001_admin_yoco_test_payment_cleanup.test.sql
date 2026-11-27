@@ -310,8 +310,10 @@ select extensions.ok(
     'private cleanup audit retains payment, receipt, and webhook snapshots'
 );
 select extensions.throws_ok(
-    $ delete from innerme_private.yoco_test_payment_cleanup_audit
-        where original_payment_id=current_setting('test.yoco_cleanup_payment_id')::uuid $,
+    format(
+        'delete from innerme_private.yoco_test_payment_cleanup_audit where original_payment_id = %L::uuid',
+        current_setting('test.yoco_cleanup_payment_id')
+    ),
     '55000',
     'Yoco test-payment cleanup audit records are immutable.',
     'cleanup audit records cannot be deleted'
