@@ -56,6 +56,6 @@ for (const source of [adminLoader, portalLoader]) {
 }
 
 assert.ok(portalLoader.includes(".sway-favicon-loader-mark,.sway-favicon-loader-dot{display:none!important}"));
-assert.ok(adminDashboard.includes("admin-workspace.css?v=20261119-fist-draw-loader-1"));
+assert.ok(adminDashboard.includes("admin-workspace.css?v=20261128-lead-proposal-structured-content-1"));
 
 console.log("Homepage splash removal and retained admin/client loader checks passed.");
