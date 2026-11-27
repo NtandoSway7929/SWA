@@ -8183,6 +8183,7 @@ function simpleBars(items, color) {
                     .filter(function (payment) {
                         return (
                             payment.status === "paid" &&
+                            payment.is_test !== true &&
                             chartMonthKey(
                                 payment.paid_at ||
                                 payment.created_at
@@ -9818,6 +9819,7 @@ function simpleBars(items, color) {
                 .filter(function (payment) {
                     return (
                         payment.status === "paid" &&
+                        payment.is_test !== true &&
                         dashboardMonthKey(
                             payment.paid_at ||
                             payment.created_at
@@ -9916,6 +9918,7 @@ function simpleBars(items, color) {
                     .filter(function (payment) {
                         return (
                             payment.status === "paid" &&
+                            payment.is_test !== true &&
                             dashboardMonthKey(
                                 payment.paid_at ||
                                 payment.created_at
@@ -10136,7 +10139,7 @@ function simpleBars(items, color) {
         const paid =
             state.payments
                 .filter(function (item) {
-                    return item.status === "paid";
+                    return item.status === "paid" && item.is_test !== true;
                 })
                 .reduce(function (sum, item) {
                     return sum +
@@ -10146,7 +10149,7 @@ function simpleBars(items, color) {
         const outstanding =
             state.payments
                 .filter(function (item) {
-                    return item.status !== "paid";
+                    return item.status !== "paid" && item.is_test !== true;
                 })
                 .reduce(function (sum, item) {
                     return sum +
@@ -13281,7 +13284,9 @@ function simpleBars(items, color) {
             );
         }, 0);
 
-        const paymentTotal = payments.reduce(function (sum, item) {
+        const paymentTotal = payments.filter(function (item) {
+            return item.is_test !== true;
+        }).reduce(function (sum, item) {
             return sum + Number(item.amount || 0);
         }, 0);
 
@@ -18922,6 +18927,7 @@ function simpleBars(items, color) {
 
         (state.payments || []).forEach(function (payment) {
             if (
+                payment.is_test === true ||
                 String(payment.status || "").toLowerCase() !== "paid" ||
                 Number(payment.amount || 0) <= 0
             ) {
@@ -19734,7 +19740,7 @@ function simpleBars(items, color) {
             return (
                 '<article class="sway-record-card" data-ai-record="payments:' + esc(item.id) + '">' +
                     '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">PAYMENT</span>' +
-                        '<div class="sway-record-card-badges">' + (overdue ? chip("overdue") : "") + chip(item.status) + '</div></div>' +
+                        '<div class="sway-record-card-badges">' + (item.is_test === true ? chip("TEST") : "") + (overdue ? chip("overdue") : "") + chip(item.status) + '</div></div>' +
                     '<button type="button" class="sway-record-card-open" data-edit="payments" data-id="' + esc(item.id) +
                         '" aria-label="Open payment for ' + esc(clientName(item.client_id)) + '">' +
                         '<strong class="sway-record-card-title">' + esc(money(item.amount)) + '</strong>' +
@@ -19750,7 +19756,12 @@ function simpleBars(items, color) {
                         '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary><div class="sway-actions-dropdown">' +
                             '<button class="sway-row-action" data-edit="payments" data-id="' + esc(item.id) + '">Edit</button>' +
                             refundAction +
-                            '<button class="sway-row-action danger" data-delete="payments" data-id="' + esc(item.id) + '">Delete</button>' +
+                            (state.currentAdmin && state.currentAdmin.role === "owner" && item.provider == null && item.is_test !== true
+                                ? '<button type="button" class="sway-row-action" data-mark-test-payment="' + esc(item.id) + '">Mark as test data</button>'
+                                : "") +
+                            (state.currentAdmin && state.currentAdmin.role === "owner" && item.is_test === true
+                                ? '<button type="button" class="sway-row-action danger" data-delete-test-payment="' + esc(item.id) + '">Permanently delete test payment</button>'
+                                : "") +
                         '</div></details>' +
                     '</div>' +
                 '</article>'
@@ -24947,10 +24958,72 @@ function simpleBars(items, color) {
         renderView();
     }
 
+    async function markPaymentAsTest(paymentId) {
+        const payment = (state.payments || []).find(function (item) { return item.id === paymentId; });
+        if (!payment || !state.currentAdmin || state.currentAdmin.role !== "owner") {
+            swayAlert("Only the Swayphics owner can classify a payment as test data.");
+            return;
+        }
+        if (payment.provider != null || payment.is_test === true) {
+            swayAlert("Only an unclassified manual payment can be marked as test data.");
+            return;
+        }
+        const expected = "TEST PAYMENT " + paymentId;
+        const confirmation = window.prompt(
+            "Only classify this payment as test data if it was created for testing and no genuine customer funds were received. This action excludes it from revenue reporting. Type exactly:\\n" + expected
+        );
+        if (confirmation === null) return;
+        if (confirmation !== expected) {
+            swayAlert("The confirmation did not match. The payment was not changed.");
+            return;
+        }
+        await api("/rest/v1/rpc/admin_mark_payment_as_test", {
+            method: "POST",
+            body: JSON.stringify({ p_payment_id: paymentId, p_confirmation: confirmation })
+        });
+        await logActivity("Marked payment as test data", "payments", paymentId);
+        await refreshData();
+        renderShell();
+        renderView();
+    }
+
+    async function deleteTestPayment(paymentId) {
+        const payment = (state.payments || []).find(function (item) { return item.id === paymentId; });
+        if (!payment || payment.is_test !== true || !state.currentAdmin || state.currentAdmin.role !== "owner") {
+            swayAlert("Only the owner can permanently delete a payment already classified as test data.");
+            return;
+        }
+        const expected = "DELETE TEST PAYMENT " + paymentId;
+        const confirmation = window.prompt(
+            "This permanently deletes the test payment and its linked receipt and receipt-delivery records. Protected provider, refund, transfer-proof and reconciliation records cannot be deleted. Type exactly:\\n" + expected
+        );
+        if (confirmation === null) return;
+        if (confirmation !== expected) {
+            swayAlert("The confirmation did not match. No records were deleted.");
+            return;
+        }
+        const result = await api("/rest/v1/rpc/admin_permanently_delete_test_payment", {
+            method: "POST",
+            body: JSON.stringify({ p_payment_id: paymentId, p_confirmation: confirmation })
+        });
+        if (!result || result.deleted !== true) {
+            throw new Error("Supabase did not confirm deletion of the test payment.");
+        }
+        await logActivity("Permanently deleted test payment", "payments", paymentId);
+        await refreshData();
+        renderShell();
+        renderView();
+    }
+
     async function removeRecord(type, id) {
         const config = configs[type];
 
         if (!config) return;
+
+        if (type === "payments") {
+            swayAlert("Payments can only be permanently deleted after the owner explicitly classifies them as test data.");
+            return;
+        }
 
         if (
             type === "team"
@@ -30107,6 +30180,38 @@ function simpleBars(items, color) {
                         }
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-mark-test-payment]")
+            .forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    if (button.disabled) return;
+                    button.disabled = true;
+                    try {
+                        await markPaymentAsTest(button.dataset.markTestPayment);
+                    } catch (error) {
+                        swayAlert(error.message || "Unable to classify this payment as test data.");
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            });
+
+        workspace
+            .querySelectorAll("[data-delete-test-payment]")
+            .forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    if (button.disabled) return;
+                    button.disabled = true;
+                    try {
+                        await deleteTestPayment(button.dataset.deleteTestPayment);
+                    } catch (error) {
+                        swayAlert(error.message || "Unable to delete this test payment.");
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
             });
 
         workspace
