@@ -93,6 +93,20 @@ The integration smoke test sends one generic query (`Crawl4AI open source web cr
 
 The same ephemeral run then executes `scripts/business-assessment-open-source-provider.search-benchmark.cjs`, with two separate datasets. The national-brand baseline covers Dis-Chem, Sorbet, Clicks, Planet Fitness and NetFlorist. The Pretoria locally operated/independent pilot covers The Cure Spa, Charis Nail & Beauty Studio, Jacqueline's Chapter One Hair and Beauty Salon, Huba Fleurs and Kalm Skin + Body Studio. The second group was selected using public evidence of local operation, family ownership, owner operation or independent-salon positioning, and each has a separately verified official domain. The benchmark records the rank of each expected official domain in the top ten, the returned top-five domains and titles, and per-dataset top-five and top-ten hit rates in the GitHub Actions job summary. The Pretoria group is a small, curated pilot, not a representative sample of all independent South African businesses or the BOF's full lead market. A non-empty generic SearXNG result set is not treated as evidence of search accuracy.
 
+### Public source trail for the Pretoria pilot
+
+The expected domains and independent/local-operation indicators were checked against public business pages before being added to the benchmark:
+
+| Business | Expected domain | Public source |
+|---|---|---|
+| The Cure Spa | `thecurespa.co.za` | https://www.thecurespa.co.za/the-cure — identifies its Pretoria location, 2015 establishment and women-run operation |
+| Charis Nail & Beauty Studio | `charisbeauty.co.za` | https://www.charisbeauty.co.za/ — identifies itself as woman-owned, family-run and located in Pretoria East |
+| Jacqueline's Chapter One Hair and Beauty Salon | `chapteronehairandbeauty.co.za` | https://www.chapteronehairandbeauty.co.za/ — describes itself as a full-service independent salon and identifies its Montana Park location |
+| Huba Fleurs | `hubafleurs.online` | https://hubafleurs.online/ — identifies a Pretoria floral studio and pickup address; the public business listing also links to this domain |
+| Kalm Skin + Body Studio | `kalm-studio.co.za` | https://www.kalm-studio.co.za/pages/about-us — describes the business as locally owned and operated and created by a husband-and-wife team |
+
+These checks establish that the benchmark cases and expected domains have a public basis. They do not independently verify corporate registration status, employee count or revenue. The set is therefore labelled locally operated/independent pilot rather than a statistically defined microbusiness sample.
+
 The SearXNG test config disables the request limiter only to keep the ephemeral test deterministic. It is not a production configuration. Production must restore rate limiting, restrict network access, configure abuse controls and review all external search engines.
 
 The GitHub Actions workflow runs both the mocked adapter tests and this Docker smoke test on the isolated POC branch.
