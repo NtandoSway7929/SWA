@@ -124,9 +124,9 @@ const assert = require("node:assert/strict");
         crawlApiToken: ""
     }), /crawl4ai_token_not_configured/);
 
-    assert.throws(() => __testing.normaliseSearxngResults({
+    assert.deepEqual(__testing.normaliseSearxngResults({
         results: [{ url: "https://evil.example/" }]
-    }, { includeDomains: "trusted.example" }), /does not throw/);
+    }, { includeDomains: "trusted.example" }), []);
 
     const noJsonProvider = createOpenSourceInspectionProvider({
         fetchImpl: async () => new Response(JSON.stringify({ detail: "JSON disabled" }), {
