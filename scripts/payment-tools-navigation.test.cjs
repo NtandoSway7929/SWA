@@ -21,7 +21,7 @@ test("manual payment recording is launched from Sales & Billing, not a floating 
 
 test("payment receipt management is launched from Sales & Billing, not a floating shortcut", () => {
   assert.match(receipts, /data-nav-menu="billing"/);
-  assert.match(receipts, /button\.dataset\.view = "payment-receipts"/);
+  assert.match(receipts, /receiptsButton.dataset.view = "payment-receipts"/);
   assert.match(receipts, /textContent = "Payment receipts"/);
   assert.match(receipts, /stopImmediatePropagation\(\)/);
   assert.match(receipts, /\.pr-launch\{display:none;/);
