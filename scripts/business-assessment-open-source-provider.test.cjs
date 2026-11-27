@@ -232,6 +232,17 @@ const assert = require("node:assert/strict");
     assert.equal(rejectedIdentity.status, "rejected",
         "A page matching neither the business name nor location must be rejected");
 
+    const storePageIdentity = matchBusinessIdentity({
+        businessName: "Kalm Skin + Body Studio",
+        location: "Elarduspark Pretoria",
+        title: "Our Stores – Kalm: Skin + Body Studio",
+        text: "Kalm The Park / Elarduspark. Address: Shop 27 The Park Shopping Centre, Barnard Street, Elarduspark, Pretoria.",
+        sourceType: "website",
+        sourceUrl: "https://www.kalm-studio.co.za/pages/our-stores"
+    });
+    assert.equal(storePageIdentity.status, "confirmed",
+        "A same-domain store page with the business name and supplied locality should confirm identity");
+
     console.log("Swayphics business identity matcher contract tests passed.");
     console.log("Business Opportunity Finder open-source provider adapter tests passed.");
 })().catch((error) => {

@@ -133,6 +133,9 @@ The corrected adapter and v2 retrieval benchmark were verified in [GitHub Action
 
 The v3 identity benchmark invokes the existing Swayphics `matchBusinessIdentity()` function on each successfully retrieved business page. It passes the test case's public business name and location, the fetched title, up to 12,000 characters of page text, `sourceType: website` and the final public URL. A failed page fetch is marked `not_evaluated_fetch_failed`, not ambiguous or rejected. This measures the current matcher without changing its code or persisting any evidence. Its confirmed/ambiguous/rejected counts are test outputs, not independent proof of legal ownership. The five-site set remains a small diagnostic pilot, not a representative sample of South African business websites.
 
+A focused follow-up was added for Kalm's official `/pages/our-stores` page. The homepage had been ambiguous because it did not expose the tested Elarduspark locality in the extracted content. The official stores page names Kalm The Park / Elarduspark and gives its Pretoria address ([official Kalm stores page](https://www.kalm-studio.co.za/pages/our-stores)). The benchmark now fetches this single same-domain page separately and reruns the same identity matcher with the same business and location inputs. The secondary result is kept separate from the homepage result: it does not rewrite or upgrade the homepage evidence row. This is a bounded test of targeted internal-page discovery, not permission to crawl arbitrary site links.
+
+
 
 
 The SearXNG test config disables the request limiter only to keep the ephemeral test deterministic. It is not a production configuration. Production must restore rate limiting, restrict network access, configure abuse controls and review all external search engines.

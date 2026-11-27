@@ -39,7 +39,13 @@ const cases = [
         url: "https://www.kalm-studio.co.za/",
         expectedDomain: "kalm-studio.co.za",
         location: "Elarduspark Pretoria",
-        identityTerms: ["kalm"]
+        identityTerms: ["kalm"],
+        identityFollowupPages: [
+            {
+                url: "https://www.kalm-studio.co.za/pages/our-stores",
+                location: "Elarduspark Pretoria"
+            }
+        ]
     }
 ];
 
@@ -176,13 +182,76 @@ function summarise(items) {
         };
     });
 
+    // When the homepage is ambiguous, test a single, explicitly listed same-domain
+    // location/contact page. Keep this result separate from the homepage assessment.
+    const followupCases = cases.flatMap((testCase) =>
+        (testCase.identityFollowupPages || []).map((page) => ({ testCase, page }))
+    );
+    const secondaryPageResults = [];
+    for (const batchStart of Array.from(
+        { length: Math.ceil(followupCases.length / 8) },
+        (_, index) => index * 8
+    )) {
+        const batch = followupCases.slice(batchStart, batchStart + 8);
+        const response = await provider.fetch(batch.map((item) => item.page.url));
+        if (!Array.isArray(response.results) || response.results.length !== batch.length) {
+            throw new Error("crawl4ai_followup_result_count_mismatch");
+        }
+        response.results.forEach((result, index) => {
+            const { testCase, page } = batch[index];
+            const success = result.success === true;
+            const identity = success
+                ? matchBusinessIdentity({
+                    businessName: testCase.business,
+                    location: page.location,
+                    title: result.title,
+                    text: String(result.text || "").slice(0, 12_000),
+                    sourceType: "website",
+                    sourceUrl: result.final_url
+                })
+                : null;
+            const primary = report.find((item) => item.business === testCase.business);
+            secondaryPageResults.push({
+                business: testCase.business,
+                url: page.url,
+                finalHost: hostname(result.final_url),
+                expectedDomain: testCase.expectedDomain,
+                statusCode: result.status_code ?? null,
+                success,
+                identityMatchStatus: identity?.status || "not_evaluated_fetch_failed",
+                identityMatchBasis: identity?.basis || [
+                    "Identity matching was not evaluated because the follow-up page retrieval did not succeed."
+                ],
+                primaryPageIdentityStatus: primary?.identityMatchStatus || "not_available",
+                resolvesPrimaryAmbiguity: primary?.identityMatchStatus === "ambiguous" &&
+                    identity?.status === "confirmed",
+                title: String(result.title || "").slice(0, 180),
+                textCharacters: String(result.text || "").length,
+                errorCode: result.error_code || null
+            });
+        });
+    }
+    const secondaryPageSummary = {
+        total: secondaryPageResults.length,
+        succeeded: secondaryPageResults.filter((item) => item.success).length,
+        confirmed: secondaryPageResults.filter((item) => item.identityMatchStatus === "confirmed").length,
+        ambiguous: secondaryPageResults.filter((item) => item.identityMatchStatus === "ambiguous").length,
+        rejected: secondaryPageResults.filter((item) => item.identityMatchStatus === "rejected").length,
+        notEvaluatedAfterFetchFailure: secondaryPageResults.filter((item) =>
+            item.identityMatchStatus === "not_evaluated_fetch_failed"
+        ).length,
+        resolvedPrimaryAmbiguities: secondaryPageResults.filter((item) => item.resolvesPrimaryAmbiguity).length
+    };
+
     const evaluated = {
         benchmarkVersion: "bof-public-page-fetch-v3-identity",
         scope: "Five independently verified Pretoria business websites; public URLs only; no assessment answers, respondent contact details or customer-submitted destinations.",
         provider: "Crawl4AI through the isolated Swayphics adapter",
         batchSizes: [3, 2],
         summary: summarise(report),
-        cases: report
+        cases: report,
+        secondaryPageSummary,
+        secondaryPageResults
     };
 
     console.log("BOF public-business page retrieval benchmark");
@@ -203,6 +272,20 @@ function summarise(items) {
             item.identityMatchStatus + " | " +
             (item.errorCode || "—") + " |"
         ).join("\n");
+        const secondaryRows = secondaryPageResults.map((item) =>
+            "| " + item.business + " | " + item.url + " | " +
+            (item.success ? "Yes" : "No") + " | " + (item.statusCode ?? "—") + " | " +
+            item.primaryPageIdentityStatus + " | " + item.identityMatchStatus + " | " +
+            (item.resolvesPrimaryAmbiguity ? "Yes" : "No") + " |"
+        ).join("\n");
+        const secondarySummary = secondaryPageResults.length
+            ? "\n### Targeted same-domain follow-up pages\n\n" +
+                "| Business | Follow-up page | Fetch OK | HTTP | Homepage match | Follow-up match | Resolved ambiguity |\n" +
+                "|---|---|---:|---:|---|---|---:|\n" +
+                secondaryRows + "\n\n" +
+                "- Ambiguous homepage matches resolved by a confirmed same-domain page: **" +
+                secondaryPageSummary.resolvedPrimaryAmbiguities + "/" + secondaryPageSummary.total + "**\n"
+            : "";
         const summary =
             "\n## BOF public-business page retrieval and identity benchmark\n\n" +
             "| Business | Fetch OK | HTTP | Final host | Text chars | Title cue | Content cue | Page usable | Production identity match | Error |\n" +
