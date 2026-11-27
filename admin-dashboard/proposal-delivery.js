@@ -171,17 +171,21 @@
         "<p>Kind regards,<br><strong>Swayphics</strong></p>";
 
       button.textContent = "Sending...";
+      var emailPayload = {
+        contact_type: issued.contact_type,
+        contact_id: issued.contact_id,
+        recipient_email: issued.recipient_email,
+        subject: "Your Swayphics proposal | " + String(issued.quote_number || ""),
+        message: htmlMessage,
+        proposal_type: "not-website-related"
+      };
+      if (issued.contact_type === "lead" && issued.requires_email_consent === true) {
+        emailPayload.email_consent_action = "marketing";
+      }
       var emailResult = await request("/functions/v1/send-email", {
         method: "POST",
         headers: authHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({
-          contact_type: issued.contact_type,
-          contact_id: issued.contact_id,
-          recipient_email: issued.recipient_email,
-          subject: "Your Swayphics proposal | " + String(issued.quote_number || ""),
-          message: htmlMessage,
-          proposal_type: "not-website-related"
-        })
+        body: JSON.stringify(emailPayload)
       });
       if (!emailResult || emailResult.success !== true) {
         throw new Error(emailResult && emailResult.error ? emailResult.error : "The email service did not confirm delivery.");
