@@ -12,6 +12,7 @@ on:
       - "scripts/lead-proposal-revision-migration.test.cjs"
       - "supabase/migrations/20261128090000_lead_proposal_revision_history.sql"
       - "supabase/tests/lead-proposal-revisions*"
+      - "supabase/tests/lead-proposal_sql_syntax_check.py"
       - ".github/workflows/lead-proposal-revisions.yml"
   workflow_dispatch:
 
