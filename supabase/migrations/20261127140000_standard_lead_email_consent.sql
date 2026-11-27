@@ -22,7 +22,7 @@ begin
     alter table public.leads
       add constraint leads_email_consent_status_check
       check (email_consent_status in (
-        'not_required', 'not_requested', 'requested',
+        'not_required', 'not_requested', 'sending', 'requested',
         'granted', 'declined', 'revoked'
       ));
   end if;
