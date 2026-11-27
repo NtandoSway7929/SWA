@@ -154,8 +154,9 @@ begin
         raise exception 'Provide a cleanup reason between 10 and 500 characters.';
     end if;
 
-    -- Read the candidate without taking a lock, then acquire locks in the
-    -- settlement order: attempt, webhook events, invoice, payment.
+    -- Acquire locks in the same parent-first order as archived-invoice purge
+    -- and refund recording: invoice, payment, attempt, then webhook events.
+    -- This avoids lock inversion with those financial workflows.
     select p.* into v_payment
       from public.payments p
      where p.id = p_payment_id;
@@ -170,6 +171,24 @@ begin
 
     if v_payment.invoice_id is null then
         raise exception 'The payment is not linked to an invoice.';
+    end if;
+
+    select i.* into v_invoice
+      from public.invoices i
+     where i.id = v_payment.invoice_id
+     for update;
+
+    if not found then
+        raise exception 'The linked invoice no longer exists.';
+    end if;
+
+    select p.* into v_payment
+      from public.payments p
+     where p.id = p_payment_id
+     for update;
+
+    if not found or v_payment.provider is distinct from 'yoco' then
+        raise exception 'The payment changed during cleanup. Retry after reviewing it.';
     end if;
 
     select pa.* into v_attempt
@@ -196,7 +215,7 @@ begin
     end if;
 
     -- Lock every webhook row bound to this attempt before validating its
-    -- verified success event and taking the invoice/payment locks.
+    -- verified success event and taking the financial cleanup snapshots.
     perform 1
       from public.payment_webhook_events e
      where e.payment_attempt_id = v_attempt.id
@@ -223,24 +242,6 @@ begin
                 or e.environment is distinct from 'test')
     ) then
         raise exception 'The payment attempt has webhook evidence from an unexpected provider environment.';
-    end if;
-
-    select i.* into v_invoice
-      from public.invoices i
-     where i.id = v_payment.invoice_id
-     for update;
-
-    if not found then
-        raise exception 'The linked invoice no longer exists.';
-    end if;
-
-    select p.* into v_payment
-      from public.payments p
-     where p.id = p_payment_id
-     for update;
-
-    if not found or v_payment.provider is distinct from 'yoco' then
-        raise exception 'The payment changed during cleanup. Retry after reviewing it.';
     end if;
 
     -- Refuse any record with financial, transfer, or reconciliation evidence.
