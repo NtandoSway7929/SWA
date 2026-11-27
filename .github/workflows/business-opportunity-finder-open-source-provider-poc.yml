@@ -155,9 +155,7 @@ jobs:
         run: node scripts/business-assessment-open-source-provider.fetch-benchmark.cjs
  
       - name: Stop loopback provider containers before private gateway runtime test
-        run: |
-          docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml down --volumes --remove-orphans || true
-          docker compose --project-name bof-private-gateway-ci --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml down --volumes --remove-orphans || true
+        run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml down --volumes --remove-orphans
 
       - name: Generate private gateway CI-only credentials and tunnel placeholder
         shell: bash
@@ -188,7 +186,7 @@ jobs:
 
           ready=false
           for attempt in $(seq 1 60); do
-            crawl_id="$("\${compose[@]}" ps -q crawl4ai)"
+            crawl_id="$("${compose[@]}" ps -q crawl4ai)"
             if [ -n "$crawl_id" ]; then
               health="$(docker inspect --format '{{.State.Health.Status}}' "$crawl_id" 2>/dev/null || true)"
               if [ "$health" = "healthy" ]; then
@@ -199,18 +197,18 @@ jobs:
             sleep 5
           done
           if [ "$ready" != true ]; then
-            "\${compose[@]}" ps
+            "${compose[@]}" ps
             exit 1
           fi
 
-          valkey_reply="$("\${compose[@]}" exec -T valkey valkey-cli ping)"
+          valkey_reply="$("${compose[@]}" exec -T valkey valkey-cli ping)"
           test "$valkey_reply" = "PONG"
 
           check_networks() {
             local service="$1"
             shift
             local container_id
-            container_id="$("\${compose[@]}" ps -q "$service")"
+            container_id="$("${compose[@]}" ps -q "$service")"
             test -n "$container_id"
             local bindings
             bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$container_id")"
@@ -256,4 +254,7 @@ jobs:
 
       - name: Stop and remove provider containers
         if: always()
-        run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml down --volumes --remove-orphans
+        run: |
+          docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml down --volumes --remove-orphans || true
+          docker compose --project-name bof-private-gateway-ci --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml down --volumes --remove-orphans || true
+          rm -f "$RUNNER_TEMP/cloudflared-tunnel-placeholder"
