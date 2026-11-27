@@ -10983,3 +10983,40 @@ body.sway-dark-mode .sway-budget-forecast-heading {
         margin-left: 0;
     }
 }
+
+
+/* Keep the structured proposal fields compact inside the existing scrollable modal. */
+.sway-proposal-review-fields .sway-proposal-section-field textarea {
+    min-height: 112px;
+}
+body.sway-dark-mode .sway-proposal-section-field > span,
+body.sway-dark-mode .sway-proposal-pricing-placeholder strong,
+body.sway-dark-mode .sway-proposal-version-snapshot > strong {
+    color: #E5EBF5;
+}
+body.sway-dark-mode .sway-proposal-section-field > small,
+body.sway-dark-mode .sway-proposal-structure-heading > span,
+body.sway-dark-mode .sway-proposal-history-section > div:first-child > span,
+body.sway-dark-mode .sway-proposal-pricing-placeholder p,
+body.sway-dark-mode .sway-proposal-version-snapshot small {
+    color: #9EABC0;
+}
+body.sway-dark-mode .sway-proposal-section-field textarea {
+    border-color: #2A3A58;
+    background: #162238;
+    color: #EDF2F9;
+}
+body.sway-dark-mode .sway-proposal-section-field textarea[readonly] {
+    background: #121D30;
+    color: #9EABC0;
+}
+body.sway-dark-mode .sway-proposal-pricing-placeholder,
+body.sway-dark-mode .sway-proposal-version-item {
+    border-color: #2A3A58;
+    background: #121D30;
+}
+body.sway-dark-mode .sway-proposal-version-item summary,
+body.sway-dark-mode .sway-proposal-version-snapshot pre {
+    background: #162238;
+    color: #C4D0E0;
+}
