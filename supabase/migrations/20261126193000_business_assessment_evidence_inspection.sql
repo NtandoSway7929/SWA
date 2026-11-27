@@ -13,6 +13,8 @@ create table public.business_assessment_inspections (
         check (length(btrim(consent_version)) between 1 and 64),
     provider text not null default 'tinyfish'
         check (provider in ('tinyfish')),
+    provider_agreement_reference text not null
+        check (length(btrim(provider_agreement_reference)) between 1 and 128),
     provider_request_id text,
     failure_code text,
     failure_summary text,
