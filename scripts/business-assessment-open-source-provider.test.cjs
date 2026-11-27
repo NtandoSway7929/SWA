@@ -412,6 +412,8 @@ const path = require("node:path");
         "Caddy must strip the Cloudflare Access JWT assertion before forwarding to each upstream");
     assert.match(privateCaddyfile, /reverse_proxy searxng:8080/);
     assert.match(privateCaddyfile, /reverse_proxy crawl4ai:11235/);
+    assert.match(privateCaddyfile, /respond "not found" 404/,
+        "Unknown paths and methods must not be proxied to either provider");
 
     assert.match(privateSearxSettings, /limiter: true/);
     assert.match(privateSearxSettings, /- json/);
