@@ -101,6 +101,22 @@ const assert = require("node:assert/strict");
     assert.ok(fetched.results[0].text.includes("Pretoria"));
     assert.equal(fetched.results[0].title, "Business");
 
+    // Reject local, private, link-local and internal destinations before any provider call.
+    const callsBeforeUnsafeUrls = calls.length;
+    for (const unsafeUrl of [
+        "http://127.0.0.1/",
+        "http://localhost/",
+        "http://169.254.169.254/latest/meta-data/",
+        "http://service.internal/",
+        "http://[::1]/"
+    ]) {
+        await assert.rejects(
+            () => provider.fetch([unsafeUrl]),
+            /Only public HTTP or HTTPS business URLs can be submitted/
+        );
+    }
+    assert.equal(calls.length, callsBeforeUnsafeUrls, "Unsafe destination URLs must be rejected before network access");
+
     const crawlCall = calls.find((call) => call.url.endsWith("/crawl"));
     assert.equal(crawlCall.init.method, "POST");
     assert.equal(crawlCall.init.headers.Authorization, "Bearer test-token");
