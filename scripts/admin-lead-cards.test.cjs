@@ -152,7 +152,7 @@ assert.match(proposalReview, /data-proposal-close/,
     "the proposal editor must provide an explicit close-without-saving action");
 assert.match(proposalReview, /isEditableDraft/,
     "only draft proposals may be edited or approved");
-assert.match(proposalReview, /Only a saved draft can be approved/,
+assert.match(proposalReview, /Only a draft revision can be approved/,
     "approval must be blocked for a non-draft proposal");
 
 assert.match(proposalReview, /structured_content:\s*\{/,
