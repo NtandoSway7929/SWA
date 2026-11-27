@@ -65,5 +65,7 @@ Upstream content is retained under its original licences. Review the pinned sour
 - Licence: Apache-2.0; the upstream `LICENSE` is included.
 - Source repository had approximately 15.5k GitHub stars when checked on 2026-11-27; star counts are mutable and are recorded only as selection context.
 - The skill requires a separately installed Playwright CLI and Node.js 20+ according to its upstream documentation. Only the skill and reference documentation are vendored. No npm package, Node.js runtime, browser binary, MCP server, browser profile or persistent session has been installed or configured.
+- The repository also has separate Playwright Node.js CI workflows: `.github/workflows/admin-table-controls-preview.yml`, `.github/workflows/admin-quick-create-accessibility.yml` and `.github/workflows/innerme-chat-browser-smoke.yml`. These install their own pinned `playwright` package and Chromium on GitHub-hosted runners for narrowly scoped fixtures. They do not install or invoke Microsoft's `playwright-cli`, and they do not provide generic coverage for `demos/**`.
+- The routing and safety rules for using either form of browser testing are documented in `.agents/skills/swayphics-client-website-demo/SKILL.md` and `docs/client-demo-design-tooling.md`.
 - The local client-demo workflow restricts browser checks to isolated, non-persistent test sessions and prohibits access to personal browser credentials, real customer accounts and unapproved live transactions. These local rules take precedence over any broader upstream examples.
 
