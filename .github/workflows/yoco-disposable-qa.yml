@@ -160,6 +160,8 @@ jobs:
           set -euo pipefail
           mkdir -p "$SUPABASE_WORKDIR"
           supabase init --workdir "$SUPABASE_WORKDIR"
+          # Use a dedicated host database port to avoid collisions with other Supabase CI stacks.
+          sed -i '/^\[db\]$/,/^\[/ s/^port = 54322$/port = 56322/' "$SUPABASE_WORKDIR/supabase/config.toml"
           mkdir -p "$SUPABASE_WORKDIR/supabase/migrations" "$SUPABASE_WORKDIR/supabase/tests"
           mkdir -p "$SUPABASE_WORKDIR/supabase/tests/yoco-source"
           cp -a "$GITHUB_WORKSPACE/supabase/tests/." "$SUPABASE_WORKDIR/supabase/tests/yoco-source/"
