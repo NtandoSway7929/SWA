@@ -248,17 +248,17 @@ select extensions.ok(
     'bank transfer approval, proof path and reviewer history are retained on the voided test submission'
 );
 select extensions.throws_ok(
-    $ update public.payments
+    $cmd$ update public.payments
           set notes = coalesce(notes,'') || ' attempted edit'
-        where id = '4e8761b0-feec-429a-a690-7085b59aedcd' $,
+        where id = '4e8761b0-feec-429a-a690-7085b59aedcd' $cmd$,
     '55000',
     'Voided test payments are immutable and cannot be reactivated or edited.',
     'a voided test payment cannot be edited or restored to paid'
 );
 select extensions.throws_ok(
-    $ update public.bank_transfer_submissions
+    $cmd$ update public.bank_transfer_submissions
           set status = 'approved'
-        where id = '1eca46ef-3c9e-4e04-a72e-907431ad7bc6' $,
+        where id = '1eca46ef-3c9e-4e04-a72e-907431ad7bc6' $cmd$,
     '55000',
     'Voided test bank-transfer submissions are immutable.',
     'a voided test bank-transfer submission cannot be re-approved'
