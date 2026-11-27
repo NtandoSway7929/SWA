@@ -64,3 +64,8 @@ verify_jwt = true
 # Resend delivery callbacks are authenticated using the Svix signing secret in the handler.
 [functions.resend-receipt-webhook]
 verify_jwt = false
+
+# Test payment deletion is owner-authenticated in the function and uses the
+# user JWT for the guarded database RPC before service-role storage cleanup.
+[functions.admin-delete-test-payment]
+verify_jwt = true
