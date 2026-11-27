@@ -94,7 +94,7 @@
         aiFocusedRecord: null,
         leadProposals: [],
         leadProposalVersions: [],
-        quoteItems: []
+        quoteItems: [],
         aiChatSessions: [],
         aiActiveChatId: "",
         aiBriefing: null,
