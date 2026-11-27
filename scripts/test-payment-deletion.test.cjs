@@ -59,7 +59,7 @@ assert.match(renderer, /item\.is_test === true/);
 assert.doesNotMatch(renderer, /data-delete="payments"/);
 
 assert.match(workspace, /admin_mark_payment_as_test/);
-assert.match(workspace, /admin_permanently_delete_test_payment/);
+assert.match(workspace, /action: "delete"/);
 assert.match(workspace, /functions\/v1\/admin-delete-test-payment/);
 assert.match(workspace, /data-retry-test-payment-cleanup/);
 assert.match(workspace, /payment\.is_test === true/);
