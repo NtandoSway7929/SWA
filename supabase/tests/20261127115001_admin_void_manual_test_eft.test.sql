@@ -132,6 +132,33 @@ insert into public.payment_receipts (
     now(),
     '{"amount":700,"currency":"ZAR","method":"EFT","invoice_number":"SWY-2026-0010"}'::jsonb
 );
+ 
+update public.payment_receipt_deliveries
+   set status = 'sent',
+       recipient_email = 'swayphics@gmail.com',
+       provider_message_id = 'manual-eft-void-test-message',
+       pdf_storage_path = '2026/SW-RCPT-2026-000001.pdf',
+       attempt_count = 2,
+       last_attempt_at = now(),
+       sent_at = now(),
+       updated_at = now()
+ where receipt_id = 'f5c08942-97d1-4c55-9cd5-f7e14557b325';
+
+insert into public.payment_receipt_delivery_attempts (
+    receipt_id,status,recipient_email,provider_message_id,attempted_at
+) values
+    ('f5c08942-97d1-4c55-9cd5-f7e14557b325','sent','swayphics@gmail.com','manual-eft-void-test-message',now()-interval '2 minutes'),
+    ('f5c08942-97d1-4c55-9cd5-f7e14557b325','sent','swayphics@gmail.com','manual-eft-void-test-message',now()-interval '1 minute');
+
+insert into public.payment_receipt_provider_events (
+    event_id,receipt_id,event_type,provider_message_id,event_created_at
+) values (
+    'manual-eft-void-test-delivered-event',
+    'f5c08942-97d1-4c55-9cd5-f7e14557b325',
+    'email.delivered',
+    'manual-eft-void-test-message',
+    now()
+);
 
 insert into public.bank_transfer_submissions (
     id,invoice_id,client_id,amount,bank_reference,proof_storage_path,
@@ -230,6 +257,10 @@ select extensions.ok(
            and a.bank_transfer_snapshot->>'status'='approved'
            and a.proof_storage_path='f8ce9e4a-127f-404b-8741-130d3d7e085c/1eca46ef-3c9e-4e04-a72e-907431ad7bc6/proof.jpg'
            and jsonb_array_length(a.receipt_delivery_snapshot->'deliveries')=1
+           and a.receipt_delivery_snapshot->'deliveries'->0->>'provider_message_id'='manual-eft-void-test-message'
+           and a.receipt_delivery_snapshot->'deliveries'->0->>'pdf_storage_path'='2026/SW-RCPT-2026-000001.pdf'
+           and jsonb_array_length(a.receipt_delivery_snapshot->'delivery_attempts')=2
+           and jsonb_array_length(a.receipt_delivery_snapshot->'provider_events')=1
     ),
     'private audit preserves pre-void payment, invoice, receipt, approved transfer, proof path and delivery snapshot'
 );
