@@ -14,6 +14,7 @@ create table public.business_assessment_inspections (
     provider text not null default 'tinyfish'
         check (provider in ('tinyfish')),
     provider_agreement_reference text not null
+        constraint business_assessment_inspections_agreement_reference_nonblank
         check (length(btrim(provider_agreement_reference)) between 1 and 128),
     provider_request_id text,
     failure_code text,
