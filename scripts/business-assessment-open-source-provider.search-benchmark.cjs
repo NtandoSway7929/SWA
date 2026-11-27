@@ -124,8 +124,12 @@ function summarise(items, prefix) {
     const total = items.length;
     const top5Count = items.filter((item) => item[prefix + "Top5"]).length;
     const top10Count = items.filter((item) => item[prefix + "Top10"]).length;
-    const recovered = items.filter((item) => item.fallbackRecoveredTop10).length;
-    const improved = items.filter((item) => item.rankImproved).length;
+    const recovered = prefix === "best"
+        ? items.filter((item) => item.fallbackRecoveredTop10).length
+        : 0;
+    const improved = prefix === "best"
+        ? items.filter((item) => item.rankImproved).length
+        : 0;
     return {
         total,
         top5Count,
