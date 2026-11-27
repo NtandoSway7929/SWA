@@ -433,6 +433,26 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (body.email_consent_action === "permission_request") {
+      const permissionText = message.toLowerCase();
+      const requiredPermissionPhrases = [
+        "one-time request for permission only",
+        "consent to receive occasional business-to-business marketing emails",
+        "we will not send promotional material unless you explicitly agree",
+        "no response will be treated as no consent",
+        "you may withdraw consent"
+      ];
+      if (
+        proposalType !== "not-website-related" ||
+        requiredPermissionPhrases.some((phrase) => !permissionText.includes(phrase))
+      ) {
+        return Response.json(
+          { error: "A permission-request email must retain the required consent wording and cannot include a promotional proposal type." },
+          { status: 400, headers: corsHeaders },
+        );
+      }
+    }
+
     const supabaseUrl =
       Deno.env.get("SUPABASE_URL");
 
@@ -1002,22 +1022,16 @@ Deno.serve(async (req) => {
           "The email was sent, but the consent request could not be recorded. Do not send a second request; reconcile the lead record first.";
       } else {
         emailConsentRecorded = true;
-        const savedLead = consentUpdate.data;
-        const eventInsert = await supabase
-          .from("lead_email_consent_events")
-          .insert({
-            lead_id: contact.id,
-            business_name: savedLead.business_name || recipientBusinessName || "Unknown business",
-            email_address: recipientEmail,
-            event_type: "request_sent",
-            channel: "Email",
-            evidence: consentEvidence,
-            actor_id: userData.user.id,
-            created_at: requestedAt,
-          });
-        if (eventInsert.error) {
+        const eventInsert = await supabase.rpc("record_swayphics_lead_email_request_sent", {
+          p_lead_id: contact.id,
+          p_email_address: recipientEmail,
+          p_evidence: consentEvidence,
+          p_actor_id: userData.user.id,
+        });
+        if (eventInsert.error || !eventInsert.data?.success) {
           emailConsentRecorded = false;
-          emailConsentRecordError = "The permission request was sent and the lead status was updated, but its audit event could not be saved: " + eventInsert.error.message;
+          emailConsentRecordError = "The permission request was sent and the lead status was updated, but its audit event could not be saved: " +
+            (eventInsert.error?.message || "The audit RPC did not confirm success.");
         }
       }
     }
