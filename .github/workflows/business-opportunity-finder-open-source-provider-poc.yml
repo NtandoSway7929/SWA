@@ -9,6 +9,7 @@ on:
       - "supabase/functions/_shared/business-assessment-evidence.mjs"
       - "scripts/business-assessment-open-source-provider.test.cjs"
       - "scripts/business-assessment-open-source-provider.integration.cjs"
+      - "scripts/business-assessment-open-source-provider.search-benchmark.cjs"
       - "scripts/bof-open-source-provider-poc/**"
       - "docs/business-opportunity-finder-open-source-provider-poc.md"
       - ".github/workflows/business-opportunity-finder-open-source-provider-poc.yml"
@@ -96,6 +97,11 @@ jobs:
           SEARXNG_BASE_URL: http://127.0.0.1:8080
           CRAWL4AI_BASE_URL: http://127.0.0.1:11235
         run: node scripts/business-assessment-open-source-provider.integration.cjs
+
+      - name: Benchmark South African official-domain discovery
+        env:
+          SEARXNG_BASE_URL: http://127.0.0.1:8080
+        run: node scripts/business-assessment-open-source-provider.search-benchmark.cjs
 
       - name: Collect provider logs on failure
         if: failure()
