@@ -14430,25 +14430,27 @@ function simpleBars(items, color) {
     }
 
     function quotePricingTotals(lines, discount, vatRate) {
+        function roundedLineTotal(line) {
+            const quantity = Math.round(Number(line.quantity || 0) * 100) / 100;
+            const unitPrice = Math.round(Number(line.unit_price || 0) * 100) / 100;
+            return Math.round(quantity * unitPrice * 100) / 100;
+        }
+
         const onceOffSubtotal = (lines || []).reduce(function (sum, line) {
-            return sum + (line.billing_interval === "none"
-                ? Number(line.quantity || 0) * Number(line.unit_price || 0)
-                : 0);
+            return sum + (line.billing_interval === "none" ? roundedLineTotal(line) : 0);
         }, 0);
         const monthlySubtotal = (lines || []).reduce(function (sum, line) {
-            return sum + (line.billing_interval === "monthly"
-                ? Number(line.quantity || 0) * Number(line.unit_price || 0)
-                : 0);
+            return sum + (line.billing_interval === "monthly" ? roundedLineTotal(line) : 0);
         }, 0);
         const yearlySubtotal = (lines || []).reduce(function (sum, line) {
-            return sum + (line.billing_interval === "yearly"
-                ? Number(line.quantity || 0) * Number(line.unit_price || 0)
-                : 0);
+            return sum + (line.billing_interval === "yearly" ? roundedLineTotal(line) : 0);
         }, 0);
         const initialSubtotal = onceOffSubtotal + monthlySubtotal + yearlySubtotal;
         const safeDiscount = Math.min(Math.max(Number(discount || 0), 0), initialSubtotal);
         const safeVatRate = Math.max(0, Math.min(Number(vatRate || 0), 100));
-        const vatAmount = Math.round((initialSubtotal - safeDiscount) * safeVatRate) / 100;
+        const vatAmount = Math.round(
+            ((initialSubtotal - safeDiscount) * safeVatRate / 100 + Number.EPSILON) * 100
+        ) / 100;
         return {
             onceOffSubtotal: onceOffSubtotal,
             monthlySubtotal: monthlySubtotal,
