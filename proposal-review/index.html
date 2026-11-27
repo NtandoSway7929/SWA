@@ -202,25 +202,37 @@
           ["goals", "Project goals"],
           ["recommended_solution", "Recommended solution"],
           ["scope_and_deliverables", "Scope and deliverables"],
-          ["delivery_plan", "Delivery plan"],
+          ["delivery_plan", "Delivery plan and timeline"],
           ["client_responsibilities", "Client responsibilities"],
-          ["assumptions_and_exclusions", "Assumptions and exclusions"],
+          ["assumptions_exclusions", "Assumptions and exclusions"],
           ["validity", "Proposal validity"],
           ["next_steps", "Next steps"]
         ];
         var found = false;
-        order.forEach(function (item) {
-          var value = plainValue(sections && sections[item[0]]);
-          if (!value.trim()) return;
+        var renderedKeys = new Set();
+        function appendSection(key, label, value) {
+          var copy = plainValue(value);
+          if (!copy.trim()) return;
           found = true;
+          renderedKeys.add(key);
           var block = document.createElement("section");
           block.className = "proposal-section";
           var heading = document.createElement("h3");
-          heading.textContent = item[1];
+          heading.textContent = label;
           var paragraph = document.createElement("p");
-          paragraph.textContent = value;
+          paragraph.textContent = copy;
           block.append(heading, paragraph);
           host.append(block);
+        }
+        order.forEach(function (item) {
+          appendSection(item[0], item[1], sections && sections[item[0]]);
+        });
+        Object.keys(sections || {}).forEach(function (key) {
+          if (renderedKeys.has(key)) return;
+          var label = key.replace(/[_-]+/g, " ").replace(/\b\w/g, function (letter) {
+            return letter.toUpperCase();
+          });
+          appendSection(key, label, sections[key]);
         });
         if (!found && fallback) {
           var block = document.createElement("section");
