@@ -156,9 +156,9 @@ assert.ok(databaseTest.includes("catalogue price changes do not rewrite saved qu
 assert.ok(databaseTest.includes("repeated conversion does not create a duplicate invoice"),
     "database tests must cover duplicate invoice prevention");
 
-assert.match(html, /admin-workspace\.js\?v=20261128-quote-pricing-engine-1/,
+assert.match(html, /admin-workspace\.js\?v=20261128-project-readiness-2/,
     "workspace JS must be cache-busted for quote pricing");
-assert.match(html, /admin-workspace\.css\?v=20261128-quote-pricing-engine-1/,
+assert.match(html, /admin-workspace\.css\?v=20261128-project-readiness-2/,
     "workspace CSS must be cache-busted for quote pricing");
 
 for (const selector of [
