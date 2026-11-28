@@ -63,15 +63,27 @@ def analyse_iptables(snapshot: str) -> list[Finding]:
 
 
 def _priority_value(raw: str) -> int | None:
+    """Resolve nftables integer, named, and relative named priorities."""
     raw = raw.strip().strip(";")
     named = {"raw": -300, "mangle": -150, "dstnat": -100,
              "filter": 0, "security": 50, "srcnat": 100}
-    if raw in named:
-        return named[raw]
-    try:
-        return int(raw)
-    except ValueError:
+    match = re.fullmatch(
+        r"([A-Za-z]+|[+-]?\\d+)(?:\\s*([+-])\\s*(\\d+))?", raw
+    )
+    if not match:
         return None
+    base_token, operator, offset_token = match.groups()
+    if base_token in named:
+        base = named[base_token]
+    else:
+        try:
+            base = int(base_token)
+        except ValueError:
+            return None
+    if operator and offset_token:
+        offset = int(offset_token)
+        base = base + offset if operator == "+" else base - offset
+    return base
 
 
 def parse_nft_forward_chains(snapshot: str) -> list[tuple[str, str, int]]:
@@ -193,6 +205,15 @@ table ip docker-bridges {
     nft_bad = nft_good.replace("priority -10", "priority 0")
     _, findings = analyse(nft_bad)
     assert findings[0].status == "FAIL"
+    nft_relative_earlier = nft_good.replace("priority -10", "priority filter - 1")
+    _, findings = analyse(nft_relative_earlier)
+    assert findings[0].status == "PASS"
+    nft_relative_later = nft_good.replace("priority -10", "priority filter + 1")
+    _, findings = analyse(nft_relative_later)
+    assert findings[0].status == "FAIL"
+    assert _priority_value("filter - 5") == -5
+    assert _priority_value("mangle + 10") == -140
+    assert _priority_value("not-a-priority") is None
     nft_unknown = nft_good.replace("table ip docker-bridges", "table ip other")
     _, findings = analyse(nft_unknown)
     assert findings[0].status == "REVIEW"
