@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 BACKEND_AUDIT="$SCRIPT_DIR/audit-host-firewall-backend.sh"
 OVERLAP_AUDIT="$SCRIPT_DIR/audit-host-network-overlap.py"
 FIREWALL_AUDIT="$SCRIPT_DIR/audit-host-firewall-state.sh"
+APPARMOR_AUDIT="$SCRIPT_DIR/audit-host-apparmor.sh"
 POLICY_VALIDATOR="$SCRIPT_DIR/validate-host-egress-policy.cjs"
 
 argument="${1-}"
@@ -18,7 +19,7 @@ case "$argument" in
         ;;
     --help|-h)
         echo "Usage: bash audit-host-readiness.sh [--show-details]"
-        echo "Runs read-only BOF policy, Docker backend, subnet-overlap and firewall-state audits."
+        echo "Runs read-only BOF policy, Docker backend, subnet-overlap, firewall-state and AppArmor audits."
         echo "Raw host topology and firewall output is suppressed unless --show-details is used."
         exit 0
         ;;
@@ -47,14 +48,17 @@ policy_output=""
 backend_output=""
 overlap_output=""
 firewall_output=""
+apparmor_output=""
 policy_status=0
 backend_status=0
 overlap_status=0
 firewall_status=0
+apparmor_status=0
 
 if capture policy_output node "$POLICY_VALIDATOR"; then policy_status=0; else policy_status=$?; fi
 if capture backend_output bash "$BACKEND_AUDIT"; then backend_status=0; else backend_status=$?; fi
 if capture overlap_output python3 "$OVERLAP_AUDIT"; then overlap_status=0; else overlap_status=$?; fi
+if capture apparmor_output bash "$APPARMOR_AUDIT"; then apparmor_status=0; else apparmor_status=$?; fi
 
 backend_name="unknown"
 if [[ "$backend_status" -eq 0 ]]; then
@@ -102,6 +106,13 @@ else
     echo "INCOMPLETE (snapshot audit exit $firewall_status)"
 fi
 
+printf 'Crawl4AI AppArmor profile: '
+if [[ "$apparmor_status" -eq 0 ]]; then
+    echo "PASS (loaded/enforced; host userns restriction enabled)"
+else
+    echo "INCOMPLETE (AppArmor audit exit $apparmor_status)"
+fi
+
 if [[ "$show_details" == true ]]; then
     echo "Raw host details: included below; treat this output as sensitive"
 else
@@ -123,5 +134,5 @@ fi
 
 # Exit 0 means inventory checks passed, not deployment readiness.
 if [[ "$overlap_status" -eq 1 ]]; then exit 1; fi
-if [[ "$policy_status" -ne 0 || "$backend_status" -ne 0 || "$overlap_status" -ne 0 || "$firewall_status" -ne 0 ]]; then exit 2; fi
+if [[ "$policy_status" -ne 0 || "$backend_status" -ne 0 || "$overlap_status" -ne 0 || "$firewall_status" -ne 0 || "$apparmor_status" -ne 0 ]]; then exit 2; fi
 exit 0
