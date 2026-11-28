@@ -12384,6 +12384,7 @@ function simpleBars(items, color) {
                 return String(id) === String(item.id);
             });
             const overdue = item.due_date && isOverdue(item.due_date) && item.status !== "completed";
+            const readiness = projectOnboardingSummary(item);
             return (
                 '<article class="sway-record-card" data-admin-table-row="tasks" data-admin-table-id="' +
                     esc(item.id) + '" data-admin-table-search="' +
@@ -14280,6 +14281,26 @@ function simpleBars(items, color) {
             )
         );
     }
+
+    function projectOnboardingSummary(project) {
+        const clientId = project && project.client_id;
+        const onboarding = state.clientOnboarding.find(function (item) {
+            return item.client_id === clientId;
+        }) || null;
+        const assets = state.clientOnboardingAssets.filter(function (item) {
+            return item.client_id === clientId;
+        });
+        const submitted = Boolean(
+            onboarding &&
+            (onboarding.submitted_at || String(onboarding.status || "").toLowerCase() === "submitted")
+        );
+
+        return {
+            status: !onboarding ? "Not started" : submitted ? "Submitted" : "In progress",
+            assetCount: assets.length
+        };
+    }
+
     function renderProjects() {
         const cards = state.projects.map(function (item) {
             const projectReviewAction =
@@ -14305,6 +14326,8 @@ function simpleBars(items, color) {
                         '<div class="sway-record-card-detail"><span>Payment</span><strong>' + chip(item.payment_status) + '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Project value</span><strong>' + esc(money(item.value)) + '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Estimated cost</span><strong>' + (Number(item.estimated_cost || 0) ? esc(money(item.estimated_cost)) : "—") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Onboarding</span><strong>' + esc(readiness.status) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Client assets</span><strong>' + readiness.assetCount + '</strong></div>' +
                         (
                             item.status === "completed"
                                 ? '<div class="sway-record-card-detail"><span>Review</span><strong>' +
@@ -14317,6 +14340,7 @@ function simpleBars(items, color) {
                         '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
                             '<div class="sway-actions-dropdown">' +
                                 '<button class="sway-row-action" data-project-timeline="' + esc(item.id) + '">Timeline</button>' +
+                                (item.client_id ? '<button class="sway-row-action" data-project-onboarding="' + esc(item.client_id) + '">Review onboarding</button>' : "") +
                                 '<button class="sway-row-action" data-edit="projects" data-id="' + esc(item.id) + '">Edit</button>' +
                                 projectReviewAction +
                                 '<button class="sway-row-action danger" data-delete="projects" data-id="' + esc(item.id) + '">Delete</button>' +
@@ -30426,6 +30450,14 @@ function simpleBars(items, color) {
                         );
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-project-onboarding]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    openClientOnboarding(button.dataset.projectOnboarding);
+                });
             });
 
         workspace
