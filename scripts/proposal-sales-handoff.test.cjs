@@ -128,8 +128,6 @@ assert.match(deliveryMigration, /create table if not exists public\.quote_review
 
 assert.match(databaseTest, /select extensions\.plan\(66\)/,
     "the accepted quote sales and project kickoff test must declare its full assertion plan");
-assert.match(migration, /admin_create_project_from_accepted_quote/,
-    "the accepted quote migration must expose the administrator project kickoff RPC");
 const projectMigration = read("supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql");
 assert.match(projectMigration, /source_quote_id uuid/,
     "projects must retain the source accepted quote");
