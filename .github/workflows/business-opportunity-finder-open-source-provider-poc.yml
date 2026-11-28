@@ -231,7 +231,7 @@ jobs:
               exit 1
             fi
             local actual expected
-            actual="$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$container_id" | sort)"
+            actual="$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$container_id" | sed '/^[[:space:]]*$/d' | sort)"
             expected="$(printf '%s\n' "$@" | sort)"
             if [ "$actual" != "$expected" ]; then
               echo "Unexpected network membership for $service"
