@@ -3122,6 +3122,7 @@
                 "high",
                 "urgent",
                 "overdue",
+                "blocked",
                 "rejected",
                 "lost",
                 "cancelled"
