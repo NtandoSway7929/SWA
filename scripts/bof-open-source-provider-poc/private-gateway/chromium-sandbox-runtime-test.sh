@@ -77,12 +77,12 @@ if [ "$ready" != true ]; then
   exit 1
 fi
 
-echo "Submitting a real public-page crawl while observing Chromium process arguments."
+echo "Submitting three reserved-domain crawls with a bounded observation delay while inspecting Chromium renderer/zygote kernel state."
 curl --connect-timeout 3 --max-time 90 --fail --silent --show-error \
   -X POST "http://127.0.0.1:${port}/crawl" \
   -H "Authorization: Bearer $token" \
   -H "Content-Type: application/json" \
-  --data '{"urls":["https://example.com"],"browser_config":{},"crawler_config":{"delay_before_return_html":5}}' \
+  --data '{"urls":["https://example.com","https://example.org","https://example.net"],"browser_config":{},"crawler_config":{"delay_before_return_html":10}}' \
   >"$response_file" &
 request_pid=$!
 chromium_seen=false
@@ -102,7 +102,7 @@ for path in glob.glob("/proc/[0-9]*/cmdline"):
     except (OSError, PermissionError):
         continue
     low = raw.lower()
-    if "chrom" not in low or "--type=renderer" not in low:
+    if "chrom" not in low or not any(tag in low for tag in ("--type=renderer", "--type=zygote")):
         continue
     try:
         status_text = open(f"/proc/{pid}/status", encoding="utf-8").read()
@@ -121,7 +121,6 @@ for path in glob.glob("/proc/[0-9]*/cmdline"):
         f"NNP={status.get('NoNewPrivs', '?')} "
         f"USERNS_DIFF={renderer_user_ns != init_user_ns}"
     )
-    break
 ' 2>/dev/null || true)"
   if [ -n "$observation" ]; then
     chromium_seen=true
