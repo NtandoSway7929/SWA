@@ -87,6 +87,7 @@ fi
 
 chromium_seen=false
 sandbox_flag_clear=false
+kernel_sandbox_verified=false
 echo "Starting host-visible Chromium process observation and submitting a real public-page crawl."
 observer_script="$(cd "$(dirname "$0")" && pwd)/chromium-process-observer.py"
 python "$observer_script" "$name" "$log_file" "$stop_file" --interval 0.03 &
