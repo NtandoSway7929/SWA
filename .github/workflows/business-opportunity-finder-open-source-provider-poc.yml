@@ -47,6 +47,7 @@ jobs:
           node scripts/bof-open-source-provider-poc/private-gateway/host-egress-policy.test.cjs
           node scripts/bof-open-source-provider-poc/private-gateway/validate-host-egress-policy.cjs
           node scripts/bof-open-source-provider-poc/private-gateway/host-readiness.test.cjs
+          python3 scripts/bof-open-source-provider-poc/private-gateway/ssrf-policy-simulator.py --self-test
 
       - name: Validate private gateway Compose configuration without starting services
         shell: bash
