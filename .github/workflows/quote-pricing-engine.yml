@@ -12,6 +12,7 @@ on:
       - "admin-dashboard/index.html"
       - "admin-dashboard/proposal-delivery.js"
       - "admin-dashboard/proposal-delivery.css"
+      - "admin-dashboard/proposal-sales-handoff.css"
       - "proposal-review/index.html"
       - "scripts/proposal-delivery.test.cjs"
       - "supabase/migrations/20261128110000_swayphics_proposal_delivery_acceptance.sql"
