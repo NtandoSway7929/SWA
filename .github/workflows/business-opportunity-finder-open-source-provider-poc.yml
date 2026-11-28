@@ -58,6 +58,7 @@ jobs:
           node scripts/bof-open-source-provider-poc/private-gateway/validate-host-egress-policy.cjs
           node scripts/bof-open-source-provider-poc/private-gateway/host-readiness.test.cjs
           node scripts/bof-open-source-provider-poc/private-gateway/audit-host-apparmor.test.cjs
+          node scripts/bof-open-source-provider-poc/private-gateway/validate-compose-resources.test.cjs
           python3 scripts/bof-open-source-provider-poc/private-gateway/ssrf-policy-simulator.py --self-test
           python3 scripts/bof-open-source-provider-poc/private-gateway/analyse-firewall-snapshot.py --self-test
           bash -n scripts/bof-open-source-provider-poc/private-gateway/network-namespace-ssrf-test.sh
@@ -89,6 +90,8 @@ jobs:
             CLOUDFLARED_TUNNEL_TOKEN_FILE="$token_file" \
             docker compose --profile tunnel --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml config --format json \
               > "$RUNNER_TEMP/bof-private-gateway-compose.json"
+          python3 scripts/bof-open-source-provider-poc/private-gateway/validate-compose-resources.py \
+            < "$RUNNER_TEMP/bof-private-gateway-compose.json"
           node scripts/bof-open-source-provider-poc/private-gateway/validate-host-egress-policy.cjs \
             --compose "$RUNNER_TEMP/bof-private-gateway-compose.json"
           docker run --rm --network none --entrypoint caddy \
