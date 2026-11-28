@@ -31,6 +31,10 @@ assert.match(adminScript, /admin_revoke_swayphics_quote_review/,
     "failed delivery must revoke the unissued review link");
 assert.match(adminScript, /Revoke link/,
     "admins must be able to revoke an outstanding client review link");
+assert.match(adminScript, /data-proposal-delivery-state/,
+    "the admin delivery action must track state so it can refresh after sending, responding or revoking");
+assert.match(adminScript, /previousAction\.remove\(\)/,
+    "stale quote actions must be replaced when the quote status changes");
 assert.match(adminScript, /quote_review_responses\?select=/,
     "the admin workspace must retrieve recorded client decisions");
 assert.match(adminScript, /View client response/,
