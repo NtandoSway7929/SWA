@@ -194,9 +194,22 @@ const { spawnSync } = require("node:child_process");
     for (const unsafeUrl of [
         "http://127.0.0.1/",
         "http://localhost/",
+        "http://localhost./",
         "http://169.254.169.254/latest/meta-data/",
         "http://service.internal/",
-        "http://[::1]/"
+        "http://router.home.arpa/",
+        "http://printer.lan/",
+        "https://office.example/",
+        "https://office.invalid/",
+        "https://metadata.google./",
+        "http://[::1]/",
+        "http://[fc00::1]/",
+        "http://[fe80::1]/",
+        "http://[::ffff:127.0.0.1]/",
+        "http://2130706433/",
+        "http://0177.0.0.1/",
+        "http://0x7f000001/",
+        "http://127.1/"
     ]) {
         await assert.rejects(
             () => provider.fetch([unsafeUrl]),
@@ -363,9 +376,9 @@ const { spawnSync } = require("node:child_process");
         "The private deployment Compose file must not publish host ports");
     assert.equal((privateCompose.match(/internal: true/g) || []).length, 3,
         "The gateway, search and crawler backplane networks must be internally isolated");
-    assert.match(privateCompose, /10\.77\.10\.2/);
-    assert.match(privateCompose, /10\.77\.20\.2/);
-    assert.match(privateCompose, /10\.77\.30\.2/);
+    assert.match(privateCompose, /ipv4_address: 10\.77\.10\.254/);
+    assert.match(privateCompose, /ipv4_address: 10\.77\.20\.254/);
+    assert.match(privateCompose, /ipv4_address: 10\.77\.30\.254/);
     assert.match(privateCompose, /CLOUDFLARED_TUNNEL_TOKEN_FILE/);
     assert.match(privateCompose, /--token-file/);
     assert.match(privateCompose, /condition: service_healthy/);

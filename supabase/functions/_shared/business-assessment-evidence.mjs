@@ -1,4 +1,4 @@
-export const INSPECTION_VERSION = "bof-evidence-2026-11-v1";
+export const INSPECTION_VERSION = "bof-evidence-2026-11-v2";
 export const CONSENT_VERSION = "bof-public-presence-v1";
 
 const DISALLOWED_HOSTS = new Set([
@@ -7,6 +7,18 @@ const DISALLOWED_HOSTS = new Set([
     "metadata.google",
     "169.254.169.254"
 ]);
+
+const DISALLOWED_HOST_SUFFIXES = [
+    ".localhost",
+    ".local",
+    ".localdomain",
+    ".internal",
+    ".test",
+    ".home.arpa",
+    ".lan",
+    ".example",
+    ".invalid"
+];
 
 export function isGoogleMapsUrl(value) {
     try {
@@ -29,17 +41,22 @@ export function normalisePublicUrl(value) {
     } catch {
         throw new Error("Enter a complete public website or profile URL.");
     }
-    const hostname = url.hostname.toLowerCase();
+    // A trailing DNS root dot must not bypass localhost or reserved-suffix checks.
+    const hostname = url.hostname.toLowerCase().replace(/\.+$/, "");
+    const isIpv6Literal = hostname.startsWith("[") && hostname.endsWith("]");
+    // WHATWG URL parsing canonicalises legacy decimal/octal/hex IPv4 forms to dotted decimal.
+    const isIpv4Literal = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+    const isDisallowedHostname = DISALLOWED_HOSTS.has(hostname) ||
+        DISALLOWED_HOST_SUFFIXES.some((suffix) =>
+            hostname === suffix.slice(1) || hostname.endsWith(suffix)
+        );
+
     if (!["https:", "http:"].includes(url.protocol) ||
         url.username || url.password ||
         !hostname.includes(".") ||
-        DISALLOWED_HOSTS.has(hostname) ||
-        hostname === "localhost" ||
-        hostname.endsWith(".localhost") ||
-        hostname.endsWith(".local") ||
-        hostname.endsWith(".internal") ||
-        hostname.endsWith(".test") ||
-        /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) ||
+        isDisallowedHostname ||
+        isIpv6Literal ||
+        isIpv4Literal ||
         url.port && !["80", "443"].includes(url.port)) {
         throw new Error("Only public HTTP or HTTPS business URLs can be submitted.");
     }
