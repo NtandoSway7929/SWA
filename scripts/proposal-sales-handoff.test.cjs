@@ -77,6 +77,10 @@ assert.match(migration, /prevent_swayphics_project_agreement_mutation/,
     "accepted agreement snapshots must be immutable apart from their one-time client association");
 assert.match(migration, /admin_convert_accepted_quote_to_client/,
     "an accepted quote must have a controlled client conversion operation");
+assert.match(migration, /A recorded client acceptance and Terms & Conditions acknowledgement are required/,
+    "prospect conversion must require a recorded client acceptance agreement");
+assert.match(adminScript, /Client acceptance required/,
+    "the admin workspace must not offer client conversion for manually accepted quotes without agreement evidence");
 assert.match(migration, /SWA-AGR-/,
     "accepted agreements must receive a generated Swayphics agreement reference");
 assert.match(migration, /public\.admin_create_invoice_from_quote\(uuid\)/,
