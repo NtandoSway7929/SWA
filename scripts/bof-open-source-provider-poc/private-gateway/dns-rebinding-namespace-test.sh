@@ -248,9 +248,3 @@ if grep -Eq '^/(rebinding|private)$' "$target_log"; then
 fi
 echo "PASS: resolver changed answers; pinned connection succeeded; rebinding and redirect destinations were blocked"
 echo "LIMIT: this proves only the isolated router policy for these controlled IPv4 paths. It does not prove host firewall, Docker forwarding, Crawl4AI/Chromium, browser subrequests, or production security."
- "$target_log"; then
-  echo "FAIL: blocked destination request reached the target fixture" >&2
-  exit 1
-fi
-echo "PASS: resolver changed answers; pinned connection succeeded; rebinding and redirect destinations were blocked"
-echo "LIMIT: this proves only the isolated router policy for these controlled IPv4 paths. It does not prove host firewall, Docker forwarding, Crawl4AI/Chromium, browser subrequests, or production security."
