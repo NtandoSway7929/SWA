@@ -93,8 +93,10 @@ assert.match(migration, /swayphics_private\.client_association_authorizations/,
     "client associations must be authorised through private transaction-scoped records");
 assert.match(migration, /pg_catalog\.pg_current_xact_id\(\)/,
     "client association authorisations must be bound to the active database transaction");
-assert.doesNotMatch(migration, /current_setting\('swayphics\.(?:quote|agreement)_client_conversion'/,
-    "caller-settable GUCs must not authorise client association changes");
+assert.doesNotMatch(migration, /current_setting\('swayphics\.(?:quote|agreement)_client_conversion|current_setting\('swayphics\.quote_invoice_conversion'/,
+    "caller-settable GUCs must not authorise client or invoice association changes");
+assert.match(migration, /target_type = 'invoice'[\s\S]*client_id = new\.client_id/,
+    "invoice links must also use the private transaction-scoped authorisation records");
 assert.match(migration, /public\.convert_swayphics_lead_to_client/,
     "client conversion must reuse the existing CRM lead conversion function");
 assert.match(migration, /set status = 'won',[\s\S]*converted_client_id = v_client_id/,
