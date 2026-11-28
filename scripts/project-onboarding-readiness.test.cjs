@@ -6,6 +6,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const source = fs.readFileSync(path.join(__dirname, "..", "admin-dashboard", "admin-workspace.js"), "utf8");
+const blockedMigration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", "20261128140000_swayphics_task_blocked_status.sql"), "utf8");
 const start = source.indexOf("function projectOnboardingSummary(project) {");
 const end = source.indexOf("\n    function renderProjects()", start);
 assert.ok(start >= 0 && end > start, "Project onboarding summary helper must exist.");
@@ -44,17 +45,22 @@ function taskSummary(project, tasks, overdueDates) {
 }
 
 assert.deepEqual(taskSummary({ id: "project-1" }, [], []), {
-  total: 0, completed: 0, open: 0, overdue: 0, percent: 0
+  total: 0, completed: 0, open: 0, blocked: 0, overdue: 0, percent: 0
 });
 assert.deepEqual(taskSummary({ id: "project-1" }, [
   { project_id: "project-1", status: "completed", due_date: "2026-11-26" },
   { project_id: "project-1", status: "in progress", due_date: "2026-11-27" },
   { project_id: "project-1", status: "todo", due_date: "2026-12-02" },
+  { project_id: "project-1", status: "blocked", due_date: "2026-11-27" },
   { project_id: "other-project", status: "todo", due_date: "2026-11-27" }
 ], ["2026-11-27"]), {
-  total: 3, completed: 1, open: 2, overdue: 1, percent: 33
+  total: 4, completed: 1, open: 3, blocked: 1, overdue: 2, percent: 25
 });
 assert.match(source, /Task execution/);
+assert.match(source, /taskSummary\.blocked/);
 assert.match(source, /taskSummary\.overdue/);
 assert.match(source, /data-project-timeline/);
+assert.match(source, /"review", "blocked", "completed"/);
+assert.match(blockedMigration, /drop constraint if exists tasks_status_check/i);
+assert.match(blockedMigration, /'todo', 'in progress', 'review', 'blocked', 'completed'/i);
 process.stdout.write("Project onboarding and task execution readiness checks passed.\n");
