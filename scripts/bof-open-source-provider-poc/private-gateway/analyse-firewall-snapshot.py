@@ -68,7 +68,7 @@ def _priority_value(raw: str) -> int | None:
     named = {"raw": -300, "mangle": -150, "dstnat": -100,
              "filter": 0, "security": 50, "srcnat": 100}
     match = re.fullmatch(
-        r"([A-Za-z]+|[+-]?\\d+)(?:\\s*([+-])\\s*(\\d+))?", raw
+        r"([A-Za-z]+|[+-]?\d+)(?:\s*([+-])\s*(\d+))?", raw
     )
     if not match:
         return None
