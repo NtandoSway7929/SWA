@@ -455,7 +455,7 @@ const { spawnSync } = require("node:child_process");
     const mockBin = fs.mkdtempSync(path.join(os.tmpdir(), "bof-firewall-audit-"));
     try {
         const mockCommands = {
-            docker: '#!/bin/sh\nif [ "$1" = "info" ]; then printf " Firewall Backend: %s\\n" "$MOCK_DOCKER_FIREWALL_BACKEND"; exit 0; fi\nexit 1\n',
+            docker: '#!/bin/sh\nif [ "$1" = "context" ] && [ "$2" = "show" ]; then printf "%s\\n" "$MOCK_DOCKER_CONTEXT_NAME"; exit 0; fi\nif [ "$1" = "context" ] && [ "$2" = "inspect" ]; then printf "%s" "$MOCK_DOCKER_CONTEXT_JSON"; exit 0; fi\nif [ "$1" = "network" ] && [ "$2" = "ls" ] && [ "$3" = "-q" ]; then printf "%s\\n" "$MOCK_DOCKER_NETWORK_IDS"; exit 0; fi\nif [ "$1" = "network" ] && [ "$2" = "inspect" ]; then printf "%s" "$MOCK_DOCKER_NETWORK_INSPECT_JSON"; exit 0; fi\necho "unexpected docker arguments: $*" >&2\nexit 1\n'
             iptables: '#!/bin/sh\nif [ "$1" = "-S" ] && [ "$2" = "DOCKER-USER" ]; then exit 0; fi\nexit 1\n',
             nft: '#!/bin/sh\nif [ "$1" = "list" ] && [ "$2" = "tables" ]; then exit 0; fi\nexit 1\n'
         };
@@ -523,12 +523,19 @@ const { spawnSync } = require("node:child_process");
             { Name: "existing-app", IPAM: { Config: [{ Subnet: "192.168.40.0/24" }] } }
         ];
 
+        const localDockerContext = [
+            { Name: "default", Endpoints: { docker: { Host: "unix:///var/run/docker.sock" } } }
+        ];
+
         const runNetworkAudit = ({
             addresses = cleanAddresses,
             routes4 = cleanRoutes4,
             routes6 = cleanRoutes6,
             dockerNetworks = cleanDockerNetworks,
-            dockerIds = "network-one\nnetwork-two"
+            dockerIds = "network-one\nnetwork-two",
+            dockerContext = localDockerContext,
+            dockerContextName = "default",
+            dockerHost = ""
         } = {}) => spawnSync("python3", [networkAuditScript], {
             encoding: "utf8",
             env: {
@@ -537,6 +544,10 @@ const { spawnSync } = require("node:child_process");
                 MOCK_IP_ADDRESS_JSON: JSON.stringify(addresses),
                 MOCK_IP_ROUTE4_JSON: JSON.stringify(routes4),
                 MOCK_IP_ROUTE6_JSON: JSON.stringify(routes6),
+                MOCK_DOCKER_CONTEXT_NAME: dockerContextName,
+                MOCK_DOCKER_CONTEXT_JSON: JSON.stringify(dockerContext),
+                DOCKER_HOST: dockerHost,
+                DOCKER_CONTEXT: "",
                 MOCK_DOCKER_NETWORK_IDS: dockerIds,
                 MOCK_DOCKER_NETWORK_INSPECT_JSON: JSON.stringify(dockerNetworks)
             }
@@ -546,6 +557,21 @@ const { spawnSync } = require("node:child_process");
         assert.equal(cleanAudit.status, 0, cleanAudit.stderr);
         assert.match(cleanAudit.stdout, /PASS: no overlap detected/);
         assert.match(cleanAudit.stdout, /non-default routes/);
+        assert.match(cleanAudit.stdout, /Verified Docker context: default/);
+        assert.match(cleanAudit.stdout, /unix:\/\/\/var\/run\/docker\.sock/);
+
+        const remoteDockerContext = runNetworkAudit({
+            dockerContextName: "remote",
+            dockerContext: [
+                { Name: "remote", Endpoints: { docker: { Host: "ssh://deploy@example.invalid" } } }
+            ]
+        });
+        assert.equal(remoteDockerContext.status, 2);
+        assert.match(remoteDockerContext.stderr, /not a local Linux Unix-socket endpoint/i);
+
+        const dockerHostOverride = runNetworkAudit({ dockerHost: "tcp://192.0.2.20:2376" });
+        assert.equal(dockerHostOverride.status, 2);
+        assert.match(dockerHostOverride.stderr, /DOCKER_HOST is set/i);
 
         const interfaceConflict = runNetworkAudit({
             addresses: [

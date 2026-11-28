@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import os
 import subprocess
 import sys
 from typing import Any
@@ -52,6 +53,53 @@ def load_json_output(raw: str, label: str) -> list[Any]:
         raise AuditError(f"{label} returned an unexpected JSON shape; expected an array.")
 
     return value
+
+
+def ensure_local_docker_context() -> tuple[str, str]:
+    # DOCKER_HOST can silently redirect Docker CLI calls away from the inspected context.
+    if os.environ.get("DOCKER_HOST", "").strip():
+        raise AuditError(
+            "DOCKER_HOST is set and may override the selected context. Unset DOCKER_HOST "
+            "and rerun so the Docker endpoint can be verified from its context."
+        )
+
+    context_name = run_command(
+        ["docker", "context", "show"],
+        "active Docker context",
+    ).strip()
+    if not context_name or "\n" in context_name or "\r" in context_name:
+        raise AuditError("Docker did not return one valid active context name.")
+
+    contexts = load_json_output(
+        run_command(
+            ["docker", "context", "inspect", context_name],
+            f"Docker context {context_name!r}",
+        ),
+        "docker context inspect",
+    )
+    if len(contexts) != 1 or not isinstance(contexts[0], dict):
+        raise AuditError(
+            "Docker context inspection did not return exactly one context object."
+        )
+
+    endpoints = contexts[0].get("Endpoints")
+    if not isinstance(endpoints, dict):
+        raise AuditError(f"Docker context {context_name!r} has no valid Endpoints object.")
+
+    docker_endpoint = endpoints.get("docker")
+    if not isinstance(docker_endpoint, dict):
+        raise AuditError(f"Docker context {context_name!r} has no Docker endpoint.")
+
+    endpoint = docker_endpoint.get("Host")
+    if not isinstance(endpoint, str) or not endpoint.startswith("unix:///"):
+        reported = endpoint if isinstance(endpoint, str) and endpoint else "missing"
+        raise AuditError(
+            f"Active Docker context {context_name!r} is not a local Linux Unix-socket "
+            f"endpoint (reported endpoint: {reported}). Select the local Docker context "
+            "and rerun; remote TCP, SSH, and other endpoints are not valid for this audit."
+        )
+
+    return context_name, endpoint
 
 
 def address_inventory() -> list[tuple[str, ipaddress._BaseNetwork, str]]:
@@ -193,6 +241,7 @@ def docker_network_inventory() -> list[tuple[str, ipaddress._BaseNetwork, str]]:
 
 def main() -> int:
     try:
+        context_name, docker_endpoint = ensure_local_docker_context()
         observed = (
             address_inventory()
             + route_inventory(4)
@@ -213,6 +262,7 @@ def main() -> int:
                     f"{observed_network} (reported as {detail})"
                 )
 
+    print(f"Verified Docker context: {context_name} ({docker_endpoint})")
     print("BOF private-gateway planned subnets:")
     for planned in PLANNED_SUBNETS:
         print(f"  - {planned}")
