@@ -527,3 +527,23 @@ The latest isolated workflow passed [GitHub Actions run 140](https://github.com/
 The sandbox diagnostic set `kernel.apparmor_restrict_unprivileged_userns=0` on the disposable GitHub runner only. The reserved `https://example.com/` crawl returned readable content, and a Chromium renderer process was observed without `--no-sandbox`. This matches Crawl4AI's upstream runtime verification runbook for the sandbox-enabled path. The test does not capture the renderer's user-namespace inode or count its individual seccomp filters, so it is not a kernel-level sandbox introspection audit.
 
 **Deployment gate remains open:** the tested host combination requires unprivileged user namespaces and the host AppArmor user-namespace restriction disabled. We have not created a dedicated AppArmor profile that grants user namespaces more selectively. Do not assume the same sysctl setting is appropriate for a shared or general-purpose host. A selected Linux Docker host must undergo the read-only network/firewall audit, host-specific userns/AppArmor review and sandbox runtime test before deployment. No production service, host firewall, host sysctl, secret, paid server or public endpoint has been changed.
+
+
+
+### Latest verified sandbox and gateway CI result — 28 November 2026
+
+The isolated POC workflow passed [GitHub Actions run 140](https://github.com/NtandoSway7929/SWA/actions/runs/46129501671), commit c3520288a760fbd396c62f47167a36648a376a04. All three jobs passed:
+
+- Mocked provider adapter contract, host-egress policy validation, Compose validation and policy tests.
+- Chromium sandbox host capability diagnostic.
+- Live SearXNG/Crawl4AI integration and private-gateway runtime smoke test.
+
+The sandbox diagnostic used the candidate filtered seccomp profile, Docker's default AppArmor profile, non-root appuser, dropped capabilities, no-new-privileges, read-only rootfs and resource limits. It set kernel.apparmor_restrict_unprivileged_userns=0 only on the disposable CI runner. The pinned Crawl4AI v0.9.6 image completed a real https://example.com/ crawl, and the test observed a Chromium renderer process command line without --no-sandbox.
+
+The live private-gateway test also started the Compose stack, verified Valkey health, confirmed the intended network membership and absence of published host ports, confirmed Caddy has no outbound egress, and successfully fetched reserved example.com through the gateway to Crawl4AI. The cloudflared connector was deliberately not started.
+
+Correction to the earlier diagnostic iteration: several intervening test runs failed because the observation script itself was defective (a missing shell state variable, an incorrect result-count assertion, and process-monitoring approaches that did not capture the short-lived renderer). Those failures did not demonstrate a Chromium sandbox failure. The final run above passed with the simpler renderer command-line observation that had already passed in run 119. It does not inspect the renderer's /proc/<pid>/status fields or prove the user-namespace inode differs from the container init process.
+
+Remaining sandbox evidence gap: the runtime check currently verifies that a Chromium renderer command line was observed without --no-sandbox; the static validator verifies the candidate seccomp policy structure. It does not yet prove, from the renderer's kernel state, Seccomp=2, NoNewPrivs=1 and a distinct user namespace. Do not describe that stronger verification as complete.
+
+No paid server has been purchased or selected. No production branch, production service, production secret, Supabase deployment, Cloudflare Tunnel, or host firewall has been changed. The next work remains in this isolated branch: improve the renderer kernel-state observation using a reliable host-PID mapping, then validate the selected no-cost/existing Linux Docker host if one is available. No hosting purchase is required to continue the POC.
