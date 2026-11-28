@@ -84,7 +84,11 @@ curl --connect-timeout 3 --max-time 90 --fail --silent --show-error \
 request_pid=$!
 chromium_seen=false
 sandbox_flag_clear=false
-while kill -0 "$request_pid" 2>/dev/null; do
+while :; do
+  request_state="$(ps -o stat= -p "$request_pid" 2>/dev/null || true)"
+  if [ -z "$request_state" ] || [[ "$request_state" == Z* ]]; then
+    break
+  fi
   observation="$(docker exec "$name" python -c '
 import glob, os
 for path in glob.glob("/proc/[0-9]*/cmdline"):
