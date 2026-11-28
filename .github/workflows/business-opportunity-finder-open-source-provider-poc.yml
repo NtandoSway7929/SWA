@@ -95,6 +95,19 @@ jobs:
       - name: Install runtime test prerequisites
         run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends curl
 
+      - name: Allow user namespaces for this disposable sandbox test runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            # This changes only the short-lived GitHub-hosted runner, not the container
+            # or any Swayphics host. Chromium requires unprivileged user namespaces.
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          else
+            echo "AppArmor user-namespace restriction sysctl is not present on this runner."
+          fi
+          test "$(cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null || echo 1)" = "1"
+
       - name: Verify real Chromium sandbox launch
         shell: bash
         run: |
