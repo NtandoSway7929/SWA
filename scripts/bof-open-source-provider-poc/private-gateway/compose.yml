@@ -1,7 +1,14 @@
 name: swayphics-bof-private-gateway
 
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   searxng:
+    logging: *default-logging
     image: ghcr.io/searxng/searxng:2026.11.23-a7163d091@sha256:c9ea2372a7f1fb3fc01fda5bacfde4adc871621ad96d9cdec903b4cbe542fcf8
     environment:
       SEARXNG_SECRET: ${SEARXNG_SECRET:?Set SEARXNG_SECRET in the private deployment environment}
@@ -13,6 +20,7 @@ services:
       - ./searxng/limiter.toml:/etc/searxng/limiter.toml:ro
     depends_on:
       valkey:
+    logging: *default-logging
         condition: service_healthy
     networks:
       - search_internal
@@ -30,6 +38,7 @@ services:
           pids: 256
 
   crawl4ai:
+    logging: *default-logging
     image: unclecode/crawl4ai:0.9.6@sha256:4603d7c4d69769673dfa1214fa9abbcac2a874d4d9af07d784782af528b65c68
     environment:
       CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:?Set CRAWL4AI_API_TOKEN in the private deployment environment}
@@ -106,6 +115,7 @@ services:
           pids: 128
 
   gateway:
+    logging: *default-logging
     image: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
     volumes:
       - ./gateway:/etc/caddy:ro
@@ -137,6 +147,7 @@ services:
           pids: 128
 
   cloudflared:
+    logging: *default-logging
     profiles:
       - tunnel
     image: cloudflare/cloudflared:2026.11.2@sha256:55c7e3e8d89d5e8d20b75a82f3602cbf98e06db406e73e282073cfdc5a9a3af6
