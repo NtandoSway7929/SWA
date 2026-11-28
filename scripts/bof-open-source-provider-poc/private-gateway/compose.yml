@@ -55,12 +55,12 @@ services:
       - apparmor=swayphics-bof-crawl4ai
     read_only: true
     tmpfs:
-      - /tmp
-      - /var/lib/redis:uid=999,gid=999,mode=0700
-      - /var/lib/crawl4ai/outputs:uid=999,gid=999,mode=0700
-      - /home/appuser/.crawl4ai:uid=999,gid=999,mode=0700
-      - /home/appuser/.cache/url_seeder:uid=999,gid=999,mode=0700
-      - /home/appuser/.gunicorn:uid=999,gid=999,mode=0700
+      - /tmp:size=512m,mode=1777
+      - /var/lib/redis:size=128m,uid=999,gid=999,mode=0700
+      - /var/lib/crawl4ai/outputs:size=256m,uid=999,gid=999,mode=0700
+      - /home/appuser/.crawl4ai:size=64m,uid=999,gid=999,mode=0700
+      - /home/appuser/.cache/url_seeder:size=64m,uid=999,gid=999,mode=0700
+      - /home/appuser/.gunicorn:size=64m,uid=999,gid=999,mode=0700
     deploy:
       resources:
         limits:
@@ -136,9 +136,9 @@ services:
       - no-new-privileges:true
     read_only: true
     tmpfs:
-      - /data
-      - /config
-      - /tmp
+      - /data:size=32m,mode=0700
+      - /config:size=8m,mode=0700
+      - /tmp:size=32m,mode=1777
     deploy:
       resources:
         limits:
@@ -165,7 +165,7 @@ services:
     restart: unless-stopped
     read_only: true
     tmpfs:
-      - /tmp
+      - /tmp:size=32m,mode=1777
     cap_drop:
       - ALL
     security_opt:
