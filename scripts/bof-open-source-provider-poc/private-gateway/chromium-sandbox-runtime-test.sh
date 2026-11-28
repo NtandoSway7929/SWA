@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # Ephemeral CI-only runtime test. It uses the candidate constrained Chromium seccomp
-# profile and Docker's default AppArmor profile; host userns restriction is adjusted by CI.
+# profile and a scoped AppArmor profile while keeping the host userns restriction enabled.
 # It does not alter host sysctls, AppArmor policy, Docker daemon config or production.
 image="unclecode/crawl4ai:0.9.6@sha256:4603d7c4d69769673dfa1214fa9abbcac2a874d4d9af07d784782af528b65c68"
 name="bof-chromium-sandbox-ci"
@@ -45,7 +45,12 @@ done
 
 profile_path="$(cd "$(dirname "$0")" && pwd)/chromium-seccomp.json"
 test -r "$profile_path"
-echo "Starting pinned Crawl4AI with sandbox=true, non-root appuser, no capabilities, no-new-privileges, candidate constrained seccomp profile and Docker's default AppArmor profile."
+apparmor_setting="$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null || true)"
+if [ "$apparmor_setting" != "1" ]; then
+  echo "FAIL: host AppArmor unprivileged-userns restriction must remain enabled for this scoped-profile test (found: ${apparmor_setting:-not-exposed})" >&2
+  exit 1
+fi
+echo "Starting pinned Crawl4AI with sandbox=true, non-root appuser, no capabilities, no-new-privileges, candidate seccomp profile and scoped AppArmor userns profile."
 docker run --detach --name "$name" \
   --publish "127.0.0.1:${port}:11235" \
   --env "CRAWL4AI_API_TOKEN=$token" \
@@ -54,6 +59,7 @@ docker run --detach --name "$name" \
   --cap-drop ALL \
   --security-opt no-new-privileges:true \
   --security-opt "seccomp=$profile_path" \
+  --security-opt apparmor=swayphics-bof-crawl4ai \
   --read-only \
   --tmpfs /tmp \
   --tmpfs /var/lib/redis:uid=999,gid=999,mode=0700 \
@@ -158,5 +164,5 @@ fi
 
 echo "PASS: Chromium renderer process was observed without --no-sandbox."
 echo "PASS: renderer kernel state confirms Seccomp=2, NoNewPrivs=1 and a user namespace distinct from the container init process."
-echo "PASS: Docker's default AppArmor profile and the candidate filtered seccomp profile allowed Chromium's sandbox with the host userns restriction disabled."
-echo "LIMIT: the host sysctl was changed only on the disposable runner; production host configuration and operational impact still require review."
+echo "PASS: scoped AppArmor userns profile and candidate filtered seccomp profile allowed Chromium's sandbox."
+echo "PASS: host kernel.apparmor_restrict_unprivileged_userns remained enabled throughout the runtime test."
