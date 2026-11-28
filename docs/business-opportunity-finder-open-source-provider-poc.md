@@ -428,3 +428,21 @@ The run also does not verify a real Cloudflare Access/Tunnel deployment, authent
 ### Next engineering gate
 
 The next work should address the gap between the passing ephemeral container tests and a deployable security boundary: define and test DNS-rebinding/redirect SSRF protections at the actual host egress layer, then validate Chromium sandboxing on a compatible Linux Docker host. These are host-dependent tests; do not install firewall rules, provision a VM, create a public route, deploy services or alter production code as part of this POC without separate approval.
+
+
+## DNS rebinding namespace test — 28 November 2026
+
+The isolated POC branch passed [GitHub Actions run 103](https://github.com/NtandoSway7929/SWA/actions/runs/46124455311), commit `f76258793e38847eb1106bdf2e82d83ebf10f1e6`. In addition to the existing dual-stack direct-SSRF namespace lab, the workflow now runs `scripts/bof-open-source-provider-poc/private-gateway/dns-rebinding-namespace-test.sh`.
+
+The controlled IPv4 DNS fixture returns the simulated public address `1.1.1.1` for the first A query to `rebind-lab.test`, then returns the private fixture address `10.201.2.2` on the next A query. The test verifies that:
+
+- The first resolved address is pinned to the actual socket connection and reaches only the simulated public fixture.
+- A later DNS resolution returning the private fixture address cannot establish a connection through the isolated router's default-deny nftables policy.
+- An HTTP redirect from the simulated public fixture to the private destination is blocked at connection time.
+- The target fixture logs the permitted requests but never receives either blocked destination request.
+
+All four test stages passed in run 103. The lab creates temporary Linux network namespaces and nftables rules only inside its temporary router namespace; it does not change host firewall rules, Docker networks, production services or public Internet routing.
+
+**Scope limitation:** this is a controlled IPv4 DNS-rebinding and redirect test against an isolated router policy. It does not prove host Docker-forwarding enforcement, IPv6 DNS-rebinding behavior, real resolver/cache behavior, Crawl4AI or Chromium subrequest handling, Cloudflare Tunnel egress, or production security. The earlier dual-stack namespace test covers direct IPv4/IPv6 private and metadata destinations and redirects, but does not make this DNS-rebinding test dual-stack.
+
+The next gate remains host-dependent and is not being simulated as complete: select an existing no-cost Linux Docker environment if available, perform the read-only host/network/firewall inventory, and only then design controlled staging enforcement. Chromium sandbox operation also remains unverified. No paid host is required or authorised for this POC.
