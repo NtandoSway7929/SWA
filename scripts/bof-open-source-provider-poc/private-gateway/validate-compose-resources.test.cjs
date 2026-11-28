@@ -17,6 +17,7 @@ function fixture(overrides = {}) {
   const services = {};
   for (const [name, limits] of Object.entries(expected)) {
     services[name] = {
+      logging: { driver: "json-file", options: { "max-size": "10m", "max-file": "3" } },
       deploy: {
         resources: {
           limits: { ...limits, ...(overrides[name] || {}) },
@@ -38,6 +39,13 @@ const valid = run(fixture());
 assert.equal(valid.status, 0, valid.stderr);
 assert.match(valid.stdout, /aggregate hard ceilings memory=.*CPUs=3[.]00/);
 console.log("PASS: exact service and aggregate CPU/memory/PID ceilings are accepted.");
+
+const missingLogging = fixture();
+delete missingLogging.services.gateway.logging;
+const logging = run(missingLogging);
+assert.equal(logging.status, 1);
+assert.match(logging.stderr, /gateway must use json-file logging capped at 10 MiB x 3 files/);
+console.log("PASS: missing bounded log rotation is rejected.");
 
 const missingCpu = fixture();
 delete missingCpu.services.crawl4ai.deploy.resources.limits.cpus;
