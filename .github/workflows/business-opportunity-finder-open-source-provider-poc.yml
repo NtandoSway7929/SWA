@@ -139,6 +139,16 @@ jobs:
         with:
           node-version: 22
 
+      - name: Load scoped AppArmor profile for private gateway runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends apparmor
+          python3 scripts/bof-open-source-provider-poc/private-gateway/validate-apparmor-profile.py
+          sudo apparmor_parser -r -W scripts/bof-open-source-provider-poc/private-gateway/apparmor-crawl4ai.profile
+          sudo grep -q '^swayphics-bof-crawl4ai ' /sys/kernel/security/apparmor/profiles
+
       - name: Generate and mask ephemeral service credentials
         shell: bash
         run: |
