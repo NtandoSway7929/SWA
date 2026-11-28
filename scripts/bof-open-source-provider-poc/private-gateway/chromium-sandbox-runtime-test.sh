@@ -80,37 +80,7 @@ fi
 chromium_seen=false
 sandbox_flag_clear=false
 kernel_sandbox_verified=false
-echo "Starting an in-container /proc observer before submitting the reserved-domain crawl."
-docker exec --user 0 "$name" python -c '
-import glob, os, time
-deadline = time.monotonic() + 45
-seen = set()
-with open("/tmp/chromium-sandbox-observer.log", "w", encoding="utf-8") as out:
-    while time.monotonic() < deadline:
-        for path in glob.glob("/proc/[0-9]*/cmdline"):
-            pid = path.split("/")[2]
-            try:
-                raw = open(path, "rb").read().replace(bytes([0]), b" ").decode("utf-8", "replace")
-                low = raw.lower()
-                if "chrom" not in low or not any(tag in low for tag in ("--type=renderer", "--type=zygote")):
-                    continue
-                status = {}
-                for line in open(f"/proc/{pid}/status", encoding="utf-8"):
-                    if ":" in line:
-                        key, value = line.split(":", 1)
-                        status[key] = value.strip()
-                user_ns = os.stat(f"/proc/{pid}/ns/user").st_ino
-                init_ns = os.stat("/proc/1/ns/user").st_ino
-                record = (pid, raw, status.get("Seccomp", "?"), status.get("NoNewPrivs", "?"), user_ns != init_ns)
-                if record not in seen:
-                    seen.add(record)
-                    out.write(f"PID={pid} {raw} SECCOMP={record[2]} NNP={record[3]} USERNS_DIFF={record[4]}\\n")
-                    out.flush()
-            except (OSError, PermissionError, ProcessLookupError):
-                pass
-        time.sleep(0.05)
-' &
-observer_pid=$!
+echo "Submitting a reserved-domain crawl while polling Chromium renderer/zygote kernel state."
 curl --connect-timeout 3 --max-time 90 --fail --silent --show-error \
   -X POST "http://127.0.0.1:${port}/crawl" \
   -H "Authorization: Bearer $token" \
@@ -118,26 +88,80 @@ curl --connect-timeout 3 --max-time 90 --fail --silent --show-error \
   --data '{"urls":["https://example.com"],"browser_config":{},"crawler_config":{"delay_before_return_html":10}}' \
   >"$response_file" &
 request_pid=$!
+while :; do
+  request_state="$(ps -o stat= -p "$request_pid" 2>/dev/null || true)"
+  if [ -z "$request_state" ] || [[ "$request_state" == Z* ]]; then
+    break
+  fi
+  observation="$(docker exec --user 0 "$name" python -c '
+import glob, os
+for path in glob.glob("/proc/[0-9]*/cmdline"):
+    pid = path.split("/")[2]
+    try:
+        raw = open(path, "rb").read().replace(bytes([0]), b" ").decode("utf-8", "replace")
+        low = raw.lower()
+        if "chrom" not in low or not any(tag in low for tag in ("--type=renderer", "--type=zygote")):
+            continue
+        status = {}
+        for line in open(f"/proc/{pid}/status", encoding="utf-8"):
+            if ":" in line:
+                key, value = line.split(":", 1)
+                status[key] = value.strip()
+        user_ns = os.stat(f"/proc/{pid}/ns/user").st_ino
+        init_ns = os.stat("/proc/1/ns/user").st_ino
+        print(f"PID={pid} {raw} SECCOMP={status.get(\"Seccomp\", \"?\")} NNP={status.get(\"NoNewPrivs\", \"?\")} USERNS_DIFF={user_ns != init_ns}")
+    except (OSError, PermissionError, ProcessLookupError):
+        pass
+' 2>/dev/null || true)"
+  if [ -n "$observation" ]; then
+    chromium_seen=true
+    printf '%s\n' "$observation" >>"$log_file"
+    if ! grep -q -- '--no-sandbox' <<<"$observation"; then
+      sandbox_flag_clear=true
+    fi
+    if grep -q 'SECCOMP=2' <<<"$observation" &&
+       grep -q 'NNP=1' <<<"$observation" &&
+       grep -q 'USERNS_DIFF=True' <<<"$observation"; then
+      kernel_sandbox_verified=true
+    fi
+  fi
+  sleep 0.05
+done
 wait "$request_pid" || {
   docker logs "$name" >&2 || true
   cat "$response_file" >&2 || true
   echo "FAIL: Crawl4AI request failed with CRAWL4AI_CHROMIUM_SANDBOX=true" >&2
   exit 1
 }
-wait "$observer_pid" || true
-observation="$(docker exec --user 0 "$name" cat /tmp/chromium-sandbox-observer.log 2>/dev/null || true)"
-printf '%s\n' "$observation" >"$log_file"
-chromium_seen=false
-sandbox_flag_clear=false
-kernel_sandbox_verified=false
+observation="$(docker exec --user 0 "$name" python -c '
+import glob, os
+for path in glob.glob("/proc/[0-9]*/cmdline"):
+    pid = path.split("/")[2]
+    try:
+        raw = open(path, "rb").read().replace(bytes([0]), b" ").decode("utf-8", "replace")
+        low = raw.lower()
+        if "chrom" not in low or not any(tag in low for tag in ("--type=renderer", "--type=zygote")):
+            continue
+        status = {}
+        for line in open(f"/proc/{pid}/status", encoding="utf-8"):
+            if ":" in line:
+                key, value = line.split(":", 1)
+                status[key] = value.strip()
+        user_ns = os.stat(f"/proc/{pid}/ns/user").st_ino
+        init_ns = os.stat("/proc/1/ns/user").st_ino
+        print(f"PID={pid} {raw} SECCOMP={status.get(\"Seccomp\", \"?\")} NNP={status.get(\"NoNewPrivs\", \"?\")} USERNS_DIFF={user_ns != init_ns}")
+    except (OSError, PermissionError, ProcessLookupError):
+        pass
+' 2>/dev/null || true)"
 if [ -n "$observation" ]; then
   chromium_seen=true
-  if ! grep -q -- '--no-sandbox' "$log_file"; then
+  printf '%s\n' "$observation" >>"$log_file"
+  if ! grep -q -- '--no-sandbox' <<<"$observation"; then
     sandbox_flag_clear=true
   fi
-  if grep -q 'SECCOMP=2' "$log_file" &&
-     grep -q 'NNP=1' "$log_file" &&
-     grep -q 'USERNS_DIFF=True' "$log_file"; then
+  if grep -q 'SECCOMP=2' <<<"$observation" &&
+     grep -q 'NNP=1' <<<"$observation" &&
+     grep -q 'USERNS_DIFF=True' <<<"$observation"; then
     kernel_sandbox_verified=true
   fi
 fi
