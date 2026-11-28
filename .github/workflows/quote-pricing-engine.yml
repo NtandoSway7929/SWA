@@ -8,8 +8,10 @@ on:
       - feature/quote-pricing-engine
       - feature/proposal-delivery-acceptance
       - feature/accepted-quote-sales-handoff
+      - feature/accepted-quote-project-kickoff
     paths:
       - "admin-dashboard/admin-workspace.js"
+      - "scripts/project-onboarding-readiness.test.cjs"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/index.html"
       - "admin-dashboard/proposal-delivery.js"
@@ -25,6 +27,7 @@ on:
       - "scripts/proposal-sales-handoff.test.cjs"
       - "supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql"
       - "supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql"
+      - "supabase/migrations/20261128140000_swayphics_task_blocked_status.sql"
       - "supabase/migrations/20261025031000_swayphics_project_delivery_settings.sql"
       - "supabase/tests/accepted-quote-sales-baseline.sql"
       - "supabase/tests/accepted-quote-sales-handoff.test.sql"
@@ -58,6 +61,7 @@ jobs:
       - name: Check dashboard and quote pricing contracts
         run: |
           node --check admin-dashboard/admin-workspace.js
+          node scripts/project-onboarding-readiness.test.cjs
           node scripts/quote-pricing-engine.test.cjs
           if [ -f admin-dashboard/proposal-delivery.js ]; then
             node --check admin-dashboard/proposal-delivery.js
@@ -74,6 +78,7 @@ jobs:
       - name: Parse proposal and quote pricing migrations and test fixtures
         run: |
           python supabase/tests/quote-pricing-engine_sql_syntax_check.py
+          python -c "from pathlib import Path; from pglast import parse_sql; parse_sql(Path('supabase/migrations/20261128140000_swayphics_task_blocked_status.sql').read_text())"
           if [ -f supabase/tests/proposal-delivery_sql_syntax_check.py ]; then
             python supabase/tests/proposal-delivery_sql_syntax_check.py
           fi
@@ -173,6 +178,26 @@ jobs:
           if [ -f "$GITHUB_WORKSPACE/supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql" ]; then
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql"
           fi
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128140000_swayphics_task_blocked_status.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          do $test$
+          begin
+            insert into public.tasks (title, status)
+            values ('Blocked status migration smoke test', 'blocked');
+
+            begin
+              insert into public.tasks (title, status)
+              values ('Invalid status constraint smoke test', 'not-a-valid-status');
+              raise exception 'The tasks status constraint accepted an unsupported status.';
+            exception
+              when check_violation then
+                null;
+            end;
+          end;
+          $test$;
+          rollback;
+          SQL
 
       - name: Run quote pricing and invoice conversion database tests
         working-directory: /tmp/quote-pricing-engine-project
