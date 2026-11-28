@@ -6,8 +6,8 @@ const validator = path.join(__dirname, "validate-compose-resources.py");
 const gib = 1024 ** 3;
 const mib = 1024 ** 2;
 const expected = {
-  searxng: { memory: gib, cpus: 1, pids: 256 },
-  crawl4ai: { memory: 4 * gib, cpus: 2, pids: 512 },
+  searxng: { memory: gib, cpus: 0.75, pids: 256 },
+  crawl4ai: { memory: 4 * gib, cpus: 1.5, pids: 512 },
   valkey: { memory: 384 * mib, cpus: 0.25, pids: 128 },
   gateway: { memory: 256 * mib, cpus: 0.25, pids: 128 },
   cloudflared: { memory: 128 * mib, cpus: 0.25, pids: 128 },
@@ -46,10 +46,10 @@ assert.equal(missing.status, 1);
 assert.match(missing.stderr, /crawl4ai must define memory, CPU and PID limits/);
 console.log("PASS: missing CPU ceiling is rejected.");
 
-const excessiveCpu = fixture({ crawl4ai: { cpus: 3 } });
+const excessiveCpu = fixture({ crawl4ai: { cpus: 2 } });
 const cpu = run(excessiveCpu);
 assert.equal(cpu.status, 1);
-assert.match(cpu.stderr, /crawl4ai CPU limit must be 2/);
+assert.match(cpu.stderr, /crawl4ai CPU limit must be 1.5/);
 console.log("PASS: an unexpected per-service CPU ceiling is rejected.");
 
 const excessiveMemory = fixture({ crawl4ai: { memory: 7 * gib } });
