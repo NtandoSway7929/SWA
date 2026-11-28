@@ -186,6 +186,12 @@ print("PASS: sandbox-enabled crawl returned readable content from https://exampl
 PY
 
 if [ "$chromium_seen" != true ]; then
+  echo "DIAGNOSTIC: Docker process table at end of crawl:" >&2
+  docker top "$name" -eo pid,args >&2 || true
+  echo "DIAGNOSTIC: recent Crawl4AI container logs:" >&2
+  docker logs --tail 120 "$name" >&2 || true
+  echo "DIAGNOSTIC: in-container process command lines:" >&2
+  docker exec --user 0 "$name" python -c 'import glob; [print(p, open(p, "rb").read().replace(bytes([0]), b" ").decode("utf-8", "replace")) for p in glob.glob("/proc/[0-9]*/cmdline")]' >&2 || true
   echo "FAIL: no Chromium renderer/zygote process arguments were observed during the crawl" >&2
   cat "$log_file" >&2
   exit 1
