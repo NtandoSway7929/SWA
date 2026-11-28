@@ -96,6 +96,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         with open(log_path, "a", encoding="utf-8") as log:
             log.write(self.path + "\n")
+        if self.path == "/redirect":
+            self.send_response(302)
+            self.send_header("Location", "http://10.201.2.2:8080/private")
+            self.end_headers()
+            return
         body = b"isolated-public-fixture"
         self.send_response(200)
         self.send_header("Content-Length", str(len(body)))
@@ -173,13 +178,32 @@ else
   exit 1
 fi
 
-echo "3/3: verify DNS rotation and that private destination never reached fixture"
+echo "3/4: HTTP redirect to a private destination must be blocked at connection time"
+if ip netns exec "$ns_client" python3 - <<'PY'
+from urllib.request import urlopen
+try:
+    urlopen("http://1.1.1.1:8080/redirect", timeout=2)
+except Exception:
+    print("PASS: redirect follow-up to private destination was blocked")
+    raise SystemExit(0)
+raise SystemExit("FAIL: redirect reached the private destination")
+PY
+then
+  :
+else
+  echo "FAIL: redirect egress test did not fail closed" >&2
+  exit 1
+fi
+
+echo "4/4: verify DNS rotation and that blocked destinations never reached fixture"
 grep -Fxq "A query 1: 1.1.1.1" "$dns_log"
 grep -Fxq "A query 2: 10.201.2.2" "$dns_log"
 grep -Fxq "/pinned" "$target_log"
-if grep -Fxq "/rebinding" "$target_log"; then
-  echo "FAIL: private rebinding request reached the target fixture" >&2
+grep -Fxq "/redirect" "$target_log"
+if grep -Eq '^/(rebinding|private)
+ "$target_log"; then
+  echo "FAIL: blocked destination request reached the target fixture" >&2
   exit 1
 fi
-echo "PASS: resolver changed answers; pinned connection succeeded; unpinned private connection was blocked"
-echo "LIMIT: this proves only the isolated router policy for this controlled rebinding path. It does not prove host firewall, Docker forwarding, Crawl4AI/Chromium, redirects, browser subrequests, or production security."
+echo "PASS: resolver changed answers; pinned connection succeeded; rebinding and redirect destinations were blocked"
+echo "LIMIT: this proves only the isolated router policy for these controlled IPv4 paths. It does not prove host firewall, Docker forwarding, Crawl4AI/Chromium, browser subrequests, or production security."
