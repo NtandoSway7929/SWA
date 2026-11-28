@@ -426,7 +426,7 @@ const { spawnSync } = require("node:child_process");
     assert.match(privateSearxSettings, /limiter: true/);
     assert.match(privateSearxSettings, /- json/);
     assert.match(privateLimiter, /trusted_proxies/);
-    assert.match(privateLimiter, /10\.77\.10\.2\/32/);
+    assert.match(privateLimiter, /10\.77\.10\.254\/32/);
     assert.match(privateEnvExample, /CLOUDFLARED_TUNNEL_TOKEN_FILE/);
     assert.match(privateEnvExample, /multi-platform sha256 index digest/);
     assert.doesNotMatch(privateEnvExample, /(?:CADDY|VALKEY|CLOUDFLARED)_IMAGE=/);
