@@ -12384,7 +12384,6 @@ function simpleBars(items, color) {
                 return String(id) === String(item.id);
             });
             const overdue = item.due_date && isOverdue(item.due_date) && item.status !== "completed";
-            const readiness = projectOnboardingSummary(item);
             return (
                 '<article class="sway-record-card" data-admin-table-row="tasks" data-admin-table-id="' +
                     esc(item.id) + '" data-admin-table-search="' +
@@ -14310,6 +14309,7 @@ function simpleBars(items, color) {
                       '</button>'
                     : "";
             const overdue = item.due_date && isOverdue(item.due_date) && item.status !== "completed";
+            const readiness = projectOnboardingSummary(item);
             return (
                 '<article class="sway-record-card" data-ai-record="projects:' + esc(item.id) + '">' +
                     '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">PROJECT</span>' +
