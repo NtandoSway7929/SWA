@@ -100,7 +100,7 @@ assert.match(migration, /v_quote\.proposal_version_id is distinct from v_version
     "delivery must reject a quote priced against a different proposal revision");
 assert.match(migration, /Africa\/Johannesburg/,
     "quote validity dates must be interpreted in the South African timezone");
-assert.match(databaseTest, /select extensions\.plan\(30\)/,
+assert.match(databaseTest, /select extensions\.plan\(31\)/,
     "the database workflow must use its complete declared assertion plan");
 assert.match(databaseTest, /client acceptance updates the existing quote status/,
     "the database workflow must verify quote acceptance");
