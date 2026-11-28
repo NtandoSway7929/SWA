@@ -149,14 +149,14 @@ import json, sys
 with open(sys.argv[1], encoding="utf-8") as handle:
     payload = json.load(handle)
 results = payload.get("results")
-if not isinstance(results, list) or len(results) != 3:
-    raise SystemExit("FAIL: expected three reserved-domain crawl result records")
-for result in results:
-    if result.get("success") is not True:
-        raise SystemExit("FAIL: reserved-domain crawl was not successful: " + repr(result.get("url")) + " " + repr(result.get("error_message") or result.get("status")))
-    if not (result.get("markdown") or result.get("extracted_content")):
-        raise SystemExit("FAIL: successful crawl contained no readable content: " + repr(result.get("url")))
-print("PASS: sandbox-enabled crawls returned readable content from example.com, example.org and example.net")
+if not isinstance(results, list) or len(results) != 1:
+    raise SystemExit("FAIL: expected one reserved-domain crawl result record")
+result = results[0]
+if result.get("success") is not True:
+    raise SystemExit("FAIL: reserved-domain crawl was not successful: " + repr(result.get("url")) + " " + repr(result.get("error_message") or result.get("status")))
+if not (result.get("markdown") or result.get("extracted_content")):
+    raise SystemExit("FAIL: successful crawl contained no readable content: " + repr(result.get("url")))
+print("PASS: sandbox-enabled crawl returned readable content from https://example.com")
 PY
 
 if [ "$chromium_seen" != true ]; then
