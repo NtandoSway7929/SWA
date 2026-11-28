@@ -105,6 +105,8 @@ jobs:
           echo "SEARXNG_SECRET=$searx_secret" >> "$GITHUB_ENV"
           echo "CRAWL4AI_API_TOKEN=$crawl_token" >> "$GITHUB_ENV"
           echo "CRAWL4AI_CHROMIUM_SANDBOX=true" >> "$GITHUB_ENV"
+          # Required by Compose interpolation even if the later gateway steps are skipped.
+          echo "BOF_GATEWAY_PUBLIC_URL=https://bof-inspect.swayphics.co.za" >> "$GITHUB_ENV"
 
       - name: Start pinned local provider containers
         run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml up --detach
@@ -114,24 +116,33 @@ jobs:
         run: |
           set -euo pipefail
           ready=false
+          searx_status="not_checked"
+          crawl_status="not_checked"
           for attempt in $(seq 1 60); do
-            searx_ok=false
-            crawl_ok=false
-            if curl --fail --silent --show-error --location http://127.0.0.1:8080/ >/dev/null 2>&1; then
-              searx_ok=true
-            fi
-            if curl --fail --silent --show-error http://127.0.0.1:11235/health >/dev/null 2>&1; then
-              crawl_ok=true
-            fi
-            if [ "$searx_ok" = true ] && [ "$crawl_ok" = true ]; then
+            searx_status="$(curl --connect-timeout 2 --max-time 5 --fail --silent --show-error --location --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/ 2>/dev/null || true)"
+            crawl_status="$(curl --connect-timeout 2 --max-time 5 --fail --silent --show-error --output /dev/null --write-out '%{http_code}' http://127.0.0.1:11235/health 2>/dev/null || true)"
+            if [[ "$searx_status" =~ ^2[0-9][0-9]$ ]] && [[ "$crawl_status" =~ ^2[0-9][0-9]$ ]]; then
               ready=true
               break
             fi
             sleep 5
           done
           if [ "$ready" != true ]; then
-            docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml ps
-            docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml logs --no-color
+            echo "Provider readiness failed. Last SearXNG HTTP status: ${searx_status:-no response}"
+            echo "Provider readiness failed. Last Crawl4AI HTTP status: ${crawl_status:-no response}"
+            for service in searxng crawl4ai; do
+              container_id="$(docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml ps -q "$service")"
+              echo "::group::$service container state"
+              if [ -n "$container_id" ]; then
+                docker inspect --format 'status={{.State.Status}} exit={{.State.ExitCode}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}not_configured{{end}}' "$container_id"
+              else
+                echo "Container was not created."
+              fi
+              echo "::endgroup::"
+              echo "::group::$service startup logs"
+              docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml logs --no-color --tail 200 "$service" || true
+              echo "::endgroup::"
+            done
             exit 1
           fi
 
