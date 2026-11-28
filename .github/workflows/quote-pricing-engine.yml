@@ -8,6 +8,7 @@ on:
       - feature/quote-pricing-engine
       - feature/proposal-delivery-acceptance
       - feature/accepted-quote-sales-handoff
+      - feature/accepted-quote-project-kickoff
     paths:
       - "admin-dashboard/admin-workspace.js"
       - "scripts/project-onboarding-readiness.test.cjs"
