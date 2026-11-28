@@ -33,7 +33,7 @@ function composeFixture(policy) {
     return {
         services,
         networks: Object.fromEntries(topology.networks.map(n => [n.name, {
-            internal: n.internal,
+            ...(n.internal ? { internal: true } : {}),
             ipam: { config: [{ subnet: n.subnet }] },
             ...(!n.internal ? { driver: "bridge" } : {})
         }]))

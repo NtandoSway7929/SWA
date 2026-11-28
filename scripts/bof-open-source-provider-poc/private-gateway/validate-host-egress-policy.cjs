@@ -194,8 +194,14 @@ function validateComposeConfig(compose, policy) {
     for (const expected of topology.networks) {
         const actual = networks[expected.name];
         assert(actual && typeof actual === "object", "Compose is missing network " + expected.name + ".");
-        assert(actual.internal === expected.internal,
-            "Compose internal flag differs for " + expected.name + ".");
+        if (expected.internal) {
+            assert(actual.internal === true,
+                "Private Compose network must explicitly set internal: true for " + expected.name + ".");
+        } else {
+            // Compose canonical JSON omits the false default for ordinary bridge networks.
+            assert(actual.internal !== true,
+                "Egress Compose network must not be marked internal: " + expected.name + ".");
+        }
         const configs = actual.ipam?.config;
         assert(Array.isArray(configs) && configs.length === 1,
             "Compose must define exactly one IPAM subnet for " + expected.name + ".");
