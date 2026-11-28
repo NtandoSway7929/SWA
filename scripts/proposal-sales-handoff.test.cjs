@@ -85,6 +85,10 @@ assert.match(migration, /SWA-AGR-/,
     "accepted agreements must receive a generated Swayphics agreement reference");
 assert.match(migration, /public\.admin_create_invoice_from_quote\(uuid\)/,
     "the handoff must explicitly preserve the existing quote-to-invoice RPC");
+assert.match(migration, /A recorded client acceptance and Terms & Conditions acknowledgement are required before creating an invoice/,
+    "the existing invoice conversion RPC must require matching accepted agreement evidence");
+assert.match(adminScript, /invoiceButton\.hidden = accepted && \(!hasClient \|\| !agreement\)/,
+    "the invoice action must remain hidden until both a client and accepted agreement record exist");
 assert.match(migration, /swayphics\.quote_client_conversion/,
     "the quote's client association must be changed only inside the conversion workflow");
 assert.match(migration, /swayphics\.agreement_client_conversion/,
@@ -102,7 +106,7 @@ assert.match(migration, /public\.admin_create_invoice_from_quote/,
 assert.match(deliveryMigration, /create table if not exists public\.quote_review_responses/,
     "the sales migration must depend on the existing proposal response table");
 
-assert.match(databaseTest, /select extensions\.plan\(44\)/,
+assert.match(databaseTest, /select extensions\.plan\(45\)/,
     "the accepted quote sales test must declare its full assertion plan");
 assert.match(databaseTest, /acceptance automatically creates one immutable agreement snapshot/,
     "the database test must verify agreement snapshot creation");
