@@ -47,8 +47,8 @@ assert.match(adminCss, /\.accepted-quote-handoff-actions/,
 assert.match(adminCss, /\.sway-project-agreement-card/,
     "the agreement review panel must be styled");
 
-assert.match(reviewPage, /href="https:\/\/swayphics\.co\.za\/terms-and-conditions\/" target="_blank"/,
-    "the public proposal acceptance checkbox must link to the published Swayphics Terms & Conditions");
+assert.match(reviewPage, /href="https:\/\/swayphics\.co\.za\/terms-and-conditions\/revisions\/fa302aec3ab9fd2e8e6458f53726f48cae765e5e\/" target="_blank"/,
+    "the public proposal acceptance checkbox must link to the immutable archived Swayphics Terms & Conditions revision");
 assert.match(reviewPage, /have read and agree to the/,
     "the acceptance statement must explicitly record agreement to the Terms & Conditions");
 assert.match(reviewPage, /terms_accepted: result\.terms_accepted === true/,
