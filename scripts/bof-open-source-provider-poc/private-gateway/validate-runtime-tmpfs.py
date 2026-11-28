@@ -49,7 +49,7 @@ def main():
         try:
             actual_size = int(parsed.get("size", ""))
         except ValueError:
-            fail(f"{args.service} tmpfs {target} has no explicit numeric size")
+            fail(f"{args.service} tmpfs {target} has no explicit numeric size; Docker reported {options!r}")
         if actual_size != expected_size:
             fail(f"{args.service} tmpfs {target} must be {expected_size} bytes, got {actual_size}")
         print(f"PASS: {args.service} tmpfs {target} size={actual_size} bytes")
