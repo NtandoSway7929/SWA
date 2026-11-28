@@ -162,7 +162,7 @@ Do not mark host egress security complete until all of the following are evidenc
 
 ## 6. Current status
 
-The POC Compose file now pins all three egress networks to stable source subnets. The read-only preflight verifies a local Linux Docker Unix-socket context (rejecting remote endpoints and `DOCKER_HOST` overrides), then audits host interface prefixes, all non-default IPv4/IPv6 routes, and existing Docker IPAM subnets against the six planned ranges. A separate read-only audit identifies the Docker firewall backend and expected policy attachment point. A further read-only snapshot records IPv4/IPv6 forwarding settings and the active iptables chains or nftables ruleset for host-specific policy design. Automated tests use mocked \`docker\`, \`iptables\` and \`nft\` commands to verify both supported branches and the unknown-backend fail-closed behaviour.
+The POC Compose file now pins all three egress networks to stable source subnets. The read-only preflight verifies a local Linux Docker Unix-socket context (rejecting remote endpoints and `DOCKER_HOST` overrides), then audits host interface prefixes, all non-default IPv4/IPv6 routes, and existing Docker IPAM subnets against the six planned ranges. A separate read-only audit identifies the Docker firewall backend and expected policy attachment point. A further read-only snapshot records IPv4/IPv6 forwarding settings and the active iptables chains or nftables ruleset for host-specific policy design. The readiness aggregator also checks that the dedicated Crawl4AI AppArmor profile is loaded in enforce mode, that apparmor_parser is available, and that kernel.apparmor_restrict_unprivileged_userns remains enabled. Automated tests use mocked \`docker\`, \`iptables\` and \`nft\` commands to verify both supported branches and the unknown-backend fail-closed behaviour.
 
 No host firewall rules have been installed. No host, VM, tunnel, production secret or live endpoint has been selected or provisioned. Do not apply firewall commands until the actual host and firewall backend are known and an out-of-band recovery route is available.
 
@@ -198,7 +198,7 @@ Run this on the Linux machine that hosts the local Docker daemon, before creatin
 
     bash scripts/bof-open-source-provider-poc/private-gateway/audit-host-readiness.sh
 
-The report combines the static policy-manifest validator, Docker firewall-backend audit, host subnet-overlap preflight, and the read-only forwarding/firewall snapshot. It captures underlying command output in memory and suppresses raw host topology and firewall rules by default. Use the option --show-details only from a trusted terminal; that output can reveal interface addresses, routes, Docker endpoints and firewall structure.
+The report combines the static policy-manifest validator, Docker firewall-backend audit, host subnet-overlap preflight, read-only forwarding/firewall snapshot, and the AppArmor profile/user-namespace restriction audit. It captures underlying command output in memory and suppresses raw host topology and firewall rules by default. Use the option --show-details only from a trusted terminal; that output can reveal interface addresses, routes, Docker endpoints, firewall structure and security-profile state.
 
 Exit codes are:
 
