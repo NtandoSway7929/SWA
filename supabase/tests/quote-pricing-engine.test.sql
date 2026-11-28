@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(44);
+select extensions.plan(45);
 
 select extensions.has_table('public','quote_items','itemised quote line table exists');
 select extensions.has_column('public','quotes','invoice_id','quotes have a persisted invoice relationship');
@@ -78,14 +78,25 @@ values (
     true
 );
 
-insert into public.leads (id,business_name)
-values ('99999999-9999-4999-8999-999999999913','Quote Pricing QA Business');
+insert into public.leads (
+    id,business_name,contact_name,email,email_consent_required,email_consent_status
+) values (
+    '99999999-9999-4999-8999-999999999913',
+    'Quote Pricing QA Business',
+    'Quote Pricing QA Contact',
+    'quote-pricing-qa@example.invalid',
+    false,
+    null
+);
 
-insert into public.clients (id,business_name,source_lead_id)
-values (
+insert into public.clients (
+    id,business_name,source_lead_id,contact_name,email
+) values (
     '99999999-9999-4999-8999-999999999914',
     'Quote Pricing QA Business',
-    '99999999-9999-4999-8999-999999999913'
+    '99999999-9999-4999-8999-999999999913',
+    'Quote Pricing QA Contact',
+    'quote-pricing-qa@example.invalid'
 );
 
 insert into public.services (
@@ -115,6 +126,13 @@ insert into public.lead_proposals (
     'Initial proposal content.',
     '99999999-9999-4999-8999-999999999911'
 );
+
+update public.lead_proposals
+   set status='approved',
+       approved_by='99999999-9999-4999-8999-999999999911',
+       approved_at=now(),
+       updated_at=now()
+ where id='99999999-9999-4999-8999-999999999917';
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','99999999-9999-4999-8999-999999999911',true);
@@ -265,9 +283,41 @@ select extensions.throws_ok(
 );
 
 select set_config('request.jwt.claim.sub','99999999-9999-4999-8999-999999999911',true);
-update public.quotes
-   set status='sent'
- where id=(select id from saved_quote_id);
+
+create temporary table quote_review_issue_result(result jsonb);
+create temporary table quote_review_accept_result(result jsonb);
+grant insert,select on quote_review_accept_result to anon;
+
+insert into quote_review_issue_result(result)
+select public.admin_issue_swayphics_quote_review(
+    (select id from saved_quote_id)
+);
+
+select set_config(
+    'test.quote_pricing_review_token',
+    (select result->>'token' from quote_review_issue_result),
+    true
+);
+
+set local role anon;
+insert into quote_review_accept_result(result)
+select public.respond_swayphics_quote_review(
+    current_setting('test.quote_pricing_review_token'),
+    'accepted',
+    'Quote Pricing QA Contact',
+    'Approved for the quote-to-invoice workflow test.',
+    true
+);
+reset role;
+set local role authenticated;
+
+select extensions.ok(
+    (select (result->>'success')::boolean
+            and result->>'decision'='accepted'
+            and (result->>'terms_accepted')::boolean
+       from quote_review_accept_result),
+    'quote-pricing invoice fixture follows the real accepted proposal and terms workflow'
+);
 
 select extensions.throws_ok(
     format(
@@ -290,10 +340,6 @@ select extensions.throws_ok(
     'Only an unconverted draft quote can be edited. Create a new quote for changes.',
     'sent quote line items and prices cannot be overwritten'
 );
-
-update public.quotes
-   set status='accepted'
- where id=(select id from saved_quote_id);
 
 create temporary table first_invoice_result(result jsonb);
 insert into first_invoice_result
@@ -358,6 +404,7 @@ select extensions.is(
     'quote stores the successfully created invoice relationship'
 );
 
+select set_config('swayphics.quote_invoice_conversion','on',true);
 select extensions.throws_ok(
     format(
         'update public.quotes set invoice_id=null where id=%L',

@@ -3122,6 +3122,7 @@
                 "high",
                 "urgent",
                 "overdue",
+                "blocked",
                 "rejected",
                 "lost",
                 "cancelled"
@@ -14280,6 +14281,55 @@ function simpleBars(items, color) {
             )
         );
     }
+
+    function projectOnboardingSummary(project) {
+        const clientId = project && project.client_id;
+        const onboarding = state.clientOnboarding.find(function (item) {
+            return item.client_id === clientId;
+        }) || null;
+        const assets = state.clientOnboardingAssets.filter(function (item) {
+            return item.client_id === clientId;
+        });
+        const submitted = Boolean(
+            onboarding &&
+            (onboarding.submitted_at || String(onboarding.status || "").toLowerCase() === "submitted")
+        );
+
+        return {
+            status: !onboarding ? "Not started" : submitted ? "Submitted" : "In progress",
+            assetCount: assets.length
+        };
+    }
+
+    function projectTaskSummary(project) {
+        const projectId = String(project && project.id || "");
+        const tasks = state.tasks.filter(function (task) {
+            return String(task.project_id || "") === projectId;
+        });
+        const completed = tasks.filter(function (task) {
+            return String(task.status || "").toLowerCase() === "completed";
+        }).length;
+        const blocked = tasks.filter(function (task) {
+            return String(task.status || "").toLowerCase() === "blocked";
+        }).length;
+        const overdue = tasks.filter(function (task) {
+            return (
+                String(task.status || "").toLowerCase() !== "completed" &&
+                task.due_date &&
+                isOverdue(task.due_date)
+            );
+        }).length;
+
+        return {
+            total: tasks.length,
+            completed: completed,
+            open: tasks.length - completed,
+            blocked: blocked,
+            overdue: overdue,
+            percent: tasks.length ? Math.round((completed / tasks.length) * 100) : 0
+        };
+    }
+
     function renderProjects() {
         const cards = state.projects.map(function (item) {
             const projectReviewAction =
@@ -14289,6 +14339,8 @@ function simpleBars(items, color) {
                       '</button>'
                     : "";
             const overdue = item.due_date && isOverdue(item.due_date) && item.status !== "completed";
+            const readiness = projectOnboardingSummary(item);
+            const taskSummary = projectTaskSummary(item);
             return (
                 '<article class="sway-record-card" data-ai-record="projects:' + esc(item.id) + '">' +
                     '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">PROJECT</span>' +
@@ -14305,6 +14357,18 @@ function simpleBars(items, color) {
                         '<div class="sway-record-card-detail"><span>Payment</span><strong>' + chip(item.payment_status) + '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Project value</span><strong>' + esc(money(item.value)) + '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Estimated cost</span><strong>' + (Number(item.estimated_cost || 0) ? esc(money(item.estimated_cost)) : "—") + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Onboarding</span><strong>' + esc(readiness.status) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Client assets</span><strong>' + readiness.assetCount + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Task progress</span><strong>' +
+                            (taskSummary.total ? taskSummary.completed + ' / ' + taskSummary.total + ' (' + taskSummary.percent + '%)' : 'No tasks assigned') +
+                        '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Open tasks</span><strong>' + taskSummary.open + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Blocked tasks</span><strong>' +
+                            (taskSummary.blocked ? taskSummary.blocked + ' ' + chip('blocked') : 'None') +
+                        '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Overdue tasks</span><strong>' +
+                            (taskSummary.overdue ? taskSummary.overdue + ' ' + chip('overdue') : 'None') +
+                        '</strong></div>' +
                         (
                             item.status === "completed"
                                 ? '<div class="sway-record-card-detail"><span>Review</span><strong>' +
@@ -14317,6 +14381,7 @@ function simpleBars(items, color) {
                         '<details class="sway-actions-menu"><summary class="sway-row-action">Actions <span aria-hidden="true">⌄</span></summary>' +
                             '<div class="sway-actions-dropdown">' +
                                 '<button class="sway-row-action" data-project-timeline="' + esc(item.id) + '">Timeline</button>' +
+                                (item.client_id ? '<button class="sway-row-action" data-project-onboarding="' + esc(item.client_id) + '">Review onboarding</button>' : "") +
                                 '<button class="sway-row-action" data-edit="projects" data-id="' + esc(item.id) + '">Edit</button>' +
                                 projectReviewAction +
                                 '<button class="sway-row-action danger" data-delete="projects" data-id="' + esc(item.id) + '">Delete</button>' +
@@ -20655,6 +20720,7 @@ function simpleBars(items, color) {
 
         const timeline =
             projectTimelineStage(project.status);
+        const taskSummary = projectTaskSummary(project);
 
         document.getElementById(
             "sway-project-timeline-modal"
@@ -20748,7 +20814,25 @@ function simpleBars(items, color) {
                         chip(project.payment_status) +
                     "</div>" +
                 "</div>" +
-                '<div class="sway-project-timeline-footer">' +
+                '<section class="sway-project-task-progress" aria-label="Project task progress">' +
+                    '<div class="sway-project-task-progress-head">' +
+                        '<strong>Task execution</strong>' +
+                        '<span>' +
+                            (taskSummary.total ? taskSummary.completed + ' of ' + taskSummary.total + ' complete' : 'No tasks assigned') +
+                        '</span>' +
+                    '</div>' +
+                    (taskSummary.total
+                        ? '<div class="sway-project-task-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + taskSummary.percent + '" aria-label="Task completion">' +
+                            '<span style="width:' + taskSummary.percent + '%"></span>' +
+                          '</div>' +
+                          '<div class="sway-project-task-progress-foot">' +
+                            '<span>' + taskSummary.percent + '% complete</span>' +
+                            '<span>' + taskSummary.open + ' open · ' + taskSummary.blocked + ' blocked · ' + taskSummary.overdue + ' overdue</span>' +
+                          '</div>'
+                        : '<p>Create or assign tasks to this project to track delivery progress.</p>'
+                    ) +
+                '</section>' +
+                '<div class="sway-project-timeline-footer">'
                     '<button type="button" class="sway-workspace-button" data-edit="projects" data-id="' +
                         esc(project.id) +
                     '">Edit project</button>' +
@@ -23590,7 +23674,7 @@ function simpleBars(items, color) {
                         label: "Status",
                         type: "select",
                         options:
-                            ["todo", "in progress", "review", "completed"]
+                            ["todo", "in progress", "review", "blocked", "completed"]
                                 .map(function (value) {
                                     return (
                                         '<option value="' +
@@ -30426,6 +30510,14 @@ function simpleBars(items, color) {
                         );
                     }
                 );
+            });
+
+        workspace
+            .querySelectorAll("[data-project-onboarding]")
+            .forEach(function (button) {
+                button.addEventListener("click", function () {
+                    openClientOnboarding(button.dataset.projectOnboarding);
+                });
             });
 
         workspace
