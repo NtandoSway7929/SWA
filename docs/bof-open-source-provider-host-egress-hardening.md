@@ -180,3 +180,25 @@ No firewall rules have been generated or applied. No host, VM, tunnel, productio
 
 
 The manifest also records the expected six-network topology and exact service membership. CI now converts the Compose file to canonical JSON and checks it against the manifest. This catches drift such as a provider changing subnet, Valkey gaining an egress attachment, Caddy gaining an outbound network, a host port being published, or the Cloudflare Tunnel profile becoming unconditional. The Compose comparison is a static configuration check; the existing live CI job separately confirms runtime network membership and unpublished ports.
+
+
+## 8. Combined read-only host readiness report
+
+Run this on the Linux machine that hosts the local Docker daemon, before creating the private-gateway networks:
+
+    bash scripts/bof-open-source-provider-poc/private-gateway/audit-host-readiness.sh
+
+The report combines the static policy-manifest validator, Docker firewall-backend audit, host subnet-overlap preflight, and the read-only forwarding/firewall snapshot. It captures underlying command output in memory and suppresses raw host topology and firewall rules by default. Use the option --show-details only from a trusted terminal; that output can reveal interface addresses, routes, Docker endpoints and firewall structure.
+
+Exit codes are:
+
+- 0: the available policy and host inventory checks completed, with no planned-subnet overlap detected. This is not deployment approval.
+- 1: at least one planned subnet overlaps an observed host range. Do not create the private-gateway networks.
+- 2: one or more required audits could not be completed or trusted. Treat this as blocked.
+- 3: invalid command-line usage.
+
+The report deliberately prints DEPLOYMENT GATE: NOT READY even when its inventory checks pass. It cannot discover address reservations held only in external cloud, office or VPN control planes; it does not validate the safety or ordering of existing firewall rules; and it does not install or test an egress policy. Host-specific destination ranges, IPv4/IPv6 and DNS-rebinding staging tests, evidence of actual packet filtering, and a safe rollback route are still mandatory.
+
+CI tests the report with mocked Docker, interface, route, sysctl and firewall commands. CI does not run the host audit against the shared runner and does not retain host inventory output. The test suite covers clean inventory, subnet conflict, incomplete inventory, unsupported backend, remote Docker context, sensitive-output suppression, and the absence of any apply mode.
+
+This script is read-only. It does not create Docker networks, alter routes, change sysctls, install firewall rules, deploy provider containers, or configure a tunnel.
