@@ -29,6 +29,12 @@ assert.match(adminScript, /email_consent_action = "marketing"/,
     "required lead consent must be passed through the existing sender");
 assert.match(adminScript, /admin_revoke_swayphics_quote_review/,
     "failed delivery must revoke the unissued review link");
+assert.match(adminScript, /emailSent = true/,
+    "a confirmed email send must be distinguished from a dashboard refresh failure");
+assert.match(adminScript, /deliveryOutcomeUnknown/,
+    "ambiguous email delivery must not automatically revoke a possibly delivered review link");
+assert.match(adminScript, /Sent - refresh workspace/,
+    "a post-send refresh failure must not invite the administrator to resend the proposal");
 assert.match(adminScript, /Revoke link/,
     "admins must be able to revoke an outstanding client review link");
 assert.match(adminScript, /data-proposal-delivery-state/,
