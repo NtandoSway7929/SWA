@@ -183,16 +183,16 @@ jobs:
                     case "$command_line" in
                       *chrome_crashpad_handler*) continue ;;
                     esac
-                    printf "%s\\n" "$command_line"
+                    echo "$command_line"
                     ;;
                 esac
               done
             ')"
             if [ -n "$process_list" ]; then
               found=true
-              if printf "%s\\n" "$process_list" | grep -q -- '--no-sandbox'; then
+              if echo "$process_list" | grep -q -- '--no-sandbox'; then
                 echo "Chromium process still contains --no-sandbox despite sandbox opt-in."
-                printf "%s\\n" "$process_list"
+                echo "$process_list"
                 exit 1
               fi
               echo "Chromium process is running without --no-sandbox."
