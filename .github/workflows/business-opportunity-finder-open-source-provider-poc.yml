@@ -121,6 +121,9 @@ jobs:
           sudo grep -q '^swayphics-bof-crawl4ai ' /sys/kernel/security/apparmor/profiles
           test "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" = "1"
 
+      - name: Run read-only AppArmor host audit
+        run: bash scripts/bof-open-source-provider-poc/private-gateway/audit-host-apparmor.sh
+
       - name: Diagnose Chromium user-namespace sandbox support
         shell: bash
         run: |
