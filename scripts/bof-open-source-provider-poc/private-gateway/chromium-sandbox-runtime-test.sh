@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Ephemeral CI-only diagnostic. It deliberately relaxes seccomp and AppArmor
-# only to isolate host user-namespace support; this is NOT a deployable profile.
+# Ephemeral CI-only runtime test. It uses the candidate constrained Chromium seccomp
+# profile; AppArmor remains unconfined for this diagnostic and must be hardened separately.
 # It does not alter host sysctls, AppArmor policy, Docker daemon config or production.
 image="unclecode/crawl4ai:0.9.6@sha256:4603d7c4d69769673dfa1214fa9abbcac2a874d4d9af07d784782af528b65c68"
 name="bof-chromium-sandbox-ci"
@@ -35,7 +35,9 @@ for setting in kernel.unprivileged_userns_clone kernel.apparmor_restrict_unprivi
   fi
 done
 
-echo "Starting pinned Crawl4AI with sandbox=true, non-root appuser, no capabilities and no-new-privileges; seccomp/AppArmor are unconfined for this disposable diagnostic only."
+profile_path="$(cd "$(dirname "$0")" && pwd)/chromium-seccomp.json"
+test -r "$profile_path"
+echo "Starting pinned Crawl4AI with sandbox=true, non-root appuser, no capabilities, no-new-privileges and the candidate constrained Chromium seccomp profile; AppArmor is unconfined for this diagnostic only."
 docker run --detach --name "$name" \
   --publish "127.0.0.1:${port}:11235" \
   --env "CRAWL4AI_API_TOKEN=$token" \
@@ -43,7 +45,7 @@ docker run --detach --name "$name" \
   --user appuser \
   --cap-drop ALL \
   --security-opt no-new-privileges:true \
-  --security-opt seccomp=unconfined \
+  --security-opt "seccomp=$profile_path" \
   --security-opt apparmor=unconfined \
   --read-only \
   --tmpfs /tmp \
@@ -145,5 +147,5 @@ if [ "$sandbox_flag_clear" != true ]; then
 fi
 
 echo "PASS: Chromium renderer process was observed without --no-sandbox."
-echo "PASS: Chromium sandbox itself launched with user namespaces when outer container seccomp/AppArmor restrictions were relaxed."
-echo "LIMIT: this is only a diagnostic. It does not validate a safe container seccomp/AppArmor profile and is not deployable configuration."
+echo "PASS: Chromium sandbox launched with user namespaces under the candidate filtered seccomp profile."
+echo "LIMIT: AppArmor was unconfined for this test. The candidate seccomp profile still needs review and separate host/AppArmor validation before deployment."
