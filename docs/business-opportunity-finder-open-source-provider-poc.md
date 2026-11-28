@@ -547,3 +547,19 @@ Correction to the earlier diagnostic iteration: several intervening test runs fa
 Remaining sandbox evidence gap: the runtime check currently verifies that a Chromium renderer command line was observed without --no-sandbox; the static validator verifies the candidate seccomp policy structure. It does not yet prove, from the renderer's kernel state, Seccomp=2, NoNewPrivs=1 and a distinct user namespace. Do not describe that stronger verification as complete.
 
 No paid server has been purchased or selected. No production branch, production service, production secret, Supabase deployment, Cloudflare Tunnel, or host firewall has been changed. The next work remains in this isolated branch: improve the renderer kernel-state observation using a reliable host-PID mapping, then validate the selected no-cost/existing Linux Docker host if one is available. No hosting purchase is required to continue the POC.
+
+
+### Renderer kernel-state assertion passed — 28 November 2026
+
+The isolated POC workflow passed [GitHub Actions run 147](https://github.com/NtandoSway7929/SWA/actions/runs/46130282821), commit `278cb4bb6aa2ce396d9477f015bf72d81e63f97e`. The Chromium runtime test now observes the container's processes through Docker's host-visible PID table and inspects the actual renderer's host `/proc/<pid>/status` and user-namespace inode.
+
+The captured renderer record showed:
+
+- `RENDERER=True` and no `--no-sandbox` argument.
+- `Seccomp=2` (seccomp filter mode).
+- `NoNewPrivs=1`.
+- `USERNS_DIFF=True`: the renderer's user-namespace inode differs from the Crawl4AI container init process.
+
+The test now asserts all three kernel-state properties on the same renderer record, in addition to a successful sandbox-enabled crawl. All three workflow jobs passed, including the live private-gateway Compose smoke test. This closes the POC's Chromium runtime sandbox evidence gap for the tested combination: candidate filtered seccomp profile, Docker default AppArmor profile, non-root user, dropped capabilities, no-new-privileges and read-only filesystem.
+
+**Remaining host policy decision:** the GitHub runner still required `kernel.apparmor_restrict_unprivileged_userns=0`. This was changed only on the disposable runner. Before deployment, investigate a narrowly scoped AppArmor `userns,` rule for the Crawl4AI container so the host-wide Ubuntu restriction can potentially remain enabled. Do not apply the global sysctl change to a real/shared host without a separate security decision. No host or production configuration was modified.
