@@ -124,6 +124,9 @@ wait "$request_pid" || {
 wait "$observer_pid" || true
 observation="$(docker exec --user 0 "$name" cat /tmp/chromium-sandbox-observer.log 2>/dev/null || true)"
 printf '%s\n' "$observation" >"$log_file"
+chromium_seen=false
+sandbox_flag_clear=false
+kernel_sandbox_verified=false
 if [ -n "$observation" ]; then
   chromium_seen=true
   if ! grep -q -- '--no-sandbox' "$log_file"; then
