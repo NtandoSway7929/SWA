@@ -142,7 +142,7 @@ resolver_pid=$!
 
 sleep 0.3
 
-echo "1/3: first DNS resolution is the simulated public address"
+echo "1/4: first DNS resolution is the simulated public address"
 ip netns exec "$ns_client" python3 - <<'PY'
 import socket
 import struct
@@ -187,7 +187,7 @@ assert b"isolated-public-fixture" in response, response
 print("PASS: controlled DNS answer was pinned to the actual socket connection")
 PY
 
-echo "2/3: second DNS resolution changes to a private address"
+echo "2/4: second DNS resolution changes to a private address"
 if ip netns exec "$ns_client" python3 - <<'PY'
 import socket
 import struct
@@ -243,6 +243,11 @@ grep -Fxq "A query 2: 10.201.2.2" "$dns_log"
 grep -Fxq "/pinned" "$target_log"
 grep -Fxq "/redirect" "$target_log"
 if grep -Eq '^/(rebinding|private)
+  echo "FAIL: blocked destination request reached the target fixture" >&2
+  exit 1
+fi
+echo "PASS: resolver changed answers; pinned connection succeeded; rebinding and redirect destinations were blocked"
+echo "LIMIT: this proves only the isolated router policy for these controlled IPv4 paths. It does not prove host firewall, Docker forwarding, Crawl4AI/Chromium, browser subrequests, or production security."
  "$target_log"; then
   echo "FAIL: blocked destination request reached the target fixture" >&2
   exit 1
