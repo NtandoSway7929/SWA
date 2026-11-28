@@ -226,11 +226,11 @@
     },
     {
       "publisher": "Cloudflare",
-      "title": "Cloudflare Tunnel configuration and firewall requirements",
-      "url": "https://developers.cloudflare.com/tunnel/configuration/",
-      "page_last_updated": "2026-09-29",
+      "title": "Tunnel with firewall",
+      "url": "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/tunnel-with-firewall/",
+      "page_last_updated": "2026-10-12",
       "checked_on": "2026-11-28",
-      "use": "Source for the regional Tunnel endpoint hostname/address snapshot and TCP/UDP 7844 requirement. Optional TCP 443 destinations are intentionally excluded."
+      "use": "Source for the default global region1.v2 and region2.v2 Tunnel endpoints and TCP/UDP 7844. The separate --region us and FedRAMP endpoint sets are not included; optional TCP 443 destinations are intentionally excluded."
     }
   ],
   "topology": {
