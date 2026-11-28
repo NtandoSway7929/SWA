@@ -51,7 +51,7 @@ const malformed = spawnSync("python3", [validator, "--service", "gateway"], {
   encoding: "utf8",
 });
 assert.equal(malformed.status, 1);
-assert.match(malformed.stderr, /missing tmpfs mount/);
+assert.match(malformed.stderr, /gateway tmpfs \/data has no explicit numeric size/);
 console.log("PASS: missing tmpfs mounts are rejected.");
 
 console.log("BOF runtime tmpfs validator regression tests passed.");
