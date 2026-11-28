@@ -16,11 +16,12 @@ const expected = {
   gateway: { "/data": 32 * mib, "/config": 8 * mib, "/tmp": 32 * mib },
 };
 
-function run(service, overrides = {}, omitTarget = null) {
+function run(service, overrides = {}, omitTarget = null, humanReadable = false) {
   const tmpfs = {};
   for (const [target, size] of Object.entries(expected[service])) {
     if (target === omitTarget) continue;
-    tmpfs[target] = "rw,noexec,nosuid,size=" + (overrides[target] ?? size) + ",mode=0700";
+    const sizeValue = humanReadable ? ((overrides[target] ?? size) / mib) + "m" : (overrides[target] ?? size);
+    tmpfs[target] = "rw,noexec,nosuid,size=" + sizeValue + ",mode=0700";
   }
   const inspected = [{ HostConfig: { Tmpfs: tmpfs } }];
   return spawnSync("python3", [validator, "--service", service], {
@@ -28,6 +29,10 @@ function run(service, overrides = {}, omitTarget = null) {
     encoding: "utf8",
   });
 }
+
+const humanReadable = run("crawl4ai", {}, null, true);
+assert.equal(humanReadable.status, 0, humanReadable.stderr);
+console.log("PASS: Docker human-readable tmpfs size suffixes are parsed correctly.");
 
 for (const service of Object.keys(expected)) {
   const valid = run(service);
