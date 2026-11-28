@@ -84,7 +84,7 @@ jobs:
             validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
   chromium-sandbox-runtime:
-    name: Chromium sandbox runtime verification
+    name: Chromium sandbox host capability diagnostic
     needs: adapter-contract
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -108,7 +108,7 @@ jobs:
           fi
           test "$(cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null || echo 1)" = "1"
 
-      - name: Verify real Chromium sandbox launch
+      - name: Diagnose Chromium user-namespace sandbox support
         shell: bash
         run: |
           bash -n scripts/bof-open-source-provider-poc/private-gateway/chromium-sandbox-runtime-test.sh
