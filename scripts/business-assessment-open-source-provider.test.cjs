@@ -537,7 +537,7 @@ const { spawnSync } = require("node:child_process");
         const iptablesState = runStateAudit("iptables");
         assert.equal(iptablesState.status, 0, iptablesState.stderr);
         assert.match(iptablesState.stdout, /Docker firewall backend: iptables/);
-        assert.match(iptablesState.stdout, /net\\.ipv4\\.ip_forward=1/);
+        assert.ok(iptablesState.stdout.includes("net.ipv4.ip_forward=1"));
         assert.match(iptablesState.stdout, /IPv4 filter FORWARD chain/);
         assert.match(iptablesState.stdout, /-P FORWARD ACCEPT/);
         assert.match(iptablesState.stdout, /IPv4 DOCKER-USER chain/);
