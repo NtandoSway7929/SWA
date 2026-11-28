@@ -679,4 +679,6 @@ grant execute on function public.respond_swayphics_quote_review(text, text, text
 comment on table public.swayphics_project_agreements is
     'Immutable accepted project agreements assembled from an exact proposal revision, itemised quote, respondent decision and acknowledged Terms & Conditions. Client association may be attached once during an authenticated accepted-quote conversion.';
 
+notify pgrst, 'reload schema';
+
 commit;
