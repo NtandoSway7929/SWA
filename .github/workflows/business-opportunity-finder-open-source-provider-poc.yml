@@ -83,9 +83,27 @@ jobs:
             caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 \
             validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
+  chromium-sandbox-runtime:
+    name: Chromium sandbox runtime verification
+    needs: adapter-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install runtime test prerequisites
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends curl
+
+      - name: Verify real Chromium sandbox launch
+        shell: bash
+        run: |
+          bash -n scripts/bof-open-source-provider-poc/private-gateway/chromium-sandbox-runtime-test.sh
+          sudo bash scripts/bof-open-source-provider-poc/private-gateway/chromium-sandbox-runtime-test.sh
+
   live-docker-smoke:
     name: Live SearXNG and Crawl4AI Docker smoke test
-    needs: adapter-contract
+    needs: [adapter-contract, chromium-sandbox-runtime]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
