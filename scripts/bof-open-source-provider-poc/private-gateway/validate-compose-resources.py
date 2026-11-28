@@ -4,14 +4,14 @@ import json
 import sys
 
 EXPECTED = {
-    "searxng": {"memory": 1024**3, "cpus": 1.0, "pids": 256},
-    "crawl4ai": {"memory": 4 * 1024**3, "cpus": 2.0, "pids": 512},
+    "searxng": {"memory": 1024**3, "cpus": 0.75, "pids": 256},
+    "crawl4ai": {"memory": 4 * 1024**3, "cpus": 1.5, "pids": 512},
     "valkey": {"memory": 384 * 1024**2, "cpus": 0.25, "pids": 128},
     "gateway": {"memory": 256 * 1024**2, "cpus": 0.25, "pids": 128},
     "cloudflared": {"memory": 128 * 1024**2, "cpus": 0.25, "pids": 128},
 }
 MAX_TOTAL_MEMORY = 6 * 1024**3
-MAX_TOTAL_CPUS = 4.0
+MAX_TOTAL_CPUS = 3.0
 
 
 def fail(message):
