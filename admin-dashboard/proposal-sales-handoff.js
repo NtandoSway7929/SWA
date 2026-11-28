@@ -181,7 +181,7 @@
     var hasClient = Boolean(quote.client_id);
     var agreement = agreementRows.get(quoteId);
     var invoiceButton = card.querySelector('[data-create-invoice-from-quote="' + quoteId + '"]');
-    if (invoiceButton) invoiceButton.hidden = accepted && !hasClient;
+    if (invoiceButton) invoiceButton.hidden = accepted && (!hasClient || !agreement);
 
     var existing = card.querySelector("[data-accepted-quote-handoff]");
     var state = !accepted ? "not-accepted" :
@@ -227,7 +227,9 @@
     } else {
       var missingAgreement = document.createElement("small");
       missingAgreement.className = "accepted-quote-agreement-note";
-      missingAgreement.textContent = "No agreement snapshot is recorded for this quotation.";
+      missingAgreement.textContent = hasClient
+        ? "Invoice creation is disabled until a recorded proposal and Terms & Conditions acceptance is available."
+        : "No agreement snapshot is recorded for this quotation.";
       actions.append(missingAgreement);
     }
 
