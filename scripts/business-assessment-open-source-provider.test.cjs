@@ -47,7 +47,7 @@ const { spawnSync } = require("node:child_process");
 
     const normalizedCrawl = __testing.normaliseCrawlResult({
         url: "https://example.co.za/",
-        redirected_url: "https://www.example.co.za/",
+        redirected_url: "https://example.co.za/",
         success: true,
         markdown: {
             raw_markdown: "# Example Business\nContact us",
@@ -59,7 +59,7 @@ const { spawnSync } = require("node:child_process");
             language: "en"
         },
         links: {
-            internal: [{ href: "https://www.example.co.za/contact?session=secret" }],
+            internal: [{ href: "https://example.co.za/contact?session=secret" }],
             external: [{ url: "https://www.instagram.com/example/" }]
         },
         response_headers: { ETag: "abc123", "Last-Modified": "Wed, 01 Jan 2025 00:00:00 GMT" },
@@ -67,15 +67,28 @@ const { spawnSync } = require("node:child_process");
     }, "https://example.co.za/");
 
     assert.equal(normalizedCrawl.success, true);
-    assert.equal(normalizedCrawl.final_url, "https://www.example.co.za/");
+    assert.equal(normalizedCrawl.final_url, "https://example.co.za/");
     assert.equal(normalizedCrawl.title, "Example Business");
     assert.equal(normalizedCrawl.language, "en");
     assert.ok(normalizedCrawl.text.includes("Example Business"));
     assert.deepEqual(normalizedCrawl.links, [
-        "https://www.example.co.za/contact",
+        "https://example.co.za/contact",
         "https://www.instagram.com/example/"
     ]);
     assert.equal(normalizedCrawl.etag, "abc123");
+
+    const crossOriginRedirectCrawl = __testing.normaliseCrawlResult({
+        url: "https://business.example.co.za/",
+        redirected_url: "https://unrelated.example.net/landing",
+        success: true,
+        markdown: { raw_markdown: "# Unrelated destination content" },
+        metadata: { title: "Unrelated destination" },
+        status_code: 200
+    }, "https://business.example.co.za/");
+    assert.equal(crossOriginRedirectCrawl.success, false,
+        "A crawler redirect to another origin must not be accepted as business-site evidence");
+    assert.equal(crossOriginRedirectCrawl.error_code, "cross_origin_redirect");
+    assert.equal(crossOriginRedirectCrawl.final_url, "https://unrelated.example.net/landing");
 
     const selectedStorePage = __testing.selectIdentityFollowupUrl([
         "https://www.example.co.za/about-us",
