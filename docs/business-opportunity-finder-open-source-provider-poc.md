@@ -582,3 +582,21 @@ The Chromium runtime job:
 The private-gateway Compose template now applies both the candidate seccomp profile and the named AppArmor profile to Crawl4AI. The live gateway job loads that profile in its own disposable runner before starting Compose. Its smoke test confirmed Valkey health, no published ports, Caddy without outbound egress, expected service network membership, no cloudflared connector, and a successful reserved example.com fetch through the gateway to Crawl4AI.
 
 This is a meaningful POC security milestone, not production approval. The profile has been tested on the current GitHub-hosted Ubuntu runner and pinned Crawl4AI image; it has not yet been validated across other kernel versions/distributions or on a selected deployment host. The network egress/SSRF controls still need host-specific firewall enforcement and live validation. The Cloudflare Tunnel/Access path, Supabase Edge Function call, operational monitoring, resource/load limits, retention/log policy, legal/vendor review and rollback process remain unverified. No paid server was purchased or selected, no host firewall was changed, and no production service or secret was touched.
+
+
+
+### AppArmor profile wired into Compose and host-readiness audit — 28 November 2026
+
+The isolated POC workflow passed [GitHub Actions run 167](https://github.com/NtandoSway7929/SWA/actions/runs/46132657304), commit 8f4bd4af27af4bedc76a6ce2ddea828a292d8654. All three jobs passed after the scoped AppArmor profile was added to the Crawl4AI service's private-gateway Compose security options.
+
+The run confirmed:
+- The dedicated AppArmor profile loads in enforce mode and the static validator passes.
+- The sandbox runtime test leaves kernel.apparmor_restrict_unprivileged_userns=1 enabled, completes a real reserved-domain crawl, observes the renderer without --no-sandbox, and verifies Seccomp=2, NoNewPrivs=1 and a distinct user namespace on that renderer.
+- The private-gateway Compose stack loads the AppArmor profile in its own CI runner, starts successfully, keeps host ports unpublished, keeps Caddy without egress, maintains the intended service network membership, does not start cloudflared, and successfully fetches reserved example.com through the gateway to Crawl4AI.
+- The read-only host-readiness aggregator now checks AppArmor is enabled, the named Crawl4AI profile is loaded and enforced, apparmor_parser is available, and the host unprivileged-userns restriction is enabled. The audit can use non-interactive sudo to read securityfs when the current user cannot.
+
+The Compose file now explicitly requires the named AppArmor profile to be loaded before starting Crawl4AI. The host preflight reports INCOMPLETE if it is absent; it does not install or load the profile and does not modify sysctls.
+
+The first two attempts to add this AppArmor check to the host-readiness test exposed a securityfs permission issue. The audit now retries the read with non-interactive sudo when ordinary file access fails. Run 167 confirms the mocked host-readiness suite and all other CI jobs pass.
+
+**Deployment remains blocked.** The profile is tested on the GitHub-hosted Ubuntu runner and pinned Crawl4AI image only. No real Linux deployment host has been selected or audited. Host-specific IPv4/IPv6 egress enforcement, DNS rebinding and redirect behavior through the actual Docker forwarding path, Cloudflare Tunnel/Access, Supabase staging connectivity, operations/retention, vulnerability scanning, legal review and rollback remain outstanding. No server has been purchased. No production branch, service, secret, or host firewall was changed.
