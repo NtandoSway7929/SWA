@@ -223,9 +223,10 @@ A separate Linux-only lab exercises actual packet forwarding through a temporary
 
 Prerequisites: root privileges, iproute2, nftables, and Python 3. The script creates three uniquely named temporary network namespaces (client, router, target), two veth pairs, and one nftables table inside the router namespace only. It does not edit the host nftables/iptables rules, host routes, host forwarding sysctls, Docker networks, or production services. A cleanup trap removes the namespaces and their veth devices.
 
-The target namespace hosts a local HTTP fixture on port 8080. A simulated public test address (1.1.1.1/32) is assigned to the target namespace loopback; it is not contacted over the public internet. The router permits only that destination and drops other forwarded traffic. The script checks:
-- permitted traffic reaches the simulated public destination;
-- direct traffic to the target's private address is blocked;
-- an HTTP redirect from the permitted destination to the private address is blocked on the follow-up connection.
+The target namespace hosts local HTTP fixtures on ports 8080 (IPv4) and 8081 (IPv6). Simulated public destinations (1.1.1.1/32 and 2001:4860:4860::8888/128) are assigned inside the target namespace; neither is contacted over the public internet. The IPv6 fixture also assigns a ULA target and the AWS IPv6 metadata address (fd00:ec2::254/128). The router permits only the exact simulated public IPv4/IPv6 destination and TCP port pairs, then drops other forwarded traffic. The script checks:
+- permitted simulated public IPv4 and IPv6 destinations are reachable;
+- direct IPv4 private-network traffic is blocked;
+- direct IPv6 ULA and IPv6 metadata-address traffic are blocked;
+- IPv4 and IPv6 HTTP redirects to private destinations are blocked on their follow-up connections.
 
-This is a packet-level test of a temporary nftables forwarding policy in a disposable network namespace. It is not proof that the selected production host's Docker bridge traffic traverses the same hook or rule order. It does not yet test the actual DOCKER-USER iptables path, Docker's host nftables integration, IPv6, live DNS rebinding, Chromium subrequests, Cloudflare Tunnel egress, or the host-specific destination ranges. Do not use its result to mark the deployment gate ready. Preserve the host-specific preflight and rollback requirements above.
+This is a packet-level test of a temporary dual-stack nftables forwarding policy in disposable network namespaces. It is not proof that the selected production host's Docker bridge traffic traverses the same hook or rule order. It does not test the actual DOCKER-USER iptables path, Docker's host nftables integration, live DNS rebinding, Chromium subrequests, Cloudflare Tunnel egress, or host-specific destination ranges. Do not use its result to mark the deployment gate ready. Preserve the host-specific preflight and rollback requirements above.
