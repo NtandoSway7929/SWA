@@ -165,9 +165,9 @@
       }
       notify(
         "Client created: " + String(result.business_name || "Client") +
-        ". The accepted quotation and agreement are now linked to the client. Reloading the Quotes workspace to expose the existing invoice action."
+        ". The accepted quotation and agreement are now linked to the client. The Quotes workspace will refresh to expose the existing invoice action."
       );
-      window.location.reload();
+      window.setTimeout(function () { window.location.reload(); }, 450);
     } catch (error) {
       button.disabled = false;
       button.textContent = originalText;
