@@ -21,8 +21,6 @@ assert.match(adminHtml, /proposal-sales-handoff\.css\?v=20261128-accepted-quote-
     "the admin dashboard must load accepted quote handoff styling");
 assert.match(adminHtml, /proposal-sales-handoff\.js\?v=20261128-accepted-quote-sales-1/,
     "the admin dashboard must load accepted quote handoff actions");
-assert.match(adminHtml, /proposal-sales-handoff\.css\?v=20261128-accepted-quote-sales-1/,
-    "the admin dashboard must load accepted quote handoff styling");
 assert.match(adminHtml, /proposal-delivery\.js[\s\S]*proposal-sales-handoff\.js/,
     "sales handoff actions must load after proposal delivery actions");
 
@@ -100,7 +98,7 @@ assert.match(migration, /public\.admin_create_invoice_from_quote/,
 assert.match(deliveryMigration, /create table if not exists public\.quote_review_responses/,
     "the sales migration must depend on the existing proposal response table");
 
-assert.match(databaseTest, /select extensions\.plan\(41\)/,
+assert.match(databaseTest, /select extensions\.plan\(43\)/,
     "the accepted quote sales test must declare its full assertion plan");
 assert.match(databaseTest, /acceptance automatically creates one immutable agreement snapshot/,
     "the database test must verify agreement snapshot creation");
