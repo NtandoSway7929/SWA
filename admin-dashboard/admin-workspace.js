@@ -14308,6 +14308,9 @@ function simpleBars(items, color) {
         const completed = tasks.filter(function (task) {
             return String(task.status || "").toLowerCase() === "completed";
         }).length;
+        const blocked = tasks.filter(function (task) {
+            return String(task.status || "").toLowerCase() === "blocked";
+        }).length;
         const overdue = tasks.filter(function (task) {
             return (
                 String(task.status || "").toLowerCase() !== "completed" &&
@@ -14320,6 +14323,7 @@ function simpleBars(items, color) {
             total: tasks.length,
             completed: completed,
             open: tasks.length - completed,
+            blocked: blocked,
             overdue: overdue,
             percent: tasks.length ? Math.round((completed / tasks.length) * 100) : 0
         };
@@ -14358,6 +14362,9 @@ function simpleBars(items, color) {
                             (taskSummary.total ? taskSummary.completed + ' / ' + taskSummary.total + ' (' + taskSummary.percent + '%)' : 'No tasks assigned') +
                         '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Open tasks</span><strong>' + taskSummary.open + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Blocked tasks</span><strong>' +
+                            (taskSummary.blocked ? chip(taskSummary.blocked + ' blocked') : 'None') +
+                        '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Overdue tasks</span><strong>' +
                             (taskSummary.overdue ? chip(taskSummary.overdue + ' overdue') : 'None') +
                         '</strong></div>' +
@@ -20819,7 +20826,7 @@ function simpleBars(items, color) {
                           '</div>' +
                           '<div class="sway-project-task-progress-foot">' +
                             '<span>' + taskSummary.percent + '% complete</span>' +
-                            '<span>' + taskSummary.open + ' open · ' + taskSummary.overdue + ' overdue</span>' +
+                            '<span>' + taskSummary.open + ' open · ' + taskSummary.blocked + ' blocked · ' + taskSummary.overdue + ' overdue</span>' +
                           '</div>'
                         : '<p>Create or assign tasks to this project to track delivery progress.</p>'
                     ) +
@@ -23666,7 +23673,7 @@ function simpleBars(items, color) {
                         label: "Status",
                         type: "select",
                         options:
-                            ["todo", "in progress", "review", "completed"]
+                            ["todo", "in progress", "review", "blocked", "completed"]
                                 .map(function (value) {
                                     return (
                                         '<option value="' +
