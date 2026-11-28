@@ -10,9 +10,17 @@ port="${BOF_CHROMIUM_SANDBOX_TEST_PORT:-11236}"
 token="$(openssl rand -hex 32)"
 response_file="$(mktemp)"
 log_file="$(mktemp)"
+stop_file="$(mktemp)"
+rm -f "$stop_file"
+observer_pid=""
 cleanup() {
+  if [ -n "${observer_pid:-}" ]; then
+    touch "$stop_file" 2>/dev/null || true
+    kill "$observer_pid" 2>/dev/null || true
+    wait "$observer_pid" 2>/dev/null || true
+  fi
   docker rm --force "$name" >/dev/null 2>&1 || true
-  rm -f "$response_file" "$log_file"
+  rm -f "$response_file" "$log_file" "$stop_file"
 }
 trap cleanup EXIT
 
@@ -77,49 +85,36 @@ if [ "$ready" != true ]; then
   exit 1
 fi
 
-echo "Submitting a real public-page crawl while observing Chromium process arguments."
+echo "Starting host-visible Chromium process observation and submitting a real public-page crawl."
+observer_script="$(cd "$(dirname "$0")" && pwd)/chromium-process-observer.py"
+python "$observer_script" "$name" "$log_file" "$stop_file" --interval 0.03 &
+observer_pid=$!
 curl --connect-timeout 3 --max-time 90 --fail --silent --show-error \
-  -X POST "http://127.0.0.1:${port}/crawl" \
+  -X POST "http://127.0.0.1:\${port}/crawl" \
   -H "Authorization: Bearer $token" \
   -H "Content-Type: application/json" \
   --data '{"urls":["https://example.com"],"browser_config":{},"crawler_config":{}}' \
   >"$response_file" &
 request_pid=$!
-chromium_seen=false
-sandbox_flag_clear=false
-while :; do
-  request_state="$(ps -o stat= -p "$request_pid" 2>/dev/null || true)"
-  if [ -z "$request_state" ] || [[ "$request_state" == Z* ]]; then
-    break
-  fi
-  observation="$(docker exec "$name" python -c '
-import glob, os
-for path in glob.glob("/proc/[0-9]*/cmdline"):
-    try:
-        raw = open(path, "rb").read().replace(b"\\x00", b" ").decode("utf-8", "replace")
-    except (OSError, PermissionError):
-        continue
-    low = raw.lower()
-    if "chrom" in low and ("--type=renderer" in low or "--type=gpu-process" in low or "--no-sandbox" in low):
-        print(raw)
-        break
-' 2>/dev/null || true)"
-  if [ -n "$observation" ]; then
-    chromium_seen=true
-    printf '%s\n' "$observation" >>"$log_file"
-    if ! grep -q -- '--no-sandbox' <<<"$observation"; then
-      sandbox_flag_clear=true
-    fi
-  fi
-  sleep 0.1
-done
 wait "$request_pid" || {
+  touch "$stop_file"
+  wait "$observer_pid" || true
+  observer_pid=""
   docker logs "$name" >&2 || true
   cat "$response_file" >&2 || true
   echo "FAIL: Crawl4AI request failed with CRAWL4AI_CHROMIUM_SANDBOX=true" >&2
   exit 1
 }
-
+sleep 1
+touch "$stop_file"
+wait "$observer_pid" || observer_status=$?
+observer_pid=""
+if [ -s "$log_file" ] && grep -q 'RENDERER=True' "$log_file"; then
+  chromium_seen=true
+fi
+if [ "$chromium_seen" = true ] && ! grep -q -- '--no-sandbox' "$log_file"; then
+  sandbox_flag_clear=true
+fi
 python - "$response_file" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as handle:
