@@ -17,9 +17,9 @@ const deliveryMigration = read("supabase/migrations/20261128110000_swayphics_pro
 const databaseTest = read("supabase/tests/accepted-quote-sales-handoff.test.sql");
 const baseline = read("supabase/tests/accepted-quote-sales-baseline.sql");
 
-assert.match(adminHtml, /proposal-sales-handoff\.css\?v=20261128-accepted-quote-sales-1/,
+assert.match(adminHtml, /proposal-sales-handoff\.css\?v=20261128-project-kickoff-1/,
     "the admin dashboard must load accepted quote handoff styling");
-assert.match(adminHtml, /proposal-sales-handoff\.js\?v=20261128-accepted-quote-sales-1/,
+assert.match(adminHtml, /proposal-sales-handoff\.js\?v=20261128-project-kickoff-1/,
     "the admin dashboard must load accepted quote handoff actions");
 assert.match(adminHtml, /proposal-delivery\.js[\s\S]*proposal-sales-handoff\.js/,
     "sales handoff actions must load after proposal delivery actions");
@@ -32,6 +32,18 @@ assert.match(adminScript, /Convert to client/,
     "accepted quotes linked to leads must expose client conversion");
 assert.match(adminScript, /View accepted agreement/,
     "accepted quotes must expose the persisted agreement snapshot");
+assert.match(adminScript, /client_projects\?select=.*source_quote_id=not\.is\.null/,
+    "the quote handoff must load projects already linked to accepted quotations");
+assert.match(adminScript, /admin_create_project_from_accepted_quote/,
+    "the administrator kickoff action must use the dedicated guarded project RPC");
+assert.match(adminScript, /Create project/,
+    "converted accepted quotes must expose the explicit project creation action");
+assert.match(adminScript, /quote_items\?select=/,
+    "project kickoff must derive its scope from the accepted quote line items");
+assert.match(adminScript, /Client onboarding and file uploads remain available through the existing client portal/,
+    "project kickoff must reuse the existing client onboarding and asset-upload portal");
+assert.match(adminScript, /projectRows = new Map\(\)/,
+    "the handoff UI must recognise existing projects and avoid prompting for duplicates");
 assert.match(adminScript, /card\.querySelector\("\.sway-record-card-actions"\)/,
     "sales handoff controls must be appended after the existing quote card actions, not inside the quote title or details");
 assert.match(adminScript, /data-create-invoice-from-quote/,
@@ -48,6 +60,8 @@ assert.match(adminCss, /\.accepted-quote-handoff-actions/,
     "accepted quote conversion controls must be styled");
 assert.match(adminCss, /\.sway-project-agreement-card/,
     "the agreement review panel must be styled");
+assert.match(adminCss, /\.sway-project-kickoff-card/,
+    "the project kickoff dialog must have responsive styling");
 
 assert.match(reviewPage, /href="https:\/\/swayphics\.co\.za\/terms-and-conditions\/revisions\/fa302aec3ab9fd2e8e6458f53726f48cae765e5e\/" target="_blank"/,
     "the public proposal acceptance checkbox must link to the immutable archived Swayphics Terms & Conditions revision");
@@ -112,8 +126,23 @@ assert.match(migration, /public\.admin_create_invoice_from_quote/,
 assert.match(deliveryMigration, /create table if not exists public\.quote_review_responses/,
     "the sales migration must depend on the existing proposal response table");
 
-assert.match(databaseTest, /select extensions\.plan\(48\)/,
-    "the accepted quote sales test must declare its full assertion plan");
+assert.match(databaseTest, /select extensions\.plan\(66\)/,
+    "the accepted quote sales and project kickoff test must declare its full assertion plan");
+assert.match(migration, /admin_create_project_from_accepted_quote/,
+    "the accepted quote migration must expose the administrator project kickoff RPC");
+const projectMigration = read("supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql");
+assert.match(projectMigration, /source_quote_id uuid/,
+    "projects must retain the source accepted quote");
+assert.match(projectMigration, /source_agreement_id uuid/,
+    "projects must retain the exact accepted agreement");
+assert.match(projectMigration, /client_projects_source_quote_uidx/,
+    "a quote must not produce multiple kickoff projects");
+assert.match(projectMigration, /A project source quote and accepted agreement cannot be changed after kickoff/,
+    "project source links must be immutable after kickoff");
+assert.match(projectMigration, /link_swayphics_project_invoice_after_quote_change/,
+    "invoices created after kickoff must be automatically linked to the project");
+assert.match(projectMigration, /admin_create_project_from_accepted_quote/,
+    "project creation must be restricted to the guarded admin RPC");
 assert.match(databaseTest, /acceptance automatically creates one immutable agreement snapshot/,
     "the database test must verify agreement snapshot creation");
 assert.match(databaseTest, /administrator conversion creates or reuses a client/,
@@ -124,5 +153,9 @@ assert.match(databaseTest, /a declined quotation does not create an accepted agr
     "the database test must verify declined quotes do not create agreements");
 assert.match(baseline, /create or replace function public\.convert_swayphics_lead_to_client/,
     "the disposable CRM baseline must provide the existing lead conversion dependency");
+assert.match(baseline, /create table public\.tasks/,
+    "the disposable project fixture must provide the existing task table");
+assert.match(baseline, /create table public\.workflow_settings/,
+    "the disposable project fixture must provide existing project delivery settings");
 
 console.log("Accepted quote sales handoff source contracts passed.");
