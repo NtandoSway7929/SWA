@@ -2,6 +2,7 @@
 """Check Docker-inspected tmpfs size ceilings for gateway containers."""
 import argparse
 import json
+import re
 import sys
 
 EXPECTED = {
@@ -26,6 +27,16 @@ def fail(message):
     raise SystemExit(1)
 
 
+def parse_size(value):
+    match = re.fullmatch(r"(\\d+)([kKmMgGtTpP]?)", str(value))
+    if not match:
+        raise ValueError("unsupported tmpfs size notation")
+    amount = int(match.group(1))
+    suffix = match.group(2).lower()
+    powers = {"": 0, "k": 1, "m": 2, "g": 3, "t": 4, "p": 5}
+    return amount * (1024 ** powers[suffix])
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--service", required=True, choices=sorted(EXPECTED))
@@ -47,7 +58,7 @@ def main():
                 key, value = item.split("=", 1)
                 parsed[key] = value
         try:
-            actual_size = int(parsed.get("size", ""))
+            actual_size = parse_size(parsed.get("size", ""))
         except ValueError:
             fail(f"{args.service} tmpfs {target} has no explicit numeric size; Docker reported {options!r}")
         if actual_size != expected_size:
