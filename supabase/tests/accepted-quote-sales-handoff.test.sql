@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(43);
+select extensions.plan(44);
 
 select extensions.has_table('public','swayphics_project_agreements',
     'accepted project agreement snapshot table exists');
@@ -272,6 +272,30 @@ select extensions.ok(
             and result->'response'->>'terms_document_sha'='e56d3f2fd1e4247dcff5bd40c9340542b1e414fc'
        from sales_review_lookup),
     'the public review page can retrieve the recorded terms acknowledgement after acceptance'
+);
+select extensions.ok(
+    (public.respond_swayphics_quote_review(
+        current_setting('test.sales_review_token'),
+        'accepted',
+        'Sales QA Contact',
+        'Approved. Please proceed with the onboarding steps.',
+        true
+    )->>'already_submitted')::boolean
+    and (public.respond_swayphics_quote_review(
+        current_setting('test.sales_review_token'),
+        'accepted',
+        'Sales QA Contact',
+        'Approved. Please proceed with the onboarding steps.',
+        true
+    )->>'terms_accepted')::boolean
+    and public.respond_swayphics_quote_review(
+        current_setting('test.sales_review_token'),
+        'accepted',
+        'Sales QA Contact',
+        'Approved. Please proceed with the onboarding steps.',
+        true
+    )->>'terms_document_sha'='e56d3f2fd1e4247dcff5bd40c9340542b1e414fc',
+    'repeated acceptance returns the same Terms acknowledgement metadata'
 );
 
 select extensions.throws_ok(
