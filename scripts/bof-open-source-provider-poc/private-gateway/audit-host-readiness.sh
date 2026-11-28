@@ -130,6 +130,7 @@ if [[ "$show_details" == true ]]; then
     printf '\n===== Docker firewall backend audit output =====\n%s\n' "$backend_output"
     printf '\n===== Host subnet-overlap audit output =====\n%s\n' "$overlap_output"
     printf '\n===== Firewall and forwarding snapshot output =====\n%s\n' "$firewall_output"
+    printf '\n===== AppArmor audit output =====\n%s\n' "$apparmor_output"
 fi
 
 # Exit 0 means inventory checks passed, not deployment readiness.
