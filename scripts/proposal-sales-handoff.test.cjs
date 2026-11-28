@@ -89,12 +89,16 @@ assert.match(migration, /A recorded client acceptance and Terms & Conditions ack
     "the existing invoice conversion RPC must require matching accepted agreement evidence");
 assert.match(adminScript, /invoiceButton\.hidden = accepted && \(!hasClient \|\| !agreement\)/,
     "the invoice action must remain hidden until both a client and accepted agreement record exist");
-assert.match(migration, /swayphics\.quote_client_conversion/,
-    "the quote's client association must be changed only inside the conversion workflow");
-assert.match(migration, /swayphics\.agreement_client_conversion/,
-    "the agreement's client association must be changed only inside the conversion workflow");
+assert.match(migration, /swayphics_private\.client_association_authorizations/,
+    "client associations must be authorised through private transaction-scoped records");
+assert.match(migration, /pg_catalog\.pg_current_xact_id\(\)/,
+    "client association authorisations must be bound to the active database transaction");
+assert.doesNotMatch(migration, /current_setting\('swayphics\.(?:quote|agreement)_client_conversion'/,
+    "caller-settable GUCs must not authorise client association changes");
 assert.match(migration, /public\.convert_swayphics_lead_to_client/,
     "client conversion must reuse the existing CRM lead conversion function");
+assert.match(migration, /set status = 'won',[\s\S]*converted_client_id = v_client_id/,
+    "the conversion handoff must reconcile the lead's won status and client reference");
 assert.match(migration, /create or replace function public\.respond_swayphics_quote_review/,
     "terms acknowledgement must be integrated into the existing proposal response RPC");
 assert.match(migration, /terms_accepted,\s*terms_url,\s*terms_document_sha,\s*acceptance_statement/,
@@ -106,7 +110,7 @@ assert.match(migration, /public\.admin_create_invoice_from_quote/,
 assert.match(deliveryMigration, /create table if not exists public\.quote_review_responses/,
     "the sales migration must depend on the existing proposal response table");
 
-assert.match(databaseTest, /select extensions\.plan\(45\)/,
+assert.match(databaseTest, /select extensions\.plan\(48\)/,
     "the accepted quote sales test must declare its full assertion plan");
 assert.match(databaseTest, /acceptance automatically creates one immutable agreement snapshot/,
     "the database test must verify agreement snapshot creation");
