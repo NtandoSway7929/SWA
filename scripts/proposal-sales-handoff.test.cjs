@@ -95,6 +95,8 @@ assert.match(migration, /create or replace function public\.respond_swayphics_qu
     "terms acknowledgement must be integrated into the existing proposal response RPC");
 assert.match(migration, /terms_accepted,\s*terms_url,\s*terms_document_sha,\s*acceptance_statement/,
     "the public acceptance RPC must persist the published terms reference and statement");
+assert.match(migration, /'terms_accepted', v_existing\.terms_accepted[\s\S]*'terms_document_sha', v_existing\.terms_document_sha/,
+    "idempotent proposal acceptance must return the original Terms acknowledgement metadata");
 assert.match(migration, /public\.admin_create_invoice_from_quote/,
     "the sales handoff must leave invoice creation in the existing quote billing workflow");
 assert.match(deliveryMigration, /create table if not exists public\.quote_review_responses/,
