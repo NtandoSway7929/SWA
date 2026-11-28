@@ -42,6 +42,7 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+      - seccomp=./chromium-seccomp.json
     read_only: true
     tmpfs:
       - /tmp
