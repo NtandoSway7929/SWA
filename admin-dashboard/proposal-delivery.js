@@ -94,25 +94,45 @@
 
   function addAction(card, quoteId, row) {
     var editButton = card.querySelector('button[data-edit="quotes"]');
-    if (!editButton || card.querySelector("[data-proposal-delivery-action]")) return;
+    if (!editButton) return;
+
+    var response = responseRows.get(quoteId);
+    var activeLink = reviewLinkRows.get(quoteId);
+    var expiresAt = activeLink && activeLink.expires_at ? new Date(activeLink.expires_at) : null;
+    var isActive = activeLink && !activeLink.revoked_at && !activeLink.responded_at &&
+      expiresAt && !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now();
+    var deliveryState = response
+      ? "response"
+      : row.status === "draft" && row.proposal_id && row.proposal_version_id
+        ? "draft"
+        : row.status === "sent"
+          ? (isActive ? "sent-active" : "sent-inactive")
+          : "";
+
+    var previousAction = card.querySelector("[data-proposal-delivery-action]");
+    var previousState = previousAction && previousAction.getAttribute("data-proposal-delivery-state");
+    var previousRevoke = card.querySelector("[data-proposal-revoke-action]");
+    if (previousAction && previousState === deliveryState &&
+        (deliveryState !== "sent-active" || previousRevoke)) {
+      return;
+    }
+    if (previousAction) previousAction.remove();
+    if (previousRevoke) previousRevoke.remove();
+    if (!deliveryState) return;
 
     var action = document.createElement("button");
     action.type = "button";
     action.className = "sway-row-action";
     action.setAttribute("data-proposal-delivery-action", quoteId);
+    action.setAttribute("data-proposal-delivery-state", deliveryState);
 
-    var response = responseRows.get(quoteId);
-    if (response) {
+    if (deliveryState === "response") {
       action.textContent = "View client response";
       action.addEventListener("click", function () { showResponse(response, row); });
-    } else if (row.status === "draft" && row.proposal_id && row.proposal_version_id) {
+    } else if (deliveryState === "draft") {
       action.textContent = "Send for review";
       action.addEventListener("click", function () { sendForReview(quoteId, row, action); });
-    } else if (row.status === "sent") {
-      var activeLink = reviewLinkRows.get(quoteId);
-      var expiresAt = activeLink && activeLink.expires_at ? new Date(activeLink.expires_at) : null;
-      var isActive = activeLink && !activeLink.revoked_at && !activeLink.responded_at &&
-        expiresAt && !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now();
+    } else {
       action.textContent = isActive ? "Awaiting response" : "Review link unavailable";
       action.disabled = true;
       action.classList.add("proposal-delivery-static");
@@ -128,8 +148,6 @@
         });
         action.insertAdjacentElement("afterend", revoke);
       }
-      return;
-    } else {
       return;
     }
     editButton.insertAdjacentElement("afterend", action);
