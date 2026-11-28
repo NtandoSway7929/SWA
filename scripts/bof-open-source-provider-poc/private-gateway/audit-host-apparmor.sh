@@ -24,13 +24,18 @@ else
 fi
 
 profiles_content=""
+profiles_read=false
 if [[ -r "$profiles_file" ]]; then
-    profiles_content="$(cat "$profiles_file" 2>/dev/null || true)"
+    if profiles_content="$(cat "$profiles_file" 2>/dev/null)"; then
+        profiles_read=true
+    fi
 fi
-if [[ -z "$profiles_content" ]] && command -v sudo >/dev/null 2>&1; then
-    profiles_content="$(sudo -n cat "$profiles_file" 2>/dev/null || true)"
+if [[ "$profiles_read" != true ]] && command -v sudo >/dev/null 2>&1; then
+    if profiles_content="$(sudo -n cat "$profiles_file" 2>/dev/null)"; then
+        profiles_read=true
+    fi
 fi
-if [[ -n "$profiles_content" ]]; then
+if [[ "$profiles_read" == true ]]; then
     profile_line="$(printf '%s\n' "$profiles_content" | grep -F "$profile_name " | head -n 1 || true)"
     if [[ -z "$profile_line" ]]; then
         echo "Crawl4AI AppArmor profile: NOT LOADED"
