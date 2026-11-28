@@ -50,9 +50,11 @@ jobs:
           python3 scripts/bof-open-source-provider-poc/private-gateway/ssrf-policy-simulator.py --self-test
           python3 scripts/bof-open-source-provider-poc/private-gateway/analyse-firewall-snapshot.py --self-test
           bash -n scripts/bof-open-source-provider-poc/private-gateway/network-namespace-ssrf-test.sh
+          bash -n scripts/bof-open-source-provider-poc/private-gateway/dns-rebinding-namespace-test.sh
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends iproute2 nftables
           sudo bash scripts/bof-open-source-provider-poc/private-gateway/network-namespace-ssrf-test.sh
+          sudo bash scripts/bof-open-source-provider-poc/private-gateway/dns-rebinding-namespace-test.sh
 
       - name: Validate private gateway Compose configuration without starting services
         shell: bash
