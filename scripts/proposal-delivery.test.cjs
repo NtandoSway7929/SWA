@@ -35,6 +35,8 @@ assert.match(adminScript, /data-proposal-delivery-state/,
     "the admin delivery action must track state so it can refresh after sending, responding or revoking");
 assert.match(adminScript, /previousAction\.remove\(\)/,
     "stale quote actions must be replaced when the quote status changes");
+assert.match(adminScript, /Reset expired quote/,
+    "an expired but unresponded proposal link must be resettable to draft");
 assert.match(adminScript, /quote_review_responses\?select=/,
     "the admin workspace must retrieve recorded client decisions");
 assert.match(adminScript, /View client response/,
