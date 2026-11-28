@@ -43,6 +43,7 @@ services:
     security_opt:
       - no-new-privileges:true
       - seccomp=./chromium-seccomp.json
+      - apparmor=swayphics-bof-crawl4ai
     read_only: true
     tmpfs:
       - /tmp
