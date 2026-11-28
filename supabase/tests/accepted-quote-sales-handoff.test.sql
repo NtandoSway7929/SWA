@@ -199,6 +199,12 @@ select extensions.is(
     'acceptance automatically creates one immutable agreement snapshot'
 );
 select extensions.ok(
+    (select agreement_number like 'SWA-AGR-' || to_char(current_date, 'YYYY') || '-%'
+       from public.swayphics_project_agreements
+      where quote_id=current_setting('test.sales_quote_id')::uuid),
+    'accepted agreement records receive a generated Swayphics agreement reference'
+);
+select extensions.ok(
     (select a.proposal_version_id=q.proposal_version_id
        from public.swayphics_project_agreements a
        join public.quotes q on q.id=a.quote_id
