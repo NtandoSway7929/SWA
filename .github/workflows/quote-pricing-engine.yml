@@ -7,8 +7,11 @@ on:
       - feature/lead-proposal-draft-saving
       - feature/quote-pricing-engine
       - feature/proposal-delivery-acceptance
+      - feature/accepted-quote-sales-handoff
+      - feature/accepted-quote-project-kickoff
     paths:
       - "admin-dashboard/admin-workspace.js"
+      - "scripts/project-onboarding-readiness.test.cjs"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/index.html"
       - "admin-dashboard/proposal-delivery.js"
@@ -23,6 +26,9 @@ on:
       - "admin-dashboard/proposal-sales-handoff.js"
       - "scripts/proposal-sales-handoff.test.cjs"
       - "supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql"
+      - "supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql"
+      - "supabase/migrations/20261128140000_swayphics_task_blocked_status.sql"
+      - "supabase/migrations/20261025031000_swayphics_project_delivery_settings.sql"
       - "supabase/tests/accepted-quote-sales-baseline.sql"
       - "supabase/tests/accepted-quote-sales-handoff.test.sql"
       - "supabase/tests/accepted-quote-sales_sql_syntax_check.py"
@@ -55,6 +61,7 @@ jobs:
       - name: Check dashboard and quote pricing contracts
         run: |
           node --check admin-dashboard/admin-workspace.js
+          node scripts/project-onboarding-readiness.test.cjs
           node scripts/quote-pricing-engine.test.cjs
           if [ -f admin-dashboard/proposal-delivery.js ]; then
             node --check admin-dashboard/proposal-delivery.js
@@ -71,6 +78,7 @@ jobs:
       - name: Parse proposal and quote pricing migrations and test fixtures
         run: |
           python supabase/tests/quote-pricing-engine_sql_syntax_check.py
+          python -c "from pathlib import Path; from pglast import parse_sql; parse_sql(Path('supabase/migrations/20261128140000_swayphics_task_blocked_status.sql').read_text())"
           if [ -f supabase/tests/proposal-delivery_sql_syntax_check.py ]; then
             python supabase/tests/proposal-delivery_sql_syntax_check.py
           fi
@@ -134,6 +142,16 @@ jobs:
           fi
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$BASELINE"
 
+      - name: Apply existing project delivery defaults
+        shell: bash
+        working-directory: /tmp/quote-pricing-engine-project
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          test -n "$DB_URL"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261025031000_swayphics_project_delivery_settings.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "update public.workflow_settings set default_project_task_template = jsonb_build_array(jsonb_build_object('title','Kickoff briefing','due_offset_days',0,'priority','high'),jsonb_build_object('title','Review client onboarding','due_offset_days',1,'priority','medium')) where id=1"
+
       - name: Apply proposal revision dependency migration
         shell: bash
         working-directory: /tmp/quote-pricing-engine-project
@@ -157,6 +175,29 @@ jobs:
           if [ -f "$GITHUB_WORKSPACE/supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql" ]; then
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql"
           fi
+          if [ -f "$GITHUB_WORKSPACE/supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql" ]; then
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql"
+          fi
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128140000_swayphics_task_blocked_status.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          do $test$
+          begin
+            insert into public.tasks (title, status)
+            values ('Blocked status migration smoke test', 'blocked');
+
+            begin
+              insert into public.tasks (title, status)
+              values ('Invalid status constraint smoke test', 'not-a-valid-status');
+              raise exception 'The tasks status constraint accepted an unsupported status.';
+            exception
+              when check_violation then
+                null;
+            end;
+          end;
+          $test$;
+          rollback;
+          SQL
 
       - name: Run quote pricing and invoice conversion database tests
         working-directory: /tmp/quote-pricing-engine-project
