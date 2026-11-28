@@ -75,6 +75,10 @@ assert.match(migration, /prevent_swayphics_project_agreement_mutation/,
     "accepted agreement snapshots must be immutable apart from their one-time client association");
 assert.match(migration, /admin_convert_accepted_quote_to_client/,
     "an accepted quote must have a controlled client conversion operation");
+assert.match(migration, /SWA-AGR-/,
+    "accepted agreements must receive a generated Swayphics agreement reference");
+assert.match(migration, /public\.admin_create_invoice_from_quote\(uuid\)/,
+    "the handoff must explicitly preserve the existing quote-to-invoice RPC");
 assert.match(migration, /swayphics\.quote_client_conversion/,
     "the quote's client association must be changed only inside the conversion workflow");
 assert.match(migration, /swayphics\.agreement_client_conversion/,
