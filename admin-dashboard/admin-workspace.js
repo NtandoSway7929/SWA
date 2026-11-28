@@ -14300,6 +14300,31 @@ function simpleBars(items, color) {
         };
     }
 
+    function projectTaskSummary(project) {
+        const projectId = String(project && project.id || "");
+        const tasks = state.tasks.filter(function (task) {
+            return String(task.project_id || "") === projectId;
+        });
+        const completed = tasks.filter(function (task) {
+            return String(task.status || "").toLowerCase() === "completed";
+        }).length;
+        const overdue = tasks.filter(function (task) {
+            return (
+                String(task.status || "").toLowerCase() !== "completed" &&
+                task.due_date &&
+                isOverdue(task.due_date)
+            );
+        }).length;
+
+        return {
+            total: tasks.length,
+            completed: completed,
+            open: tasks.length - completed,
+            overdue: overdue,
+            percent: tasks.length ? Math.round((completed / tasks.length) * 100) : 0
+        };
+    }
+
     function renderProjects() {
         const cards = state.projects.map(function (item) {
             const projectReviewAction =
@@ -14310,6 +14335,7 @@ function simpleBars(items, color) {
                     : "";
             const overdue = item.due_date && isOverdue(item.due_date) && item.status !== "completed";
             const readiness = projectOnboardingSummary(item);
+            const taskSummary = projectTaskSummary(item);
             return (
                 '<article class="sway-record-card" data-ai-record="projects:' + esc(item.id) + '">' +
                     '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">PROJECT</span>' +
@@ -14328,6 +14354,13 @@ function simpleBars(items, color) {
                         '<div class="sway-record-card-detail"><span>Estimated cost</span><strong>' + (Number(item.estimated_cost || 0) ? esc(money(item.estimated_cost)) : "—") + '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Onboarding</span><strong>' + esc(readiness.status) + '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Client assets</span><strong>' + readiness.assetCount + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Task progress</span><strong>' +
+                            (taskSummary.total ? taskSummary.completed + ' / ' + taskSummary.total + ' (' + taskSummary.percent + '%)' : 'No tasks assigned') +
+                        '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Open tasks</span><strong>' + taskSummary.open + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Overdue tasks</span><strong>' +
+                            (taskSummary.overdue ? chip(taskSummary.overdue + ' overdue') : 'None') +
+                        '</strong></div>' +
                         (
                             item.status === "completed"
                                 ? '<div class="sway-record-card-detail"><span>Review</span><strong>' +
@@ -20679,6 +20712,7 @@ function simpleBars(items, color) {
 
         const timeline =
             projectTimelineStage(project.status);
+        const taskSummary = projectTaskSummary(project);
 
         document.getElementById(
             "sway-project-timeline-modal"
@@ -20772,7 +20806,25 @@ function simpleBars(items, color) {
                         chip(project.payment_status) +
                     "</div>" +
                 "</div>" +
-                '<div class="sway-project-timeline-footer">' +
+                '<section class="sway-project-task-progress" aria-label="Project task progress">' +
+                    '<div class="sway-project-task-progress-head">' +
+                        '<strong>Task execution</strong>' +
+                        '<span>' +
+                            (taskSummary.total ? taskSummary.completed + ' of ' + taskSummary.total + ' complete' : 'No tasks assigned') +
+                        '</span>' +
+                    '</div>' +
+                    (taskSummary.total
+                        ? '<div class="sway-project-task-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + taskSummary.percent + '" aria-label="Task completion">' +
+                            '<span style="width:' + taskSummary.percent + '%"></span>' +
+                          '</div>' +
+                          '<div class="sway-project-task-progress-foot">' +
+                            '<span>' + taskSummary.percent + '% complete</span>' +
+                            '<span>' + taskSummary.open + ' open · ' + taskSummary.overdue + ' overdue</span>' +
+                          '</div>'
+                        : '<p>Create or assign tasks to this project to track delivery progress.</p>'
+                    ) +
+                '</section>' +
+                '<div class="sway-project-timeline-footer">'
                     '<button type="button" class="sway-workspace-button" data-edit="projects" data-id="' +
                         esc(project.id) +
                     '">Edit project</button>' +
