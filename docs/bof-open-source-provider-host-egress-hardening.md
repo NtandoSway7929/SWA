@@ -98,6 +98,18 @@ Docker's nftables documentation specifically describes creating a separate table
 
 Do not assume a UFW deny rule controls forwarded Docker bridge traffic. Docker's NAT and forwarding path can bypass the UFW chains normally used for host input/output filtering. The Docker documentation explicitly calls out this incompatibility. See [Docker packet filtering and firewalls](https://docs.docker.com/engine/network/packet-filtering-firewalls/).
 
+### Read-only firewall state snapshot
+
+After identifying the Docker firewall backend, capture the current forwarding state:
+
+    bash scripts/bof-open-source-provider-poc/private-gateway/audit-host-firewall-state.sh
+
+The snapshot first runs the backend audit, then reads the IPv4 and IPv6 forwarding sysctls. For iptables it records the IPv4 FORWARD, DOCKER-USER and Docker NAT chains, plus the IPv6 FORWARD and (when present) DOCKER-USER chains. For nftables it prints the complete ruleset with handles and chain priorities so the existing forward hooks and rule ordering can be reviewed.
+
+The script never installs, deletes, flushes or reloads firewall rules and does not change sysctls. It exits with code 2 when the backend or forwarding state cannot be read. An absent IPv6 DOCKER-USER chain is reported as a manual-review item rather than being treated as proof that IPv6 is protected. Keep the captured output private because it can disclose host interface, network and firewall topology.
+
+This is an inventory aid, not a policy validator. It does not prove that current rules are safe, that every container path is filtered, or that a proposed policy will execute before Docker's accept rules. Those properties still require inspection of the actual host and controlled packet-level staging tests.
+
 ## 4. SSRF validation matrix for staging
 
 A successful host firewall deployment must be verified from the actual Crawl4AI container and its egress network. Use controlled test endpoints and a test-only DNS zone. Do not send probes at the real cloud metadata service or production infrastructure.
@@ -140,6 +152,6 @@ Do not mark host egress security complete until all of the following are evidenc
 
 ## 6. Current status
 
-The POC Compose file now pins all three egress networks to stable source subnets. The read-only preflight verifies a local Linux Docker Unix-socket context (rejecting remote endpoints and `DOCKER_HOST` overrides), then audits host interface prefixes, all non-default IPv4/IPv6 routes, and existing Docker IPAM subnets against the six planned ranges. A separate read-only audit identifies the Docker firewall backend and expected policy attachment point. Automated tests use mocked \`docker\`, \`iptables\` and \`nft\` commands to verify both supported branches and the unknown-backend fail-closed behaviour.
+The POC Compose file now pins all three egress networks to stable source subnets. The read-only preflight verifies a local Linux Docker Unix-socket context (rejecting remote endpoints and `DOCKER_HOST` overrides), then audits host interface prefixes, all non-default IPv4/IPv6 routes, and existing Docker IPAM subnets against the six planned ranges. A separate read-only audit identifies the Docker firewall backend and expected policy attachment point. A further read-only snapshot records IPv4/IPv6 forwarding settings and the active iptables chains or nftables ruleset for host-specific policy design. Automated tests use mocked \`docker\`, \`iptables\` and \`nft\` commands to verify both supported branches and the unknown-backend fail-closed behaviour.
 
 No host firewall rules have been installed. No host, VM, tunnel, production secret or live endpoint has been selected or provisioned. Do not apply firewall commands until the actual host and firewall backend are known and an out-of-band recovery route is available.

@@ -486,6 +486,86 @@ const { spawnSync } = require("node:child_process");
     }
 
 
+
+    const firewallStateAuditScript = path.join(
+        __dirname, "bof-open-source-provider-poc", "private-gateway",
+        "audit-host-firewall-state.sh"
+    );
+    assert.ok(fs.existsSync(firewallStateAuditScript),
+        "The private gateway must include a read-only host firewall state audit");
+
+    const stateMockBin = fs.mkdtempSync(path.join(os.tmpdir(), "bof-firewall-state-"));
+    try {
+        const stateMocks = {
+            docker: '#!/bin/sh\nif [ "$1" = "info" ]; then printf " Firewall Backend: %s\\n" "$MOCK_DOCKER_FIREWALL_BACKEND"; exit 0; fi\nexit 1\n',
+            iptables: '#!/bin/sh\ncase "$*" in\n  "-S DOCKER-USER") printf "%s\\n" "$MOCK_IPTABLES_DOCKER_USER";;\n  "-S FORWARD") printf "%s\\n" "$MOCK_IPTABLES_FORWARD";;\n  "-t nat -S DOCKER") printf "%s\\n" "$MOCK_IPTABLES_NAT_DOCKER";;\n  *) echo "unexpected iptables arguments: $*" >&2; exit 1;;\nesac\n',
+            ip6tables: '#!/bin/sh\ncase "$*" in\n  "-S FORWARD") printf "%s\\n" "$MOCK_IP6TABLES_FORWARD";;\n  "-S DOCKER-USER") if [ "$MOCK_IP6TABLES_DOCKER_USER_PRESENT" = "yes" ]; then printf "%s\\n" "$MOCK_IP6TABLES_DOCKER_USER"; else echo "No chain/target/match by that name." >&2; exit 1; fi;;\n  *) echo "unexpected ip6tables arguments: $*" >&2; exit 1;;\nesac\n',
+            sysctl: '#!/bin/sh\nif [ "$1" != "-n" ]; then exit 1; fi\ncase "$2" in\n  net.ipv4.ip_forward) [ "$MOCK_SYSCTL_IPV4" != "missing" ] || exit 1; printf "%s\\n" "$MOCK_SYSCTL_IPV4";;\n  net.ipv6.conf.all.forwarding) [ "$MOCK_SYSCTL_IPV6" != "missing" ] || exit 1; printf "%s\\n" "$MOCK_SYSCTL_IPV6";;\n  *) exit 1;;\nesac\n',
+            nft: '#!/bin/sh\ncase "$*" in\n  "list tables") exit 0;;\n  "-a list ruleset") printf "%s\\n" "$MOCK_NFT_RULESET";;\n  *) echo "unexpected nft arguments: $*" >&2; exit 1;;\nesac\n'
+        };
+        for (const [name, content] of Object.entries(stateMocks)) {
+            const commandPath = path.join(stateMockBin, name);
+            fs.writeFileSync(commandPath, content, { mode: 0o755 });
+            fs.chmodSync(commandPath, 0o755);
+        }
+
+        const stateEnv = {
+            ...process.env,
+            PATH: stateMockBin + path.delimiter + process.env.PATH,
+            MOCK_SYSCTL_IPV4: "1",
+            MOCK_SYSCTL_IPV6: "1",
+            MOCK_IPTABLES_FORWARD: "-P FORWARD ACCEPT\n-A FORWARD -j DOCKER-USER",
+            MOCK_IPTABLES_DOCKER_USER: "-N DOCKER-USER\n-A DOCKER-USER -j RETURN",
+            MOCK_IPTABLES_NAT_DOCKER: "-N DOCKER",
+            MOCK_IP6TABLES_FORWARD: "-P FORWARD DROP",
+            MOCK_IP6TABLES_DOCKER_USER_PRESENT: "yes",
+            MOCK_IP6TABLES_DOCKER_USER: "-N DOCKER-USER",
+            MOCK_NFT_RULESET: "table inet docker-bridges {\n chain forward {\n  type filter hook forward priority filter; policy accept;\n }\n }"
+        };
+        const runStateAudit = (backend, overrides = {}) => spawnSync(
+            "bash", [firewallStateAuditScript],
+            {
+                encoding: "utf8",
+                env: {
+                    ...stateEnv,
+                    ...overrides,
+                    MOCK_DOCKER_FIREWALL_BACKEND: backend
+                }
+            }
+        );
+
+        const iptablesState = runStateAudit("iptables");
+        assert.equal(iptablesState.status, 0, iptablesState.stderr);
+        assert.match(iptablesState.stdout, /Docker firewall backend: iptables/);
+        assert.match(iptablesState.stdout, /net\\.ipv4\\.ip_forward=1/);
+        assert.match(iptablesState.stdout, /IPv4 filter FORWARD chain/);
+        assert.match(iptablesState.stdout, /-P FORWARD ACCEPT/);
+        assert.match(iptablesState.stdout, /IPv4 DOCKER-USER chain/);
+        assert.match(iptablesState.stdout, /IPv4 Docker NAT chain/);
+        assert.match(iptablesState.stdout, /IPv6 filter FORWARD chain/);
+
+        const nftablesState = runStateAudit("nftables");
+        assert.equal(nftablesState.status, 0, nftablesState.stderr);
+        assert.match(nftablesState.stdout, /Docker firewall backend: nftables/);
+        assert.match(nftablesState.stdout, /Complete nftables ruleset/);
+        assert.match(nftablesState.stdout, /priority filter/);
+
+        const missingForwardingState = runStateAudit("iptables", {
+            MOCK_SYSCTL_IPV6: "missing"
+        });
+        assert.equal(missingForwardingState.status, 2);
+        assert.match(missingForwardingState.stderr, /host forwarding state is unknown/i);
+
+        const missingIPv6UserChain = runStateAudit("iptables", {
+            MOCK_IP6TABLES_DOCKER_USER_PRESENT: "no"
+        });
+        assert.equal(missingIPv6UserChain.status, 0, missingIPv6UserChain.stderr);
+        assert.match(missingIPv6UserChain.stdout, /IPv6 DOCKER-USER chain/);
+        assert.match(missingIPv6UserChain.stdout, /manual review is required/);
+    } finally {
+        fs.rmSync(stateMockBin, { recursive: true, force: true });
+    }
+
     const networkAuditScript = path.join(
         __dirname, "bof-open-source-provider-poc", "private-gateway",
         "audit-host-network-overlap.py"
