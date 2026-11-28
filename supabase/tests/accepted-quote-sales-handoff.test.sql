@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(45);
+select extensions.plan(48);
 
 select extensions.has_table('public','swayphics_project_agreements',
     'accepted project agreement snapshot table exists');
@@ -15,6 +15,14 @@ select extensions.has_column('public','quote_review_responses','terms_document_s
 select extensions.ok(
     (select relrowsecurity from pg_class where oid='public.swayphics_project_agreements'::regclass),
     'accepted agreement snapshots have row-level security enabled'
+);
+select extensions.ok(
+    not has_schema_privilege('authenticated','swayphics_private','USAGE')
+    and not has_schema_privilege('anon','swayphics_private','USAGE')
+    and not has_table_privilege('authenticated','swayphics_private.client_association_authorizations','SELECT')
+    and not has_table_privilege('authenticated','swayphics_private.client_association_authorizations','INSERT')
+    and not has_table_privilege('anon','swayphics_private.client_association_authorizations','SELECT'),
+    'transaction-scoped client association authorisations are inaccessible to API roles'
 );
 select extensions.ok(
     has_table_privilege('authenticated','public.swayphics_project_agreements','SELECT')
@@ -309,6 +317,20 @@ select extensions.throws_ok(
     '55000',
     'Only draft quotes can be edited. Create a new quote for changes.',
     'accepted quote client association cannot be changed by a direct database update'
+);
+select set_config('swayphics.quote_client_conversion','on',true);
+select extensions.throws_ok(
+    'update public.quotes set client_id = ''99999999-9999-4999-8999-999999999934'' where id = current_setting(''test.sales_quote_id'')::uuid',
+    '55000',
+    'Only draft quotes can be edited. Create a new quote for changes.',
+    'a caller-settable conversion flag cannot bypass the accepted quote client association guard'
+);
+select set_config('swayphics.agreement_client_conversion','on',true);
+select extensions.throws_ok(
+    'update public.swayphics_project_agreements set client_id = ''99999999-9999-4999-8999-999999999934'' where quote_id = current_setting(''test.sales_quote_id'')::uuid',
+    '55000',
+    'Accepted project agreement records are immutable.',
+    'a caller-settable conversion flag cannot bypass agreement immutability'
 );
 
 set local role authenticated;
