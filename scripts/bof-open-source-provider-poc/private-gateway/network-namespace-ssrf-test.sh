@@ -76,7 +76,7 @@ table inet bof_ssrf_lab {
 }
 NFT
 
-cat > "/tmp/${suffix}-server.py" <<'PY'
+ip netns exec "$ns_target" python3 - <<'PY' &
 from http.server import BaseHTTPRequestHandler, HTTPServer
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -94,9 +94,7 @@ class Handler(BaseHTTPRequestHandler):
         pass
 HTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
 PY
-ip netns exec "$ns_target" python3 "/tmp/${suffix}-server.py" &
 server_pid=$!
-rm -f "/tmp/${suffix}-server.py"
 
 sleep 0.3
 
