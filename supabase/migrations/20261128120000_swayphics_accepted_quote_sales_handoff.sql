@@ -202,6 +202,12 @@ begin
     if old.client_id is null
        and new.client_id is not null
        and current_setting('swayphics.agreement_client_conversion', true) = 'on'
+       and exists (
+            select 1
+              from public.quotes q
+             where q.id = old.quote_id
+               and q.client_id = new.client_id
+       )
        and (to_jsonb(new) - 'client_id') = (to_jsonb(old) - 'client_id') then
         return new;
     end if;
