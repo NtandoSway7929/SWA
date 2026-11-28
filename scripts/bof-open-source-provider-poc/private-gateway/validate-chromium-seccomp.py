@@ -11,6 +11,9 @@ compose_text = compose_path.read_text(encoding="utf-8")
 if "seccomp=./chromium-seccomp.json" not in compose_text:
     print("FAIL: private gateway Crawl4AI service does not reference the constrained Chromium seccomp profile", file=sys.stderr)
     raise SystemExit(1)
+if "apparmor=swayphics-bof-crawl4ai" not in compose_text:
+    print("FAIL: private gateway Crawl4AI service does not reference the scoped AppArmor userns profile", file=sys.stderr)
+    raise SystemExit(1)
 
 def fail(message):
     print(f"FAIL: {message}", file=sys.stderr)
