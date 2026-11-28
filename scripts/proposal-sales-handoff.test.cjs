@@ -65,7 +65,7 @@ assert.match(migration, /create table if not exists public\.swayphics_project_ag
     "accepted proposal responses must create a dedicated agreement snapshot");
 assert.match(migration, /after insert on public\.quote_review_responses/,
     "agreement snapshot creation must follow the recorded response");
-assert.match(migration, /when new\.terms_accepted is not true/,
+assert.match(migration, /new\.terms_accepted is not true/,
     "agreement creation must require the terms acknowledgement");
 assert.match(migration, /proposal_snapshot jsonb not null/,
     "agreements must persist their immutable proposal content");
