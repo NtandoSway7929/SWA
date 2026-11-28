@@ -675,3 +675,11 @@ The verifier parses Docker's human-readable size suffixes and checks the byte-eq
 During test development, the first runtime check revealed that Docker inspect reports size values with suffixes such as `512m`, rather than always returning raw bytes. The verifier was updated to parse those suffixes; the first missing-mount assertion was also corrected to reflect the actual missing-size failure. Run 203 confirms the corrected tests and live checks pass.
 
 The tmpfs ceilings can cause writes to fail if a crawl exceeds the allocated space. They are not a substitute for workload testing. The 4 GiB crawler memory cap includes its 1 GiB shared-memory allocation and the configured tmpfs mounts, but no representative concurrency or memory-pressure benchmark has yet been performed. No host was selected, no paid server purchased, and no production service changed.
+
+
+
+### Docker runtime resource-ceiling verification added — 28 November 2026
+
+The CI smoke test now inspects Docker HostConfig for each running service and checks the actual memory byte limit, NanoCpus quota and PidsLimit against the reviewed per-service budget. A separate regression suite covers exact expected values, missing PID limits and altered CPU/memory/PID values. Cloudflared remains disabled in runtime smoke tests; its rendered Compose limits are checked statically.
+
+This is stronger than checking the Compose source alone: it verifies the running containers received the intended cgroup CPU/memory/PID settings. It still does not exercise saturation, OOM recovery, concurrency, throughput or host-level capacity. The check is being validated in CI before the resource-control work is considered complete.
