@@ -77,6 +77,9 @@ if [ "$ready" != true ]; then
   exit 1
 fi
 
+chromium_seen=false
+sandbox_flag_clear=false
+kernel_sandbox_verified=false
 echo "Starting an in-container /proc observer before submitting the reserved-domain crawl."
 docker exec --user 0 "$name" python -c '
 import glob, os, time
@@ -155,7 +158,8 @@ print("PASS: sandbox-enabled crawl returned readable content from https://exampl
 PY
 
 if [ "$chromium_seen" != true ]; then
-  echo "FAIL: no Chromium renderer/GPU process arguments were observed during the crawl" >&2
+  echo "FAIL: no Chromium renderer/zygote process arguments were observed during the crawl" >&2
+  cat "$log_file" >&2
   exit 1
 fi
 if [ "$sandbox_flag_clear" != true ]; then
