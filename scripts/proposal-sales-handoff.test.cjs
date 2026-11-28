@@ -36,7 +36,7 @@ assert.match(adminScript, /card\.querySelector\("\.sway-record-card-actions"\)/,
     "sales handoff controls must be appended after the existing quote card actions, not inside the quote title or details");
 assert.match(adminScript, /data-create-invoice-from-quote/,
     "the sales handoff must preserve the existing quote invoice action");
-assert.match(adminScript, /invoiceButton\.hidden = accepted && !hasClient/,
+assert.match(adminScript, /invoiceButton\.hidden = accepted && \(!hasClient \|\| !agreement\)/,
     "invoice creation must remain hidden until an accepted quote is linked to a client");
 assert.doesNotMatch(adminScript, /admin_create_invoice_from_quote|\/rest\/v1\/invoices/,
     "the sales handoff must not duplicate the existing invoice workflow");
