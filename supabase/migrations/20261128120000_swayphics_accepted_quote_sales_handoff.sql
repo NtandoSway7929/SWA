@@ -329,6 +329,17 @@ begin
     if v_quote.client_id is not null then
         v_client_id := v_quote.client_id;
     else
+        if not exists (
+            select 1
+              from public.swayphics_project_agreements a
+             where a.quote_id = v_quote.id
+               and a.proposal_version_id = v_quote.proposal_version_id
+               and nullif(btrim(a.terms_acceptance_statement), '') is not null
+        ) then
+            raise exception 'A recorded client acceptance and Terms & Conditions acknowledgement are required before converting this quote into a client.'
+                using errcode = '55000';
+        end if;
+
         if v_quote.lead_id is null then
             raise exception 'This accepted quote is not linked to a lead that can be converted.'
                 using errcode = '23514';
