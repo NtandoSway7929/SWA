@@ -3,9 +3,9 @@ set -uo pipefail
 
 # Read-only check of the dedicated Crawl4AI AppArmor profile and userns policy.
 profile_name="swayphics-bof-crawl4ai"
-enabled_file="/sys/module/apparmor/parameters/enabled"
-profiles_file="/sys/kernel/security/apparmor/profiles"
-restriction_file="/proc/sys/kernel/apparmor_restrict_unprivileged_userns"
+enabled_file="${BOF_APPARMOR_ENABLED_FILE:-/sys/module/apparmor/parameters/enabled}"
+profiles_file="${BOF_APPARMOR_PROFILES_FILE:-/sys/kernel/security/apparmor/profiles}"
+restriction_file="${BOF_USERNS_RESTRICTION_FILE:-/proc/sys/kernel/apparmor_restrict_unprivileged_userns}"
 
 status=0
 echo "BOF Crawl4AI AppArmor host audit (read-only)"
