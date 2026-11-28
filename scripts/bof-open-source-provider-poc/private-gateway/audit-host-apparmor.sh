@@ -30,7 +30,7 @@ elif command -v sudo >/dev/null 2>&1; then
     profiles_content="$(sudo -n cat "$profiles_file" 2>/dev/null || true)"
 fi
 if [[ -n "$profiles_content" ]]; then
-    profile_line="$(printf '%s\\n' "$profiles_content" | grep -F "$profile_name " | head -n 1 || true)"
+    profile_line="$(printf '%s\n' "$profiles_content" | grep -F "$profile_name " | head -n 1 || true)"
     if [[ -z "$profile_line" ]]; then
         echo "Crawl4AI AppArmor profile: NOT LOADED"
         status=2
