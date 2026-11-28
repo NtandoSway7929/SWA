@@ -204,6 +204,20 @@ jobs:
           valkey_reply="$("${compose[@]}" exec -T valkey valkey-cli ping)"
           test "$valkey_reply" = "PONG"
 
+          valkey_id="$("${compose[@]}" ps -q valkey)"
+          test -n "$valkey_id"
+          valkey_user="$(docker inspect --format '{{.Config.User}}' "$valkey_id")"
+          test "$valkey_user" = "999:1000"
+          valkey_cap_drop="$(docker inspect --format '{{json .HostConfig.CapDrop}}' "$valkey_id")"
+          echo "$valkey_cap_drop" | grep -q '"ALL"'
+          valkey_security_opt="$(docker inspect --format '{{json .HostConfig.SecurityOpt}}' "$valkey_id")"
+          echo "$valkey_security_opt" | grep -q 'no-new-privileges'
+
+          test "$("${compose[@]}" exec -T valkey valkey-cli SET bof:ci:runtime-check ready EX 30)" = "OK"
+          test "$("${compose[@]}" exec -T valkey valkey-cli GET bof:ci:runtime-check)" = "ready"
+          test "$("${compose[@]}" exec -T valkey valkey-cli DEL bof:ci:runtime-check)" = "1"
+          echo "Valkey runtime verified: non-root UID/GID 999:1000, all capabilities dropped, no-new-privileges, and read/write/delete works."
+
           check_networks() {
             local service="$1"
             shift
