@@ -210,6 +210,7 @@ declare
     v_description text;
     v_task_count integer := 0;
     v_invoice_linked boolean := false;
+    v_already_created boolean := false;
 begin
     if auth.uid() is null or not public.is_swayphics_admin() then
         raise exception 'Only an authenticated Swayphics administrator can start an accepted project.'
@@ -300,6 +301,7 @@ begin
      for update;
 
     if found then
+        v_already_created := true;
         if v_project.client_id is distinct from v_quote.client_id
            or v_project.source_agreement_id is distinct from v_agreement.id then
             raise exception 'An existing project is linked to inconsistent accepted-sale records.'
@@ -383,7 +385,7 @@ begin
         'invoice_id', case when v_invoice_linked then v_quote.invoice_id else null end,
         'invoice_linked', v_invoice_linked,
         'task_count', v_task_count,
-        'already_created', v_project.created_at < transaction_timestamp()
+        'already_created', v_already_created
     );
 end;
 $function$;
