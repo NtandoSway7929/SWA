@@ -256,7 +256,7 @@ jobs:
           docker run --rm \
             --network bof-private-gateway-ci_tunnel_internal \
             --volume "$PWD/scripts/business-assessment-private-gateway.integration.cjs:/test/integration.cjs:ro" \
-            --env BOF_GATEWAY_INTERNAL_URL=http://10.77.30.2:8080 \
+            --env BOF_GATEWAY_INTERNAL_URL=http://10.77.30.254:8080 \
             --env BOF_GATEWAY_PUBLIC_HOST=bof-inspect.swayphics.co.za \
             --env CRAWL4AI_API_TOKEN="$CRAWL4AI_API_TOKEN" \
             node:22-alpine node /test/integration.cjs

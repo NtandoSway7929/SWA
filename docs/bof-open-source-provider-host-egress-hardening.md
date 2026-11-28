@@ -19,7 +19,7 @@ The private-gateway Compose file now assigns stable subnets:
 
 Caddy has no egress network. Valkey is reachable only on \`search_internal\`. Search, crawl and tunnel egress are separated so host rules can apply different destination and port policies.
 
-Before deployment, inspect all host, VPN, LAN, existing Docker and cloud-provider routes. None of the six ranges may overlap. If any range changes, update Compose and this policy together; the limiter's trusted Caddy address \`10.77.10.2/32\` must also remain synchronised with the gateway's fixed IP.
+Before deployment, inspect all host, VPN, LAN, existing Docker and cloud-provider routes. None of the six ranges may overlap. If any range changes, update Compose and this policy together; the limiter's trusted Caddy address \`10.77.10.254/32\` must also remain synchronised with the gateway's fixed IP. Caddy uses `.254` in each subnet so dynamic container addresses can use the low end of the range without colliding with the gateway.
 
 ## 2. Required egress policy
 

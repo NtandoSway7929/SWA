@@ -2,7 +2,7 @@
 
 const http = require("node:http");
 
-const gatewayOrigin = process.env.BOF_GATEWAY_INTERNAL_URL || "http://10.77.30.2:8080";
+const gatewayOrigin = process.env.BOF_GATEWAY_INTERNAL_URL || "http://10.77.30.254:8080";
 const publicHost = process.env.BOF_GATEWAY_PUBLIC_HOST || "bof-inspect.swayphics.co.za";
 const crawlToken = process.env.CRAWL4AI_API_TOKEN || "";
 const forwardedIp = "203.0.113.77";

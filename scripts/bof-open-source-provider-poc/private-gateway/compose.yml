@@ -66,7 +66,7 @@ services:
 
   valkey:
     image: valkey/valkey:9.2.1-alpine@sha256:3ad5a213cb1bc2fd4a113c89b6248a88655a6bf1dda69519d04e03cd3e3d2742
-    # Start as the image's baked-in account so cap_drop: ALL does not block its root-to-valkey setpriv step.
+    # Run as the baked-in account so the entrypoint skips its root-only setpriv step while retaining cap_drop: ALL.
     user: "999:1000"
     command:
       - valkey-server
@@ -107,11 +107,11 @@ services:
       - crawl4ai
     networks:
       tunnel_internal:
-        ipv4_address: 10.77.30.2
+        ipv4_address: 10.77.30.254
       search_internal:
-        ipv4_address: 10.77.10.2
+        ipv4_address: 10.77.10.254
       crawl_internal:
-        ipv4_address: 10.77.20.2
+        ipv4_address: 10.77.20.254
     restart: unless-stopped
     cap_drop:
       - ALL
