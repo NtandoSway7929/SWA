@@ -87,6 +87,7 @@ curl --connect-timeout 3 --max-time 90 --fail --silent --show-error \
 request_pid=$!
 chromium_seen=false
 sandbox_flag_clear=false
+kernel_sandbox_verified=false
 while :; do
   request_state="$(ps -o stat= -p "$request_pid" 2>/dev/null || true)"
   if [ -z "$request_state" ] || [[ "$request_state" == Z* ]]; then
@@ -95,20 +96,43 @@ while :; do
   observation="$(docker exec "$name" python -c '
 import glob, os
 for path in glob.glob("/proc/[0-9]*/cmdline"):
+    pid = path.split("/")[2]
     try:
-        raw = open(path, "rb").read().replace(b"\\x00", b" ").decode("utf-8", "replace")
+        raw = open(path, "rb").read().replace(bytes([0]), b" ").decode("utf-8", "replace")
     except (OSError, PermissionError):
         continue
     low = raw.lower()
-    if "chrom" in low and ("--type=renderer" in low or "--type=gpu-process" in low or "--no-sandbox" in low):
-        print(raw)
-        break
+    if "chrom" not in low or "--type=renderer" not in low:
+        continue
+    try:
+        status_text = open(f"/proc/{pid}/status", encoding="utf-8").read()
+        status = {}
+        for line in status_text.splitlines():
+            if ":" in line:
+                key, value = line.split(":", 1)
+                status[key] = value.strip()
+        renderer_user_ns = os.stat(f"/proc/{pid}/ns/user").st_ino
+        init_user_ns = os.stat("/proc/1/ns/user").st_ino
+    except (OSError, PermissionError):
+        continue
+    print(
+        f"PID={pid} {raw} "
+        f"SECCOMP={status.get('Seccomp', '?')} "
+        f"NNP={status.get('NoNewPrivs', '?')} "
+        f"USERNS_DIFF={renderer_user_ns != init_user_ns}"
+    )
+    break
 ' 2>/dev/null || true)"
   if [ -n "$observation" ]; then
     chromium_seen=true
-    printf '%s\n' "$observation" >>"$log_file"
+    printf '%s\\n' "$observation" >>"$log_file"
     if ! grep -q -- '--no-sandbox' <<<"$observation"; then
       sandbox_flag_clear=true
+    fi
+    if grep -q 'SECCOMP=2' <<<"$observation" &&
+       grep -q 'NNP=1' <<<"$observation" &&
+       grep -q 'USERNS_DIFF=True' <<<"$observation"; then
+      kernel_sandbox_verified=true
     fi
   fi
   sleep 0.1
@@ -140,12 +164,17 @@ if [ "$chromium_seen" != true ]; then
   exit 1
 fi
 if [ "$sandbox_flag_clear" != true ]; then
-  echo "FAIL: Chromium process was observed with --no-sandbox or no sandbox-free process could be confirmed" >&2
+  echo "FAIL: Chromium renderer process was observed with --no-sandbox or no sandbox-free renderer could be confirmed" >&2
+  cat "$log_file" >&2
+  exit 1
+fi
+if [ "$kernel_sandbox_verified" != true ]; then
+  echo "FAIL: renderer kernel state did not show Seccomp=2, NoNewPrivs=1 and a distinct user namespace" >&2
   cat "$log_file" >&2
   exit 1
 fi
 
 echo "PASS: Chromium renderer process was observed without --no-sandbox."
-echo "PASS: Chromium sandbox launched with user namespaces under the candidate filtered seccomp profile."
+echo "PASS: renderer kernel state confirms seccomp filter mode, no_new_privs and a distinct user namespace."
 echo "PASS: Docker's default AppArmor profile and the candidate filtered seccomp profile allowed Chromium's sandbox with the host userns restriction disabled."
 echo "LIMIT: the host sysctl was changed only on the disposable runner; production host configuration and operational impact still require review."
