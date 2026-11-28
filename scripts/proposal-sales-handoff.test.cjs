@@ -51,7 +51,7 @@ assert.match(adminCss, /\.sway-project-agreement-card/,
 
 assert.match(reviewPage, /href="https:\/\/swayphics\.co\.za\/terms-and-conditions\/revisions\/fa302aec3ab9fd2e8e6458f53726f48cae765e5e\/" target="_blank"/,
     "the public proposal acceptance checkbox must link to the immutable archived Swayphics Terms & Conditions revision");
-assert.match(reviewPage, /have read and agree to the/,
+assert.match(reviewPage, /acknowledge the Swayphics Terms &amp; Conditions/,
     "the acceptance statement must explicitly record agreement to the Terms & Conditions");
 assert.match(reviewPage, /terms_accepted: result\.terms_accepted === true/,
     "the public page must display the server-recorded terms acknowledgement");
