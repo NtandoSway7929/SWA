@@ -35,6 +35,10 @@ def main():
         service = services.get(name)
         if not isinstance(service, dict):
             fail("required service is missing: " + name)
+        logging = service.get("logging") or {}
+        log_options = logging.get("options") or {}
+        if logging.get("driver") != "json-file" or log_options.get("max-size") != "10m" or log_options.get("max-file") != "3":
+            fail(name + " must use json-file logging capped at 10 MiB x 3 files")
         deploy = service.get("deploy") or {}
         resources = deploy.get("resources") or {}
         limits = resources.get("limits") or {}
