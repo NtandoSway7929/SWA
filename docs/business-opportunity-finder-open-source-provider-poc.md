@@ -683,3 +683,13 @@ The tmpfs ceilings can cause writes to fail if a crawl exceeds the allocated spa
 The CI smoke test now inspects Docker HostConfig for each running service and checks the actual memory byte limit, NanoCpus quota and PidsLimit against the reviewed per-service budget. A separate regression suite covers exact expected values, missing PID limits and altered CPU/memory/PID values. Cloudflared remains disabled in runtime smoke tests; its rendered Compose limits are checked statically.
 
 This is stronger than checking the Compose source alone: it verifies the running containers received the intended cgroup CPU/memory/PID settings. It still does not exercise saturation, OOM recovery, concurrency, throughput or host-level capacity. The check is being validated in CI before the resource-control work is considered complete.
+
+
+
+### Runtime Docker CPU, memory and PID ceilings verified — 28 November 2026
+
+The isolated POC workflow passed [GitHub Actions run 208](https://github.com/NtandoSway7929/SWA/actions/runs/46137679158), commit 391bab82acbfaf4a0619ba2153802b7745f29f71. All three workflow jobs passed.
+
+The live Docker smoke test inspected the actual HostConfig values for SearXNG, Crawl4AI, Valkey and Caddy. It confirmed the expected memory bytes, NanoCpus quota and PidsLimit for each running container. The same run passed the runtime tmpfs checks for Crawl4AI and Caddy, the runtime log rotation checks for all four containers, the provider integration test and the Chromium sandbox diagnostic.
+
+This verifies that Docker applied the configured resource ceilings to the four containers in the CI environment. It is not a stress test: there is no evidence yet about latency under contention, OOM behaviour, process exhaustion, crawl concurrency, recovery after forced termination or actual host sizing. Cloudflared remains configuration-tested but intentionally not started in CI.
