@@ -89,6 +89,8 @@ table inet bof_ssrf_lab {
 NFT
 
 ip netns exec "$ns_target" python3 - <<'PY' &
+import socket
+import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -104,9 +106,10 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
     def log_message(self, *_):
         pass
-HTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+server4 = HTTPServer(("0.0.0.0", 8080), Handler)
+threading.Thread(target=server4.serve_forever, daemon=True).start()
 class IPv6HTTPServer(HTTPServer):
-    address_family = 10  # socket.AF_INET6
+    address_family = socket.AF_INET6
 class IPv6Handler(Handler):
     def do_GET(self):
         if self.path == "/redirect":
