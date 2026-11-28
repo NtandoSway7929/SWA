@@ -73,6 +73,8 @@
     .response-result p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
     .response-result.accepted{border-color:#B8D7C9}
     .response-result.rejected{border-color:#E3C7C7}
+    .terms-acknowledgement-note{margin:-4px 0 0;color:var(--muted);font-size:12px;line-height:1.6}
+    .terms-acknowledgement-note a{color:var(--blue);font-weight:700;text-decoration:underline}
     .footer{padding:24px;text-align:center;color:#8A949D;font-size:10px;letter-spacing:.06em}
     @media(max-width:640px){
       .top{padding:19px 17px}.top-inner{align-items:flex-start}.top-note{max-width:110px;text-align:right;line-height:1.5}
@@ -140,8 +142,9 @@
           </label>
           <label class="confirm" for="accept-confirmation">
             <input id="accept-confirmation" type="checkbox">
-            <span>I confirm that I am authorised to accept this proposal on behalf of the business, agree to the project proposal and commercial quotation, and have read and agree to the <a href="https://swayphics.co.za/terms-and-conditions/revisions/fa302aec3ab9fd2e8e6458f53726f48cae765e5e/" target="_blank" rel="noopener noreferrer">Swayphics Terms &amp; Conditions</a>.</span>
+            <span>I confirm that I am authorised to accept this proposal on behalf of the business, agree to the project proposal and commercial quotation, and acknowledge the Swayphics Terms &amp; Conditions.</span>
           </label>
+          <p class="terms-acknowledgement-note"><a href="https://swayphics.co.za/terms-and-conditions/revisions/fa302aec3ab9fd2e8e6458f53726f48cae765e5e/" target="_blank" rel="noopener noreferrer">Read the Swayphics Terms &amp; Conditions</a> before accepting.</p>
           <div class="actions">
             <button type="button" class="accept" id="accept-button">Accept proposal</button>
             <button type="button" class="decline" id="decline-button">Decline proposal</button>
