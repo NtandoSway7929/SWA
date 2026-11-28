@@ -57,6 +57,7 @@ jobs:
           node scripts/bof-open-source-provider-poc/private-gateway/host-egress-policy.test.cjs
           node scripts/bof-open-source-provider-poc/private-gateway/validate-host-egress-policy.cjs
           node scripts/bof-open-source-provider-poc/private-gateway/host-readiness.test.cjs
+          node scripts/bof-open-source-provider-poc/private-gateway/audit-host-apparmor.test.cjs
           python3 scripts/bof-open-source-provider-poc/private-gateway/ssrf-policy-simulator.py --self-test
           python3 scripts/bof-open-source-provider-poc/private-gateway/analyse-firewall-snapshot.py --self-test
           bash -n scripts/bof-open-source-provider-poc/private-gateway/network-namespace-ssrf-test.sh
