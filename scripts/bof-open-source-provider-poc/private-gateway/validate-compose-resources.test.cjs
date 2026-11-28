@@ -36,7 +36,7 @@ function run(document) {
 
 const valid = run(fixture());
 assert.equal(valid.status, 0, valid.stderr);
-assert.match(valid.stdout, /aggregate hard ceilings memory=.*CPUs=3\.75/);
+assert.match(valid.stdout, /aggregate hard ceilings memory=.*CPUs=3[.]00/);
 console.log("PASS: exact service and aggregate CPU/memory/PID ceilings are accepted.");
 
 const missingCpu = fixture();
