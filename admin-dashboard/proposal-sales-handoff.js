@@ -186,7 +186,7 @@
     var existing = card.querySelector("[data-accepted-quote-handoff]");
     var state = !accepted ? "not-accepted" :
       hasClient ? (agreement ? "client-agreement" : "client-no-agreement") :
-      quote.lead_id ? "lead-awaiting-client" : "no-client-link";
+      quote.lead_id ? (agreement ? "lead-awaiting-client" : "lead-missing-agreement") : "no-client-link";
 
     if (existing && existing.getAttribute("data-handoff-state") === state) return;
     if (existing) existing.remove();
@@ -200,7 +200,7 @@
     actions.setAttribute("data-accepted-quote-handoff", quoteId);
     actions.setAttribute("data-handoff-state", state);
 
-    if (!hasClient && quote.lead_id) {
+    if (!hasClient && quote.lead_id && agreement) {
       actions.append(createAction(
         "Convert to client",
         "sway-row-action accepted-quote-convert",
@@ -209,6 +209,11 @@
       var note = document.createElement("small");
       note.textContent = "Client conversion is required before an invoice can be created.";
       actions.append(note);
+    } else if (!hasClient && quote.lead_id) {
+      actions.append(createAction("Client acceptance required", "sway-row-action accepted-quote-static", null, true));
+      var missingAgreementNote = document.createElement("small");
+      missingAgreementNote.textContent = "A recorded proposal and Terms & Conditions acceptance is required before client conversion.";
+      actions.append(missingAgreementNote);
     } else if (!hasClient) {
       actions.append(createAction("Client conversion required", "sway-row-action accepted-quote-static", null, true));
     }
