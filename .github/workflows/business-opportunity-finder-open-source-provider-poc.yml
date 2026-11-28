@@ -337,6 +337,16 @@ jobs:
           check_networks searxng "bof-private-gateway-ci_search_internal" "bof-private-gateway-ci_search_egress"
           check_networks crawl4ai "bof-private-gateway-ci_crawl_internal" "bof-private-gateway-ci_crawl_egress"
           check_networks valkey "bof-private-gateway-ci_search_internal"
+          for service in searxng crawl4ai valkey gateway; do
+            container_id="$("${compose[@]}" ps --quiet "$service")"
+            test -n "$container_id"
+            log_config="$(docker inspect --format '{{.HostConfig.LogConfig.Type}} {{index .HostConfig.LogConfig.Config "max-size"}} {{index .HostConfig.LogConfig.Config "max-file"}}' "$container_id")"
+            if [[ "$log_config" != "json-file 10m 3" ]]; then
+              echo "FAIL: $service log rotation is not json-file 10m x 3: $log_config" >&2
+              exit 1
+            fi
+            echo "PASS: $service runtime log rotation is $log_config"
+          done
 
           tunnel_id="$(docker ps --filter "label=com.docker.compose.project=bof-private-gateway-ci" --filter "label=com.docker.compose.service=cloudflared" -q)"
           test -z "$tunnel_id"
