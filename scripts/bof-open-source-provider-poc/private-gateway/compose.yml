@@ -26,6 +26,7 @@ services:
       resources:
         limits:
           memory: 1G
+          cpus: "1.0"
           pids: 256
 
   crawl4ai:
@@ -56,6 +57,7 @@ services:
       resources:
         limits:
           memory: 4G
+          cpus: "2.0"
           pids: 512
         reservations:
           memory: 1G
@@ -100,6 +102,7 @@ services:
       resources:
         limits:
           memory: 384M
+          cpus: "0.25"
           pids: 128
 
   gateway:
@@ -130,6 +133,7 @@ services:
       resources:
         limits:
           memory: 256M
+          cpus: "0.25"
           pids: 128
 
   cloudflared:
@@ -159,6 +163,7 @@ services:
       resources:
         limits:
           memory: 128M
+          cpus: "0.25"
           pids: 128
 
 networks:
