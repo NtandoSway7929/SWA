@@ -641,3 +641,13 @@ The CI rendered the actual private-gateway Compose configuration to JSON and che
 An initial test exposed two validator issues: the expected aggregate CPU assertion still referenced the earlier 3.75-CPU draft, and Compose's rendered memory values were numeric strings. Both were corrected; run 184 confirms the corrected tests and rendered-config validation pass.
 
 The private-gateway Compose template also applies bounded Docker json-file log rotation to every service (10 MiB per file, three files maximum, approximately 30 MiB per container before Docker rotation). This reduces unbounded container-log growth but does not cap application files, crawler output, Docker image layers, journald, host logs or other disk consumers. Disk monitoring and cleanup policy remain required.\n\nThis does not yet measure or prove runtime memory/CPU enforcement under load, resource exhaustion behaviour, disk usage, log growth or restart recovery on a real host. The resource ceilings remain a conservative configuration proposal pending measurement on a selected host. No server was purchased and no production environment was changed.
+
+
+
+### Runtime container log rotation verified — 28 November 2026
+
+The isolated workflow passed [GitHub Actions run 191](https://github.com/NtandoSway7929/SWA/actions/runs/46136010122), commit 27091c04977ce321122ec6c61657831d5e7378ae. All three jobs passed.
+
+In addition to validating the rendered Compose JSON and testing rejection of missing log limits, the live Docker smoke test inspected each running service's Docker HostConfig. SearXNG, Crawl4AI, Valkey and Caddy each reported the active logging driver and limits as `json-file 10m 3`. Cloudflared remains disabled in the smoke test; its rendered Compose configuration is covered by the static validator.
+
+This confirms Docker applied the requested log rotation settings to the four containers actually started in CI. It does not cap crawler output files, tmpfs usage, Docker image/layer storage, host system logs or other disk consumers. Disk alerts and an explicit output-retention policy remain open.
