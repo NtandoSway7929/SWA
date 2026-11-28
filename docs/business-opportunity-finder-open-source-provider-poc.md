@@ -629,3 +629,15 @@ The private-gateway Compose template now defines hard CPU, memory and PID ceilin
 The aggregate CPU ceiling leaves up to one CPU core outside the containers on a four-vCPU host, if every service simultaneously reaches its configured quota. The aggregate memory ceilings leave 2.25 GiB below an 8 GiB host's nominal capacity for the OS, Docker, filesystem cache and other host processes. These are arithmetic budgets, not performance benchmarks or a claim that an 8 GiB/four-vCPU host is sufficient. The crawler's 4 GiB ceiling includes its shared-memory allocation; runtime headroom and actual peak memory still need measurement under representative concurrent crawls.
 
 The current POC has no measured production concurrency target. Before any deployment, establish a low initial concurrency limit, verify Compose enforces the limits on the selected Docker version, measure CPU/RAM/PID peaks, disk growth and restart behaviour, and tune only from observed workload. Do not increase host size or purchase a server based on this CI check. The resource validator proves configuration shape and ceilings only; it does not prove runtime enforcement, latency, throughput, or resilience.
+
+
+
+### Resource ceilings validated in rendered Compose CI — 28 November 2026
+
+The private gateway resource policy passed [GitHub Actions run 184](https://github.com/NtandoSway7929/SWA/actions/runs/46134951445), commit 7c9b18902c7349fc07264bb68bbf054ff719138e. All three workflow jobs passed.
+
+The CI rendered the actual private-gateway Compose configuration to JSON and checked every service's memory, CPU and PID limits. It confirmed the aggregate hard ceilings are 5.75 GiB RAM and 3.00 CPUs. The resource validator regression suite also passed, including rejection cases for missing and altered limits. The live Docker gateway smoke test passed with the new CPU ceilings in place.
+
+An initial test exposed two validator issues: the expected aggregate CPU assertion still referenced the earlier 3.75-CPU draft, and Compose's rendered memory values were numeric strings. Both were corrected; run 184 confirms the corrected tests and rendered-config validation pass.
+
+This does not yet measure or prove runtime memory/CPU enforcement under load, resource exhaustion behaviour, disk usage, log growth or restart recovery on a real host. The resource ceilings remain a conservative configuration proposal pending measurement on a selected host. No server was purchased and no production environment was changed.
