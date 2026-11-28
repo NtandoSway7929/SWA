@@ -14364,10 +14364,10 @@ function simpleBars(items, color) {
                         '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Open tasks</span><strong>' + taskSummary.open + '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Blocked tasks</span><strong>' +
-                            (taskSummary.blocked ? chip(taskSummary.blocked + ' blocked') : 'None') +
+                            (taskSummary.blocked ? taskSummary.blocked + ' ' + chip('blocked') : 'None') +
                         '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Overdue tasks</span><strong>' +
-                            (taskSummary.overdue ? chip(taskSummary.overdue + ' overdue') : 'None') +
+                            (taskSummary.overdue ? taskSummary.overdue + ' ' + chip('overdue') : 'None') +
                         '</strong></div>' +
                         (
                             item.status === "completed"
