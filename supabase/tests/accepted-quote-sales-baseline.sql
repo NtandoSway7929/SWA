@@ -189,25 +189,25 @@ commit;
 begin;
 
 alter table public.leads
-    add column contact_name text,
+    add column if not exists contact_name text,
     add column email text,
-    add column phone text,
-    add column status text not null default 'new',
-    add column converted_client_id uuid references public.clients(id) on delete set null,
-    add column assigned_to uuid references public.admin_users(user_id) on delete set null,
-    add column next_follow_up date,
-    add column notes text,
-    add column updated_at timestamptz not null default now();
+    add column if not exists phone text,
+    add column if not exists status text not null default 'new',
+    add column if not exists converted_client_id uuid references public.clients(id) on delete set null,
+    add column if not exists assigned_to uuid references public.admin_users(user_id) on delete set null,
+    add column if not exists next_follow_up date,
+    add column if not exists notes text,
+    add column if not exists updated_at timestamptz not null default now();
 
 alter table public.clients
-    add column contact_name text,
+    add column if not exists contact_name text,
     add column email text,
-    add column phone text,
-    add column status text not null default 'active',
-    add column assigned_to uuid references public.admin_users(user_id) on delete set null,
-    add column notes text,
+    add column if not exists phone text,
+    add column if not exists status text not null default 'active',
+    add column if not exists assigned_to uuid references public.admin_users(user_id) on delete set null,
+    add column if not exists notes text,
     add column created_at timestamptz not null default now(),
-    add column updated_at timestamptz not null default now();
+    add column if not exists updated_at timestamptz not null default now();
 
 create or replace function public.convert_swayphics_lead_to_client(
     p_lead_id uuid
