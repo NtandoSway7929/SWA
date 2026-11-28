@@ -109,7 +109,7 @@ for path in glob.glob("/proc/[0-9]*/cmdline"):
                 status[key] = value.strip()
         user_ns = os.stat(f"/proc/{pid}/ns/user").st_ino
         init_ns = os.stat("/proc/1/ns/user").st_ino
-        print(f"PID={pid} {raw} SECCOMP={status.get(\"Seccomp\", \"?\")} NNP={status.get(\"NoNewPrivs\", \"?\")} USERNS_DIFF={user_ns != init_ns}")
+        print("PID={} {} SECCOMP={} NNP={} USERNS_DIFF={}".format(pid, raw, status.get("Seccomp", "?"), status.get("NoNewPrivs", "?"), user_ns != init_ns))
     except (OSError, PermissionError, ProcessLookupError):
         pass
 ' 2>/dev/null || true)"
@@ -149,7 +149,7 @@ for path in glob.glob("/proc/[0-9]*/cmdline"):
                 status[key] = value.strip()
         user_ns = os.stat(f"/proc/{pid}/ns/user").st_ino
         init_ns = os.stat("/proc/1/ns/user").st_ino
-        print(f"PID={pid} {raw} SECCOMP={status.get(\"Seccomp\", \"?\")} NNP={status.get(\"NoNewPrivs\", \"?\")} USERNS_DIFF={user_ns != init_ns}")
+        print("PID={} {} SECCOMP={} NNP={} USERNS_DIFF={}".format(pid, raw, status.get("Seccomp", "?"), status.get("NoNewPrivs", "?"), user_ns != init_ns))
     except (OSError, PermissionError, ProcessLookupError):
         pass
 ' 2>/dev/null || true)"
