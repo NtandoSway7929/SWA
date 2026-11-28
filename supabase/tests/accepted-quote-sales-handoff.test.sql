@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(44);
+select extensions.plan(45);
 
 select extensions.has_table('public','swayphics_project_agreements',
     'accepted project agreement snapshot table exists');
@@ -497,6 +497,7 @@ reset role;
 
 update public.quotes
    set status='accepted',
+       client_id='99999999-9999-4999-8999-999999999934',
        updated_at=now()
  where id=current_setting('test.sales_manual_quote_id')::uuid;
 
@@ -513,6 +514,12 @@ select extensions.throws_ok(
     '55000',
     'A recorded client acceptance and Terms & Conditions acknowledgement are required before converting this quote into a client.',
     'a manually accepted quote without a recorded agreement cannot be converted into a client'
+);
+select extensions.throws_ok(
+    'select public.admin_create_invoice_from_quote(current_setting(''test.sales_manual_quote_id'')::uuid)',
+    '55000',
+    'A recorded client acceptance and Terms & Conditions acknowledgement are required before creating an invoice.',
+    'a manually accepted quote with a client link cannot bypass the agreement gate to create an invoice'
 );
 reset role;
 
