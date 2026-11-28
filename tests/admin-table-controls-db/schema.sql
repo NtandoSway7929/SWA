@@ -74,7 +74,7 @@ create table public.tasks (
   priority text not null default 'medium'
     check (priority in ('low', 'medium', 'high', 'urgent')),
   status text not null default 'todo'
-    check (status in ('todo', 'in progress', 'review', 'completed')),
+    check (status in ('todo', 'in progress', 'review', 'blocked', 'completed')),
   due_date date,
   completed_at timestamptz,
   created_at timestamptz not null default now(),
