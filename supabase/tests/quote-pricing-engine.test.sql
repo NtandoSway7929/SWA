@@ -89,11 +89,14 @@ insert into public.leads (
     null
 );
 
-insert into public.clients (id,business_name,source_lead_id)
-values (
+insert into public.clients (
+    id,business_name,source_lead_id,contact_name,email
+) values (
     '99999999-9999-4999-8999-999999999914',
     'Quote Pricing QA Business',
-    '99999999-9999-4999-8999-999999999913'
+    '99999999-9999-4999-8999-999999999913',
+    'Quote Pricing QA Contact',
+    'quote-pricing-qa@example.invalid'
 );
 
 insert into public.services (
