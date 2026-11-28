@@ -5,7 +5,7 @@
 # are touched. A temporary /etc/netns resolver config is removed by the EXIT trap.
 set -Eeuo pipefail
 
-if [[ \${EUID} -ne 0 ]]; then
+if [[ ${EUID} -ne 0 ]]; then
   echo "ERROR: run as root (for example: sudo $0)" >&2
   exit 2
 fi
@@ -14,10 +14,10 @@ for bin in ip nft python3; do
 done
 
 suffix="bofdns$$"
-ns_client="\${suffix}c"
-ns_router="\${suffix}r"
-ns_target="\${suffix}t"
-resolver_dir="/etc/netns/\${ns_client}"
+ns_client="${suffix}c"
+ns_router="${suffix}r"
+ns_target="${suffix}t"
+resolver_dir="/etc/netns/${ns_client}"
 resolver_pid=""
 target_pid=""
 dns_log="$(mktemp)"
