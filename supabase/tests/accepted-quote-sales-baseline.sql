@@ -159,6 +159,13 @@ grant execute on function public.is_swayphics_admin() to authenticated;
 insert into public.leads (id,business_name)
 values ('99999999-9999-4999-8999-999999999901','Legacy Quote Lead');
 
+-- Existing target ensures the quote immutability test reaches the trigger rather than failing its FK first.
+insert into public.clients (id,business_name)
+values (
+    '99999999-9999-4999-8999-999999999934',
+    'Accepted Quote Guard Test Client'
+);
+
 insert into public.quotes (id,quote_number,title,lead_id,amount,status)
 values (
     '99999999-9999-4999-8999-999999999902',
