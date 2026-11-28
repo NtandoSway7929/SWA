@@ -214,3 +214,18 @@ It loads the declarative destination-deny baseline and tests policy decisions fo
 This is deliberately a **policy-logic regression harness**, not a live DNS server, HTTP proxy, packet filter or Crawl4AI network test. It does not resolve names, open sockets, intercept browser subrequests, enforce address pinning, or prove that the host firewall drops packets. It also cannot populate the still-empty host-specific destination ranges. Passing it demonstrates only that the encoded decision logic fails closed for the supplied test vectors.
 
 The test is run in the POC CI mocked-contract job. Production and host readiness gates remain unchanged: an actual isolated Linux staging host must still demonstrate packet-level denial for DNS rebinding, mixed A/AAAA answers, redirects, browser subrequests, IPv4 and IPv6 private/metadata destinations, and unapproved ports before deployment can be considered.
+
+## 10. Isolated Linux network-namespace forwarding lab
+
+A separate Linux-only lab exercises actual packet forwarding through a temporary nftables router namespace:
+
+    sudo bash scripts/bof-open-source-provider-poc/private-gateway/network-namespace-ssrf-test.sh
+
+Prerequisites: root privileges, iproute2, nftables, and Python 3. The script creates three uniquely named temporary network namespaces (client, router, target), two veth pairs, and one nftables table inside the router namespace only. It does not edit the host nftables/iptables rules, host routes, host forwarding sysctls, Docker networks, or production services. A cleanup trap removes the namespaces and their veth devices.
+
+The target namespace hosts a local HTTP fixture on port 8080. A simulated public test address (1.1.1.1/32) is assigned to the target namespace loopback; it is not contacted over the public internet. The router permits only that destination and drops other forwarded traffic. The script checks:
+- permitted traffic reaches the simulated public destination;
+- direct traffic to the target's private address is blocked;
+- an HTTP redirect from the permitted destination to the private address is blocked on the follow-up connection.
+
+This is a packet-level test of a temporary nftables forwarding policy in a disposable network namespace. It is not proof that the selected production host's Docker bridge traffic traverses the same hook or rule order. It does not yet test the actual DOCKER-USER iptables path, Docker's host nftables integration, IPv6, live DNS rebinding, Chromium subrequests, Cloudflare Tunnel egress, or the host-specific destination ranges. Do not use its result to mark the deployment gate ready. Preserve the host-specific preflight and rollback requirements above.
