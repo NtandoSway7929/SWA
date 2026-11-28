@@ -13,7 +13,7 @@ revoke all on schema swayphics_private from public, anon, authenticated, service
 
 create table if not exists swayphics_private.client_association_authorizations (
     transaction_id pg_catalog.xid8 not null,
-    target_type text not null check (target_type in ('quote','agreement')),
+    target_type text not null check (target_type in ('quote','agreement','invoice')),
     target_id uuid not null,
     quote_id uuid not null,
     client_id uuid not null,
@@ -313,7 +313,19 @@ begin
     end if;
 
     if new.invoice_id is distinct from old.invoice_id
-       and current_setting('swayphics.quote_invoice_conversion', true) is distinct from 'on' then
+       and not (
+            new.invoice_id is not null
+            and exists (
+                select 1
+                  from swayphics_private.client_association_authorizations a
+                 where a.transaction_id = pg_catalog.pg_current_xact_id()
+                   and a.target_type = 'invoice'
+                   and a.target_id = new.invoice_id
+                   and a.quote_id = old.id
+                   and a.client_id = new.client_id
+                   and a.admin_user_id = auth.uid()
+            )
+       ) then
         raise exception 'Quote-to-invoice links can only be created by the atomic conversion workflow.'
             using errcode = '55000';
     end if;
@@ -614,14 +626,23 @@ begin
     where qi.quote_id = v_quote.id
     order by qi.position, qi.created_at;
 
-    perform pg_catalog.set_config('swayphics.quote_invoice_conversion', 'on', true);
+    insert into swayphics_private.client_association_authorizations (
+        transaction_id, target_type, target_id, quote_id, client_id, admin_user_id
+    ) values (
+        pg_catalog.pg_current_xact_id(), 'invoice', v_invoice_id,
+        v_quote.id, v_quote.client_id, auth.uid()
+    )
+    on conflict (transaction_id, target_type, target_id) do nothing;
 
     update public.quotes
        set invoice_id = v_invoice_id,
            updated_at = now()
      where id = v_quote.id;
 
-    perform pg_catalog.set_config('swayphics.quote_invoice_conversion', 'off', true);
+    delete from swayphics_private.client_association_authorizations
+     where transaction_id = pg_catalog.pg_current_xact_id()
+       and target_type = 'invoice'
+       and target_id = v_invoice_id;
 
     return jsonb_build_object(
         'invoice_id', v_invoice_id,
