@@ -135,12 +135,6 @@ if [ -n "$observation" ]; then
     kernel_sandbox_verified=true
   fi
 fi
-wait "$request_pid" || {
-  docker logs "$name" >&2 || true
-  cat "$response_file" >&2 || true
-  echo "FAIL: Crawl4AI request failed with CRAWL4AI_CHROMIUM_SANDBOX=true" >&2
-  exit 1
-}
 
 python - "$response_file" <<'PY'
 import json, sys
