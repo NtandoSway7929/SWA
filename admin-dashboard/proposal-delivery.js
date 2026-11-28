@@ -42,7 +42,9 @@
     var body = {};
     try { body = await response.json(); } catch (_) {}
     if (!response.ok) {
-      throw new Error(body.message || body.error_description || body.error || "The proposal service could not complete the request.");
+      var requestError = new Error(body.message || body.error_description || body.error || "The proposal service could not complete the request.");
+      requestError.httpStatus = response.status;
+      throw requestError;
     }
     return body;
   }
@@ -204,6 +206,8 @@
     button.disabled = true;
     button.textContent = "Preparing...";
     var issued = null;
+    var emailSendAttempted = false;
+    var emailSent = false;
     try {
       issued = await rpc("admin_issue_swayphics_quote_review", { p_quote_id: quoteId });
       if (!issued || !issued.token || !issued.review_link_id || !issued.recipient_email) {
@@ -225,6 +229,7 @@
         "<p>Kind regards,<br><strong>Swayphics</strong></p>";
 
       button.textContent = "Sending...";
+      emailSendAttempted = true;
       var emailPayload = {
         contact_type: issued.contact_type,
         contact_id: issued.contact_id,
@@ -242,29 +247,53 @@
         body: JSON.stringify(emailPayload)
       });
       if (!emailResult || emailResult.success !== true) {
-        throw new Error(emailResult && emailResult.error ? emailResult.error : "The email service did not confirm delivery.");
+        var deliveryError = new Error(emailResult && emailResult.error ? emailResult.error : "The email service did not confirm delivery.");
+        deliveryError.httpStatus = 400;
+        throw deliveryError;
       }
+      emailSent = true;
 
-      await refreshQuoteState();
-      renderActions();
+      try {
+        await refreshQuoteState();
+        renderActions();
+      } catch (refreshError) {
+        button.disabled = true;
+        button.textContent = "Sent - refresh workspace";
+        notify("The proposal email was sent successfully to " + issued.recipient_email + ". The dashboard could not refresh, so reload the Quotes workspace to confirm its status. Do not send it again.");
+        return;
+      }
       notify("Proposal " + String(issued.quote_number || "") + " sent to " + issued.recipient_email + ". The quotation is now awaiting the client's response.");
     } catch (error) {
       var recoveryMessage = "";
-      if (issued && issued.review_link_id) {
+      var deliveryOutcomeUnknown = emailSent ||
+        (emailSendAttempted && (!error || !Number.isFinite(Number(error.httpStatus)) || Number(error.httpStatus) >= 500));
+
+      if (issued && issued.review_link_id && !deliveryOutcomeUnknown) {
         try {
           await rpc("admin_revoke_swayphics_quote_review", {
             p_review_link_id: issued.review_link_id,
-            p_reason: "Proposal email delivery did not complete successfully."
+            p_reason: "Proposal email delivery failed before a successful send was confirmed."
           });
           await refreshQuoteState();
           renderActions();
           recoveryMessage = " The review link was revoked and the quotation was returned to draft.";
         } catch (revokeError) {
-          recoveryMessage = " The delivery attempt could not be confirmed and the review link could not be automatically revoked. Check this quote's status before retrying.";
+          recoveryMessage = " The send failed, but automatic revocation could not be confirmed. Check this quote's status before retrying.";
         }
+      } else if (issued && issued.review_link_id) {
+        try {
+          await refreshQuoteState();
+          renderActions();
+        } catch (refreshError) {
+          // Keep the link active when delivery is uncertain; never invalidate a link that may already be in the recipient's inbox.
+        }
+        button.disabled = true;
+        button.textContent = "Check delivery status";
+        recoveryMessage = " Email delivery could not be confirmed. The review link remains active. Check Swayphics Mail and the quote status before retrying or revoking the link.";
+      } else {
+        button.disabled = false;
+        button.textContent = originalText;
       }
-      button.disabled = false;
-      button.textContent = originalText;
       notify((error && error.message ? error.message : "The proposal could not be sent.") + recoveryMessage);
     }
   }
