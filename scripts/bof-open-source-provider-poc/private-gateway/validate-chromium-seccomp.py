@@ -6,6 +6,11 @@ from pathlib import Path
 
 profile_path = Path(__file__).with_name("chromium-seccomp.json")
 profile = json.loads(profile_path.read_text(encoding="utf-8"))
+compose_path = Path(__file__).with_name("compose.yml")
+compose_text = compose_path.read_text(encoding="utf-8")
+if "seccomp=./chromium-seccomp.json" not in compose_text:
+    print("FAIL: private gateway Crawl4AI service does not reference the constrained Chromium seccomp profile", file=sys.stderr)
+    raise SystemExit(1)
 
 def fail(message):
     print(f"FAIL: {message}", file=sys.stderr)
