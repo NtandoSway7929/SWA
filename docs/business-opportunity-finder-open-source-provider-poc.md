@@ -382,3 +382,49 @@ The selected page is fetched separately and passed through the unchanged identit
 
 
 The automated follow-up benchmark now includes a redirect-origin contract: a successful crawler response is not enough by itself. The final URL must preserve the selected page's exact HTTPS origin. A redirect to another host or an HTTP downgrade is not evaluated as same-host business evidence.
+
+
+## Latest isolated CI and benchmark results — 28 November 2026
+
+The isolated POC branch passed [GitHub Actions run 92](https://github.com/NtandoSway7929/SWA/actions/runs/46122945183), commit `605373157ca2c0ef01b64bd0c4afb98c41395a1e`.
+
+The run completed both jobs:
+
+- **Mocked provider adapter contract:** passed, including the Swayphics identity-matcher contract, declarative host-egress policy validation, and private-gateway Compose topology validation.
+- **Live Docker smoke test:** passed with the pinned SearXNG, Crawl4AI, Caddy and Valkey services. Provider health checks, live adapter integration, search and retrieval benchmarks, private-gateway health, network membership, unpublished host ports, route/method/client-IP denials, and internal `/search` and `/crawl` requests all completed successfully.
+- The private-gateway runtime test returned 20 candidates for its generic test query and successfully fetched the reserved `https://example.com/` page with readable text.
+
+### Search results from run 92
+
+The 20-attempt search benchmark reported:
+
+| Dataset | Query scope | Top 5 | Top 10 |
+|---|---|---:|---:|
+| Five national brands | Primary query | 5/5 (100%) | 5/5 (100%) |
+| Five Pretoria independent/local operators | Primary query | 3/5 (60%) | 4/5 (80%) |
+| Five Pretoria independent/local operators | Best across primary + two alternates | 5/5 (100%) | 5/5 (100%) |
+
+For the Pretoria cases, alternate queries recovered one domain that the primary query did not place in the top ten and improved rank in two cases. These figures are search-result rank measurements against this small, curated dataset. They are not identity-confirmation rates, a statistically representative market sample or a guarantee of lead coverage.
+
+### Retrieval and identity results from run 92
+
+The five-site Pretoria page-fetch benchmark reported:
+
+- 4/5 successful HTTP retrievals (80%).
+- 4/5 pages with both title and content identity cues.
+- Identity matcher outcomes: 3 confirmed, 1 ambiguous, 0 rejected, 1 not evaluated because fetch failed.
+- Zero final-domain mismatches.
+- Kalm's homepage remained ambiguous on the locality cue; the one automatically selected same-origin `/pages/our-stores` follow-up returned HTTP 200 and independently confirmed the business/location match. The follow-up remains a separate evidence result and does not upgrade the homepage record.
+- Huba Fleurs remained unavailable: the expected domain returned HTTP 302 with title `Account Suspended`, only 106 text characters and no business identity cue. The adapter correctly returned `http_status_302` and did not evaluate identity. This is a live-site availability limitation, not evidence that the business does not exist.
+
+The result set is intentionally limited to public independently researched sites. It did not include assessment answers, respondent contact details or user-submitted destinations.
+
+### What this CI run does not prove
+
+The hosted workflow sets `CRAWL4AI_CHROMIUM_SANDBOX=false` only for API-level CI checks. It explicitly records that the browser sandbox has not been verified. The secure private-gateway Compose default remains `true`, and static validation rejects a disabled default. A compatible Linux Docker host must still demonstrate actual Chromium sandbox operation before deployment.
+
+The run also does not verify a real Cloudflare Access/Tunnel deployment, authentic Cloudflare client-IP forwarding, live SearXNG rate-limit behaviour under hostile traffic, host-level egress filtering, DNS-rebinding resistance, IPv4/IPv6 metadata blocking on a selected host, Supabase Edge Function connectivity, production retention/deletion, legal compliance or service reliability under representative load.
+
+### Next engineering gate
+
+The next work should address the gap between the passing ephemeral container tests and a deployable security boundary: define and test DNS-rebinding/redirect SSRF protections at the actual host egress layer, then validate Chromium sandboxing on a compatible Linux Docker host. These are host-dependent tests; do not install firewall rules, provision a VM, create a public route, deploy services or alter production code as part of this POC without separate approval.
