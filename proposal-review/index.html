@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#252B31">
+  <title>Proposal Review | Swayphics</title>
+  <style>
+    :root{color-scheme:light;--ink:#252B31;--muted:#68727C;--line:#E2E6EA;--surface:#fff;--soft:#F5F7F8;--blue:#0152F4;--blue-deep:#002096;--danger:#9E3434}
+    *{box-sizing:border-box}
+    body{margin:0;background:#F3F5F6;color:var(--ink);font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:var(--blue)}
+    .top{background:#252B31;color:#fff;padding:23px 22px}
+    .top-inner{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .brand{font-size:13px;font-weight:800;letter-spacing:.16em}
+    .brand span{display:block;margin-top:5px;color:#B8C2CC;font-size:9px;letter-spacing:.2em;font-weight:600}
+    .top-note{color:#D5DCE2;font-size:11px;letter-spacing:.04em}
+    main{max-width:980px;margin:36px auto 70px;padding:0 18px}
+    .state-card,.document{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 40px rgba(27,37,45,.06)}
+    .state-card{max-width:620px;margin:70px auto;padding:34px;text-align:center}
+    .state-card h1{margin:0 0 10px;font-size:22px;letter-spacing:-.03em}
+    .state-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.7}
+    #review-shell[hidden],#state-screen[hidden]{display:none}
+    .intro{padding:32px 34px;border-bottom:1px solid var(--line)}
+    .eyebrow{color:var(--blue);font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+    h1{margin:11px 0 8px;font-size:clamp(27px,4vw,38px);line-height:1.12;letter-spacing:-.045em}
+    .intro p{margin:0;color:var(--muted);font-size:14px;line-height:1.7}
+    .quote-meta{display:flex;flex-wrap:wrap;gap:9px 22px;margin-top:23px;color:#505B65;font-size:12px}
+    .quote-meta strong{color:var(--ink);font-weight:700}
+    .section{padding:27px 34px;border-bottom:1px solid var(--line)}
+    .section:last-child{border-bottom:0}
+    .section h2{margin:0 0 15px;font-size:17px;letter-spacing:-.02em}
+    .section-copy{color:#4F5963;font-size:13px;line-height:1.8;white-space:pre-wrap}
+    .proposal-section{padding:16px 0;border-top:1px solid #EDF0F2}
+    .proposal-section:first-child{border-top:0;padding-top:0}
+    .proposal-section h3{margin:0 0 7px;font-size:13px}
+    .proposal-section p{margin:0;color:#56616B;font-size:13px;line-height:1.8;white-space:pre-wrap}
+    .line-list{display:grid;gap:0}
+    .line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;padding:15px 0;border-top:1px solid #EDF0F2}
+    .line:first-child{border-top:0;padding-top:0}
+    .line-name{font-size:13px;font-weight:700}
+    .line-description{margin-top:5px;color:var(--muted);font-size:12px;line-height:1.65;white-space:pre-wrap}
+    .line-meta{margin-top:6px;color:#6C7781;font-size:11px}
+    .line-price{text-align:right;font-size:13px;font-weight:700;white-space:nowrap}
+    .line-price small{display:block;margin-top:5px;color:var(--muted);font-size:10px;font-weight:500}
+    .financials{margin-top:18px;padding:18px 19px;background:var(--soft);border-radius:12px}
+    .financial-row{display:flex;justify-content:space-between;gap:20px;padding:7px 0;color:#56616B;font-size:12px}
+    .financial-row strong{color:var(--ink);font-variant-numeric:tabular-nums}
+    .financial-row.total{margin-top:8px;padding-top:15px;border-top:1px solid #D9E0E5;font-size:15px;font-weight:700}
+    .financial-row.total strong{color:var(--blue-deep);font-size:19px}
+    .recurrence-note{margin:13px 0 0;color:var(--muted);font-size:11px;line-height:1.65}
+    .validity{margin-top:17px;color:#56616B;font-size:12px;line-height:1.65}
+    .response-panel{background:#FAFBFC}
+    .form-grid{display:grid;grid-template-columns:1fr;gap:13px;max-width:620px}
+    label{display:grid;gap:7px;color:#343C43;font-size:12px;font-weight:700}
+    input,textarea{width:100%;border:1px solid #CDD4DA;border-radius:9px;padding:12px 13px;background:#fff;color:var(--ink);font:inherit;font-size:13px;outline:none}
+    input:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(1,82,244,.10)}
+    textarea{min-height:86px;resize:vertical;line-height:1.6}
+    .confirm{display:flex;grid-template-columns:auto 1fr;align-items:flex-start;gap:10px;color:#56616B;font-size:12px;font-weight:500;line-height:1.6}
+    .confirm input{width:17px;height:17px;margin:1px 0 0;accent-color:var(--blue);flex:0 0 auto}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+    button{min-height:44px;border:1px solid transparent;border-radius:9px;padding:0 19px;font-size:12px;font-weight:800;cursor:pointer;transition:background .15s ease,border-color .15s ease,opacity .15s ease}
+    button:disabled{opacity:.48;cursor:not-allowed}
+    .accept{background:var(--blue);color:#fff}
+    .accept:hover:not(:disabled){background:var(--blue-deep)}
+    .decline{background:#fff;border-color:#CBD2D8;color:#4B5660}
+    .decline:hover:not(:disabled){background:#F2F4F5}
+    .legal-note{max-width:650px;margin:14px 0 0;color:#77818A;font-size:10px;line-height:1.65}
+    .response-result{padding:20px;border:1px solid #D9E0E5;border-radius:12px;background:#fff}
+    .response-result strong{display:block;margin-bottom:7px;font-size:15px}
+    .response-result p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+    .response-result.accepted{border-color:#B8D7C9}
+    .response-result.rejected{border-color:#E3C7C7}
+    .footer{padding:24px;text-align:center;color:#8A949D;font-size:10px;letter-spacing:.06em}
+    @media(max-width:640px){
+      .top{padding:19px 17px}.top-inner{align-items:flex-start}.top-note{max-width:110px;text-align:right;line-height:1.5}
+      main{margin:20px auto 45px;padding:0 11px}.intro{padding:25px 21px}.section{padding:22px 21px}
+      .state-card{padding:27px 22px;margin:40px auto}.quote-meta{display:grid;gap:8px}
+      .line{grid-template-columns:minmax(0,1fr) auto;gap:10px}.line-price{font-size:12px}
+      .financial-row.total strong{font-size:17px}
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">SWAYPHICS<span>EMPOWERING THROUGH DESIGN</span></div>
+      <div class="top-note">Private proposal review</div>
+    </div>
+  </header>
+  <main>
+    <section class="state-card" id="state-screen" aria-live="polite">
+      <h1 id="state-title">Loading your proposal</h1>
+      <p id="state-copy">Securely retrieving the proposal and its commercial details.</p>
+    </section>
+    <article id="review-shell" class="document" hidden>
+      <header class="intro">
+        <div class="eyebrow">Prepared for <span id="business-name">your business</span></div>
+        <h1 id="proposal-title">Proposal</h1>
+        <p id="proposal-subject"></p>
+        <div class="quote-meta">
+          <span>Quotation <strong id="quote-number"></strong></span>
+          <span>Prepared by <strong>Swayphics</strong></span>
+          <span>Recipient <strong id="recipient-name"></strong></span>
+        </div>
+      </header>
+      <section class="section">
+        <h2>Project proposal</h2>
+        <div id="proposal-sections"></div>
+      </section>
+      <section class="section">
+        <h2>Commercial investment</h2>
+        <div class="section-copy" id="quote-title"></div>
+        <div class="line-list" id="quote-lines"></div>
+        <div class="financials">
+          <div class="financial-row"><span>Once-off services</span><strong id="once-off"></strong></div>
+          <div class="financial-row"><span>Monthly recurring</span><strong id="monthly"></strong></div>
+          <div class="financial-row"><span>Yearly recurring</span><strong id="yearly"></strong></div>
+          <div class="financial-row"><span>Initial subtotal</span><strong id="subtotal"></strong></div>
+          <div class="financial-row"><span>Initial discount</span><strong id="discount"></strong></div>
+          <div class="financial-row"><span>VAT</span><strong id="vat"></strong></div>
+          <div class="financial-row total"><span>Initial amount due</span><strong id="amount"></strong></div>
+        </div>
+        <p class="recurrence-note">The initial amount due includes once-off services and the first monthly or yearly billing periods. Monthly and yearly figures show the recurring charges separately. Future recurring invoices are not automatically issued by this quotation.</p>
+        <p class="validity" id="quote-validity"></p>
+        <p class="validity" id="review-expiry"></p>
+        <p class="section-copy" id="quote-notes"></p>
+      </section>
+      <section class="section response-panel" id="response-panel">
+        <h2>Your response</h2>
+        <div id="response-existing" hidden></div>
+        <form id="response-form" class="form-grid">
+          <label for="respondent-name">Full name
+            <input id="respondent-name" name="respondent_name" autocomplete="name" maxlength="120" required>
+          </label>
+          <label for="response-message">Message (optional)
+            <textarea id="response-message" name="message" maxlength="2000" placeholder="Add a question or a note for Swayphics."></textarea>
+          </label>
+          <label class="confirm" for="accept-confirmation">
+            <input id="accept-confirmation" type="checkbox">
+            <span>I confirm that I am authorised to accept this proposal on behalf of the business and agree to the proposal and commercial quotation.</span>
+          </label>
+          <div class="actions">
+            <button type="button" class="accept" id="accept-button">Accept proposal</button>
+            <button type="button" class="decline" id="decline-button">Decline proposal</button>
+          </div>
+          <p class="legal-note">Your decision is recorded against this quotation and the exact proposal revision presented on this page. An accepted quotation can then be used by Swayphics to prepare the next onboarding and invoicing steps.</p>
+        </form>
+      </section>
+    </article>
+    <div class="footer">SWAYPHICS · CREATIVE & DIGITAL SERVICES</div>
+  </main>
+  <script>
+    (function () {
+      "use strict";
+      var SUPABASE_URL = "https://sqifhribgsqfaxgtobsa.supabase.co";
+      var PUBLISHABLE_KEY = "sb_publishable_kV_YWij7nHIHjyr3Uv2iIA_PIhr-QbH";
+      var token = new URLSearchParams(window.location.search).get("token") || "";
+      var stateScreen = document.getElementById("state-screen");
+      var reviewShell = document.getElementById("review-shell");
+      var responseForm = document.getElementById("response-form");
+      var acceptButton = document.getElementById("accept-button");
+      var declineButton = document.getElementById("decline-button");
+      var pageData = null;
+      var busy = false;
+
+      function el(id) { return document.getElementById(id); }
+      function setState(title, copy) {
+        stateScreen.hidden = false;
+        reviewShell.hidden = true;
+        el("state-title").textContent = title;
+        el("state-copy").textContent = copy;
+      }
+      function currency(value) {
+        var number = Number(value || 0);
+        return new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" }).format(number);
+      }
+      function dateLabel(value) {
+        if (!value) return "Not specified";
+        var d = new Date(String(value) + "T00:00:00");
+        if (Number.isNaN(d.getTime())) return String(value);
+        return new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "long", day: "numeric" }).format(d);
+      }
+      function dateTimeLabel(value) {
+        if (!value) return "Not specified";
+        var d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "Not specified";
+        return new Intl.DateTimeFormat("en-ZA", {
+          year: "numeric", month: "long", day: "numeric",
+          hour: "numeric", minute: "2-digit", timeZone: "Africa/Johannesburg"
+        }).format(d);
+      }
+      function plainValue(value) {
+        if (value === null || value === undefined) return "";
+        if (typeof value === "string" || typeof value === "number") return String(value);
+        if (Array.isArray(value)) return value.map(plainValue).filter(Boolean).join("\n");
+        if (typeof value === "object") {
+          return Object.keys(value).map(function (key) {
+            return plainValue(value[key]);
+          }).filter(Boolean).join("\n");
+        }
+        return "";
+      }
+      function appendProposalSections(sections, fallback) {
+        var host = el("proposal-sections");
+        host.replaceChildren();
+        var order = [
+          ["project_overview", "Project overview"],
+          ["business_understanding", "Business understanding"],
+          ["goals", "Project goals"],
+          ["recommended_solution", "Recommended solution"],
+          ["scope_and_deliverables", "Scope and deliverables"],
+          ["delivery_plan", "Delivery plan and timeline"],
+          ["client_responsibilities", "Client responsibilities"],
+          ["assumptions_exclusions", "Assumptions and exclusions"],
+          ["validity", "Proposal validity"],
+          ["next_steps", "Next steps"]
+        ];
+        var found = false;
+        var renderedKeys = new Set();
+        function appendSection(key, label, value) {
+          var copy = plainValue(value);
+          if (!copy.trim()) return;
+          found = true;
+          renderedKeys.add(key);
+          var block = document.createElement("section");
+          block.className = "proposal-section";
+          var heading = document.createElement("h3");
+          heading.textContent = label;
+          var paragraph = document.createElement("p");
+          paragraph.textContent = copy;
+          block.append(heading, paragraph);
+          host.append(block);
+        }
+        order.forEach(function (item) {
+          appendSection(item[0], item[1], sections && sections[item[0]]);
+        });
+        Object.keys(sections || {}).forEach(function (key) {
+          if (renderedKeys.has(key)) return;
+          var label = key.replace(/[_-]+/g, " ").replace(/\b\w/g, function (letter) {
+            return letter.toUpperCase();
+          });
+          appendSection(key, label, sections[key]);
+        });
+        if (!found && fallback) {
+          var block = document.createElement("section");
+          block.className = "proposal-section";
+          var paragraph = document.createElement("p");
+          paragraph.textContent = String(fallback);
+          block.append(paragraph);
+          host.append(block);
+        }
+      }
+      function appendQuoteLines(items) {
+        var host = el("quote-lines");
+        host.replaceChildren();
+        (Array.isArray(items) ? items : []).forEach(function (item) {
+          var row = document.createElement("div");
+          row.className = "line";
+          var details = document.createElement("div");
+          var name = document.createElement("div");
+          name.className = "line-name";
+          name.textContent = String(item.service_name || "Service");
+          var description = document.createElement("div");
+          description.className = "line-description";
+          description.textContent = String(item.description || "");
+          var meta = document.createElement("div");
+          meta.className = "line-meta";
+          var frequency = item.billing_interval === "monthly" ? "Monthly" : item.billing_interval === "yearly" ? "Yearly" : "Once-off";
+          meta.textContent = String(item.quantity || 1) + " × " + currency(item.unit_price) + " · " + frequency;
+          details.append(name);
+          if (description.textContent) details.append(description);
+          details.append(meta);
+          var price = document.createElement("div");
+          price.className = "line-price";
+          price.textContent = currency(item.line_total);
+          row.append(details, price);
+          host.append(row);
+        });
+      }
+      function showExistingResponse(response) {
+        responseForm.hidden = true;
+        var host = el("response-existing");
+        host.hidden = false;
+        var box = document.createElement("div");
+        box.className = "response-result " + (response.decision === "accepted" ? "accepted" : "rejected");
+        var heading = document.createElement("strong");
+        heading.textContent = response.decision === "accepted" ? "Proposal accepted" : "Proposal declined";
+        var copy = document.createElement("p");
+        var submitted = response.submitted_at ? new Date(response.submitted_at).toLocaleString("en-ZA") : "";
+        copy.textContent = "Your response was recorded" + (submitted ? " on " + submitted : "") + ".";
+        if (response.message) copy.textContent += " Note: " + response.message;
+        box.append(heading, copy);
+        host.replaceChildren(box);
+      }
+      function render(data) {
+        pageData = data;
+        var proposal = data.proposal || {};
+        var quote = data.quote || {};
+        stateScreen.hidden = true;
+        reviewShell.hidden = false;
+        el("business-name").textContent = data.business_name || "your business";
+        el("proposal-title").textContent = proposal.title || quote.title || "Swayphics proposal";
+        el("proposal-subject").textContent = proposal.subject || "";
+        el("quote-number").textContent = quote.quote_number || "";
+        el("recipient-name").textContent = data.recipient_name || data.recipient_email || "";
+        el("quote-title").textContent = quote.title || "";
+        appendProposalSections(proposal.sections || {}, proposal.content || "");
+        appendQuoteLines(quote.items || []);
+        el("once-off").textContent = currency(quote.once_off_subtotal);
+        el("monthly").textContent = currency(quote.monthly_recurring_subtotal) + " / month";
+        el("yearly").textContent = currency(quote.yearly_recurring_subtotal) + " / year";
+        el("subtotal").textContent = currency(quote.initial_subtotal);
+        el("discount").textContent = currency(quote.discount);
+        el("vat").textContent = currency(quote.vat_amount) + (Number(quote.vat_rate || 0) ? " (" + Number(quote.vat_rate) + "%)" : "");
+        el("amount").textContent = currency(quote.amount);
+        el("quote-validity").textContent = quote.valid_until
+          ? "Quotation valid until " + dateLabel(quote.valid_until) + "."
+          : "No separate quotation validity date has been specified.";
+        el("review-expiry").textContent = "This private review link expires on " + dateTimeLabel(data.expires_at) + ".";
+        el("quote-notes").textContent = quote.notes || "";
+        if (data.response && data.response.decision) showExistingResponse(data.response);
+        else if (quote.status !== "sent") {
+          responseForm.hidden = true;
+          var host = el("response-existing");
+          host.hidden = false;
+          var box = document.createElement("div");
+          box.className = "response-result";
+          var title = document.createElement("strong");
+          title.textContent = "This quotation is no longer awaiting a response";
+          var message = document.createElement("p");
+          message.textContent = quote.status === "accepted" ? "This quotation has already been accepted." : quote.status === "rejected" ? "This quotation has already been declined." : "Contact Swayphics for an updated review link.";
+          box.append(title, message);
+          host.replaceChildren(box);
+        }
+      }
+      async function rpc(name, payload) {
+        var response = await fetch(SUPABASE_URL + "/rest/v1/rpc/" + name, {
+          method: "POST",
+          headers: { "apikey": PUBLISHABLE_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify(payload || {})
+        });
+        var result = {};
+        try { result = await response.json(); } catch (_) {}
+        if (!response.ok) throw new Error(result.message || result.error || "The review service could not complete this request.");
+        return result;
+      }
+      async function submitDecision(decision) {
+        if (busy || !pageData) return;
+        var name = String(el("respondent-name").value || "").trim();
+        var note = String(el("response-message").value || "").trim();
+        if (name.length < 2) {
+          el("respondent-name").focus();
+          window.alert("Enter your full name before submitting your response.");
+          return;
+        }
+        if (decision === "accepted" && !el("accept-confirmation").checked) {
+          el("accept-confirmation").focus();
+          window.alert("Confirm that you are authorised to accept this proposal before continuing.");
+          return;
+        }
+        if (decision === "rejected" && !window.confirm("Submit your decision to decline this proposal?")) return;
+        busy = true;
+        acceptButton.disabled = true;
+        declineButton.disabled = true;
+        acceptButton.textContent = "Submitting...";
+        try {
+          var result = await rpc("respond_swayphics_quote_review", {
+            p_token: token,
+            p_decision: decision,
+            p_respondent_name: name,
+            p_message: note || null,
+            p_confirmed: decision === "accepted" && el("accept-confirmation").checked
+          });
+          showExistingResponse({
+            decision: result.decision || decision,
+            message: note,
+            submitted_at: result.submitted_at || new Date().toISOString()
+          });
+        } catch (error) {
+          window.alert(error.message || "Your response could not be submitted. Please retry.");
+          acceptButton.disabled = false;
+          declineButton.disabled = false;
+          acceptButton.textContent = "Accept proposal";
+          busy = false;
+        }
+      }
+      acceptButton.addEventListener("click", function () { submitDecision("accepted"); });
+      declineButton.addEventListener("click", function () { submitDecision("rejected"); });
+
+      if (token.length < 32) {
+        setState("Review link unavailable", "This link is incomplete. Please use the full proposal review link sent by Swayphics.");
+        return;
+      }
+      rpc("get_swayphics_quote_review", { p_token: token }).then(function (data) {
+        if (!data || data.ok !== true) {
+          setState("Proposal link unavailable", data && data.error ? data.error : "This proposal link is invalid or has expired.");
+          return;
+        }
+        render(data);
+      }).catch(function () {
+        setState("Unable to load proposal", "The secure review service could not be reached. Check your connection and open the original email link again.");
+      });
+    })();
+  </script>
+</body>
+</html>

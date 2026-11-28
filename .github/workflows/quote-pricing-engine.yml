@@ -6,18 +6,26 @@ on:
       - main
       - feature/lead-proposal-draft-saving
       - feature/quote-pricing-engine
+      - feature/proposal-delivery-acceptance
     paths:
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/index.html"
       - "admin-dashboard/proposal-delivery.js"
       - "admin-dashboard/proposal-delivery.css"
+      - "admin-dashboard/proposal-sales-handoff.css"
       - "proposal-review/index.html"
       - "scripts/proposal-delivery.test.cjs"
       - "supabase/migrations/20261128110000_swayphics_proposal_delivery_acceptance.sql"
       - "supabase/tests/proposal-review-baseline.sql"
       - "supabase/tests/proposal-review-workflow.test.sql"
       - "supabase/tests/proposal-delivery_sql_syntax_check.py"
+      - "admin-dashboard/proposal-sales-handoff.js"
+      - "scripts/proposal-sales-handoff.test.cjs"
+      - "supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql"
+      - "supabase/tests/accepted-quote-sales-baseline.sql"
+      - "supabase/tests/accepted-quote-sales-handoff.test.sql"
+      - "supabase/tests/accepted-quote-sales_sql_syntax_check.py"
       - "scripts/quote-pricing-engine.test.cjs"
       - "supabase/migrations/20261128090000_lead_proposal_revision_history.sql"
       - "supabase/migrations/20261128100000_swayphics_quote_pricing_engine.sql"
@@ -52,6 +60,10 @@ jobs:
             node --check admin-dashboard/proposal-delivery.js
             node scripts/proposal-delivery.test.cjs
           fi
+          if [ -f admin-dashboard/proposal-sales-handoff.js ]; then
+            node --check admin-dashboard/proposal-sales-handoff.js
+            node scripts/proposal-sales-handoff.test.cjs
+          fi
 
       - name: Install PostgreSQL parser
         run: python -m pip install --disable-pip-version-check pglast
@@ -61,6 +73,9 @@ jobs:
           python supabase/tests/quote-pricing-engine_sql_syntax_check.py
           if [ -f supabase/tests/proposal-delivery_sql_syntax_check.py ]; then
             python supabase/tests/proposal-delivery_sql_syntax_check.py
+          fi
+          if [ -f supabase/tests/accepted-quote-sales_sql_syntax_check.py ]; then
+            python supabase/tests/accepted-quote-sales_sql_syntax_check.py
           fi
 
   disposable-database:
@@ -86,11 +101,16 @@ jobs:
           set -euo pipefail
           mkdir -p "$SUPABASE_WORKDIR"
           supabase init --workdir "$SUPABASE_WORKDIR"
-          sed -i '/^\[db\]$/,/^\[/ s/^port = 54322$/port = 56324/' "$SUPABASE_WORKDIR/supabase/config.toml"
+          DB_PORT=$((61000 + GITHUB_RUN_ID % 4000))
+          sed -i "/^\[db\]$/,/^\[/ s/^port = 54322$/port = ${DB_PORT}/" "$SUPABASE_WORKDIR/supabase/config.toml"
+          echo "Using isolated Supabase database port: $DB_PORT"
           mkdir -p "$SUPABASE_WORKDIR/supabase/tests"
           cp supabase/tests/quote-pricing-engine.test.sql "$SUPABASE_WORKDIR/supabase/tests/quote-pricing-engine.test.sql"
           if [ -f supabase/tests/proposal-review-workflow.test.sql ]; then
             cp supabase/tests/proposal-review-workflow.test.sql "$SUPABASE_WORKDIR/supabase/tests/proposal-review-workflow.test.sql"
+          fi
+          if [ -f supabase/tests/accepted-quote-sales-handoff.test.sql ]; then
+            cp supabase/tests/accepted-quote-sales-handoff.test.sql "$SUPABASE_WORKDIR/supabase/tests/accepted-quote-sales-handoff.test.sql"
           fi
           rm -f "$SUPABASE_WORKDIR/supabase/seed.sql"
 
@@ -108,6 +128,9 @@ jobs:
           BASELINE="$GITHUB_WORKSPACE/supabase/tests/quote-pricing-engine-baseline.sql"
           if [ -f "$GITHUB_WORKSPACE/supabase/tests/proposal-review-baseline.sql" ]; then
             BASELINE="$GITHUB_WORKSPACE/supabase/tests/proposal-review-baseline.sql"
+          fi
+          if [ -f "$GITHUB_WORKSPACE/supabase/tests/accepted-quote-sales-baseline.sql" ]; then
+            BASELINE="$GITHUB_WORKSPACE/supabase/tests/accepted-quote-sales-baseline.sql"
           fi
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$BASELINE"
 
@@ -131,6 +154,9 @@ jobs:
           if [ -f "$GITHUB_WORKSPACE/supabase/migrations/20261128110000_swayphics_proposal_delivery_acceptance.sql" ]; then
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128110000_swayphics_proposal_delivery_acceptance.sql"
           fi
+          if [ -f "$GITHUB_WORKSPACE/supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql" ]; then
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql"
+          fi
 
       - name: Run quote pricing and invoice conversion database tests
         working-directory: /tmp/quote-pricing-engine-project
@@ -138,6 +164,9 @@ jobs:
           supabase test db supabase/tests/quote-pricing-engine.test.sql
           if [ -f supabase/tests/proposal-review-workflow.test.sql ]; then
             supabase test db supabase/tests/proposal-review-workflow.test.sql
+          fi
+          if [ -f supabase/tests/accepted-quote-sales-handoff.test.sql ]; then
+            supabase test db supabase/tests/accepted-quote-sales-handoff.test.sql
           fi
 
       - name: Stop isolated Supabase
