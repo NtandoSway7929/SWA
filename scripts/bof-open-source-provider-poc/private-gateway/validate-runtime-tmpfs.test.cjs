@@ -16,9 +16,10 @@ const expected = {
   gateway: { "/data": 32 * mib, "/config": 8 * mib, "/tmp": 32 * mib },
 };
 
-function run(service, overrides = {}) {
+function run(service, overrides = {}, omitTarget = null) {
   const tmpfs = {};
   for (const [target, size] of Object.entries(expected[service])) {
+    if (target === omitTarget) continue;
     tmpfs[target] = "rw,noexec,nosuid,size=" + (overrides[target] ?? size) + ",mode=0700";
   }
   const inspected = [{ HostConfig: { Tmpfs: tmpfs } }];
@@ -35,9 +36,10 @@ for (const service of Object.keys(expected)) {
   console.log("PASS: " + service + " accepts all expected bounded tmpfs mounts.");
 }
 
-const missing = run("crawl4ai");
-const missingDoc = JSON.parse(missing.input || "null");
-void missingDoc;
+const missing = run("crawl4ai", {}, "/tmp");
+assert.equal(missing.status, 1);
+assert.match(missing.stderr, /missing tmpfs mount/);
+console.log("PASS: missing tmpfs mounts are rejected.");
 
 const altered = run("crawl4ai", { "/tmp": 1024 * mib });
 assert.equal(altered.status, 1);
