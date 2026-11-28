@@ -144,6 +144,36 @@ def run_self_tests(policy):
             self.assertFalse(allowed)
             self.assertEqual(blocked_index, 1)
 
+        def test_mixed_ipv4_and_ipv6_dns_answers_fail_closed(self):
+            allowed, reason = evaluate_url(
+                "https://dualstack.test/",
+                ["1.1.1.1", "fd00:ec2::254"],
+                {443},
+                policy,
+            )
+            self.assertFalse(allowed)
+            self.assertIn("dns_answer_set_not_entirely_public", reason)
+
+        def test_three_hop_redirect_chain_checks_every_destination(self):
+            hops = [
+                {"url": "https://public.test/", "resolved_addresses": ["1.1.1.1"]},
+                {"url": "https://cdn.public.test/asset", "resolved_addresses": ["2606:4700:4700::1111"]},
+                {"url": "http://192.168.1.10/admin", "resolved_addresses": ["192.168.1.10"]},
+            ]
+            allowed, blocked_index, reason = evaluate_redirect_chain(
+                hops[0]["url"], hops, {80, 443}, policy
+            )
+            self.assertFalse(allowed)
+            self.assertEqual(blocked_index, 2)
+            self.assertIn("dns_answer_set_not_entirely_public", reason)
+
+        def test_invalid_dns_answer_fails_closed(self):
+            allowed, reason = evaluate_url(
+                "https://public.test/", ["not-an-ip-address"], {443}, policy
+            )
+            self.assertFalse(allowed)
+            self.assertIn("dns_answer_set_not_entirely_public", reason)
+
         def test_unapproved_port_is_blocked(self):
             allowed, reason = evaluate_url("https://public.test:8443/", ["1.1.1.1"], {80, 443}, policy)
             self.assertFalse(allowed)
