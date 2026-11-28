@@ -10,6 +10,7 @@ on:
       - feature/accepted-quote-sales-handoff
     paths:
       - "admin-dashboard/admin-workspace.js"
+      - "scripts/project-onboarding-readiness.test.cjs"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/index.html"
       - "admin-dashboard/proposal-delivery.js"
@@ -58,6 +59,7 @@ jobs:
       - name: Check dashboard and quote pricing contracts
         run: |
           node --check admin-dashboard/admin-workspace.js
+          node scripts/project-onboarding-readiness.test.cjs
           node scripts/quote-pricing-engine.test.cjs
           if [ -f admin-dashboard/proposal-delivery.js ]; then
             node --check admin-dashboard/proposal-delivery.js
