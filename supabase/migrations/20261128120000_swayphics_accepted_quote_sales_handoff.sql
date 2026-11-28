@@ -5,6 +5,27 @@ begin;
 create sequence if not exists public.swayphics_agreement_number_seq
     start with 1 increment by 1;
 
+-- A GUC can be set by a caller and is not an authorisation boundary.
+-- Instead, privileged RPCs write a transaction-scoped record that only
+-- SECURITY DEFINER triggers can read.
+create schema if not exists swayphics_private;
+revoke all on schema swayphics_private from public, anon, authenticated, service_role;
+
+create table if not exists swayphics_private.client_association_authorizations (
+    transaction_id pg_catalog.xid8 not null,
+    target_type text not null check (target_type in ('quote','agreement')),
+    target_id uuid not null,
+    quote_id uuid not null,
+    client_id uuid not null,
+    admin_user_id uuid not null,
+    created_at timestamptz not null default now(),
+    primary key (transaction_id, target_type, target_id)
+);
+
+alter table swayphics_private.client_association_authorizations enable row level security;
+revoke all on table swayphics_private.client_association_authorizations
+    from public, anon, authenticated, service_role;
+
 alter table public.quote_review_responses
     add column if not exists terms_accepted boolean not null default false,
     add column if not exists terms_url text,
@@ -191,6 +212,7 @@ execute function public.create_swayphics_project_agreement_from_response();
 create or replace function public.prevent_swayphics_project_agreement_mutation()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $function$
 begin
@@ -201,14 +223,23 @@ begin
 
     if old.client_id is null
        and new.client_id is not null
-       and current_setting('swayphics.agreement_client_conversion', true) = 'on'
+       and (to_jsonb(new) - 'client_id') = (to_jsonb(old) - 'client_id')
+       and exists (
+            select 1
+              from swayphics_private.client_association_authorizations a
+             where a.transaction_id = pg_catalog.pg_current_xact_id()
+               and a.target_type = 'agreement'
+               and a.target_id = old.id
+               and a.quote_id = old.quote_id
+               and a.client_id = new.client_id
+               and a.admin_user_id = auth.uid()
+       )
        and exists (
             select 1
               from public.quotes q
              where q.id = old.quote_id
                and q.client_id = new.client_id
-       )
-       and (to_jsonb(new) - 'client_id') = (to_jsonb(old) - 'client_id') then
+       ) then
         return new;
     end if;
 
@@ -227,12 +258,10 @@ before update or delete on public.swayphics_project_agreements
 for each row
 execute function public.prevent_swayphics_project_agreement_mutation();
 
--- The accepted quote may be linked to a client only through the dedicated
--- administrator RPC below. Commercial values and proposal references remain
--- frozen after acceptance.
 create or replace function public.guard_swayphics_quote_commercial_record()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $function$
 begin
@@ -249,12 +278,21 @@ begin
            or (new.lead_id is distinct from old.lead_id and new.lead_id is not null)
            or (
                 new.client_id is distinct from old.client_id
-                and new.client_id is not null
                 and not (
                     old.client_id is null
+                    and new.client_id is not null
                     and old.status = 'accepted'
                     and new.status = 'accepted'
-                    and current_setting('swayphics.quote_client_conversion', true) = 'on'
+                    and exists (
+                        select 1
+                          from swayphics_private.client_association_authorizations a
+                         where a.transaction_id = pg_catalog.pg_current_xact_id()
+                           and a.target_type = 'quote'
+                           and a.target_id = old.id
+                           and a.quote_id = old.id
+                           and a.client_id = new.client_id
+                           and a.admin_user_id = auth.uid()
+                    )
                 )
            )
            or (new.proposal_id is distinct from old.proposal_id and new.proposal_id is not null)
@@ -287,8 +325,6 @@ $function$;
 revoke all on function public.guard_swayphics_quote_commercial_record()
     from public, anon, authenticated, service_role;
 
--- Invoice creation remains in the existing public.admin_create_invoice_from_quote(uuid)
--- RPC from the quote-pricing milestone; this migration does not duplicate billing logic.
 create or replace function public.admin_convert_accepted_quote_to_client(
     p_quote_id uuid
 )
@@ -343,7 +379,6 @@ begin
     if v_quote.client_id is not null then
         v_client_id := v_quote.client_id;
     else
-
         if v_quote.lead_id is null then
             raise exception 'This accepted quote is not linked to a lead that can be converted.'
                 using errcode = '23514';
@@ -370,7 +405,22 @@ begin
                 using errcode = '23514';
         end if;
 
-        perform pg_catalog.set_config('swayphics.quote_client_conversion', 'on', true);
+        -- Preserve the CRM's canonical won/converted linkage even when the
+        -- existing lead converter finds and reuses an earlier client record.
+        update public.leads
+           set status = 'won',
+               converted_client_id = v_client_id,
+               next_follow_up = null,
+               updated_at = now()
+         where id = v_quote.lead_id;
+
+        insert into swayphics_private.client_association_authorizations (
+            transaction_id, target_type, target_id, quote_id, client_id, admin_user_id
+        ) values (
+            pg_catalog.pg_current_xact_id(), 'quote', v_quote.id,
+            v_quote.id, v_client_id, auth.uid()
+        )
+        on conflict (transaction_id, target_type, target_id) do nothing;
 
         update public.quotes
            set client_id = v_client_id,
@@ -378,27 +428,46 @@ begin
          where id = v_quote.id
            and client_id is null;
 
-        perform pg_catalog.set_config('swayphics.quote_client_conversion', 'off', true);
+        delete from swayphics_private.client_association_authorizations
+         where transaction_id = pg_catalog.pg_current_xact_id()
+           and target_type = 'quote'
+           and target_id = v_quote.id;
     end if;
 
-    perform pg_catalog.set_config('swayphics.agreement_client_conversion', 'on', true);
+    select a.id, a.agreement_number
+      into v_agreement_id, v_agreement_number
+      from public.swayphics_project_agreements a
+     where a.quote_id = v_quote.id
+       and a.client_id is null;
 
-    update public.swayphics_project_agreements
-       set client_id = v_client_id
-     where quote_id = v_quote.id
-       and client_id is null;
+    if v_agreement_id is not null then
+        insert into swayphics_private.client_association_authorizations (
+            transaction_id, target_type, target_id, quote_id, client_id, admin_user_id
+        ) values (
+            pg_catalog.pg_current_xact_id(), 'agreement', v_agreement_id,
+            v_quote.id, v_client_id, auth.uid()
+        )
+        on conflict (transaction_id, target_type, target_id) do nothing;
 
-    perform pg_catalog.set_config('swayphics.agreement_client_conversion', 'off', true);
+        update public.swayphics_project_agreements
+           set client_id = v_client_id
+         where id = v_agreement_id;
+
+        delete from swayphics_private.client_association_authorizations
+         where transaction_id = pg_catalog.pg_current_xact_id()
+           and target_type = 'agreement'
+           and target_id = v_agreement_id;
+    else
+        select a.id, a.agreement_number
+          into v_agreement_id, v_agreement_number
+          from public.swayphics_project_agreements a
+         where a.quote_id = v_quote.id;
+    end if;
 
     select c.business_name
       into v_business_name
       from public.clients c
      where c.id = v_client_id;
-
-    select a.id, a.agreement_number
-      into v_agreement_id, v_agreement_number
-      from public.swayphics_project_agreements a
-     where a.quote_id = v_quote.id;
 
     return jsonb_build_object(
         'success', true,
@@ -845,6 +914,9 @@ revoke all on function public.respond_swayphics_quote_review(text, text, text, t
     from public, anon, authenticated, service_role;
 grant execute on function public.respond_swayphics_quote_review(text, text, text, text, boolean)
     to anon, authenticated;
+
+comment on schema swayphics_private is
+    'Private transaction-scoped authorisation records used only by SECURITY DEFINER Swayphics conversion triggers.';
 
 comment on table public.swayphics_project_agreements is
     'Immutable accepted project agreements assembled from an exact proposal revision, itemised quote, respondent decision and acknowledged Terms & Conditions. Client association may be attached once during an authenticated accepted-quote conversion.';
