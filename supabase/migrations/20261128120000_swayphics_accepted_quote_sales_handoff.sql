@@ -396,6 +396,121 @@ grant execute on function public.admin_convert_accepted_quote_to_client(uuid)
 
 -- Preserve the original proposal-response contract while recording explicit
 -- acknowledgement of the published Swayphics Terms & Conditions.
+create or replace function public.get_swayphics_quote_review(
+    p_token text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_link public.quote_review_links%rowtype;
+    v_result jsonb;
+begin
+    if p_token is null or length(btrim(p_token)) < 32 or length(btrim(p_token)) > 512 then
+        return jsonb_build_object('ok', false, 'error', 'This proposal link is invalid or has expired.');
+    end if;
+
+    select *
+      into v_link
+      from public.quote_review_links l
+     where l.token_hash = encode(extensions.digest(btrim(p_token), 'sha256'), 'hex')
+       and l.revoked_at is null
+       and (l.expires_at > now() or l.responded_at is not null)
+     limit 1;
+
+    if not found then
+        return jsonb_build_object('ok', false, 'error', 'This proposal link is invalid or has expired.');
+    end if;
+
+    update public.quote_review_links
+       set first_viewed_at = coalesce(first_viewed_at, now())
+     where id = v_link.id
+       and first_viewed_at is null;
+
+    select jsonb_build_object(
+        'ok', true,
+        'business_name', coalesce(c.business_name, lead.business_name, ''),
+        'recipient_name', coalesce(v_link.recipient_name, c.contact_name, lead.contact_name, ''),
+        'recipient_email', v_link.recipient_email,
+        'proposal', jsonb_build_object(
+            'title', pv.title,
+            'subject', pv.subject,
+            'content', pv.content,
+            'sections', coalesce(pv.structured_content->'sections', '{}'::jsonb)
+        ),
+        'quote', jsonb_build_object(
+            'id', q.id,
+            'quote_number', q.quote_number,
+            'title', q.title,
+            'valid_until', q.valid_until,
+            'notes', q.notes,
+            'status', q.status,
+            'once_off_subtotal', q.once_off_subtotal,
+            'monthly_recurring_subtotal', q.monthly_recurring_subtotal,
+            'yearly_recurring_subtotal', q.yearly_recurring_subtotal,
+            'initial_subtotal', q.initial_subtotal,
+            'discount', q.discount,
+            'vat_rate', q.vat_rate,
+            'vat_amount', q.vat_amount,
+            'amount', q.amount,
+            'items', coalesce((
+                select jsonb_agg(
+                    jsonb_build_object(
+                        'service_name', qi.service_name_snapshot,
+                        'description', qi.description,
+                        'quantity', qi.quantity,
+                        'unit_price', qi.unit_price,
+                        'line_total', qi.line_total,
+                        'billing_interval', qi.billing_interval
+                    )
+                    order by qi.position, qi.created_at
+                )
+                from public.quote_items qi
+                where qi.quote_id = q.id
+            ), '[]'::jsonb)
+        ),
+        'expires_at', v_link.expires_at,
+        'response', (
+            select jsonb_build_object(
+                'decision', r.decision,
+                'respondent_name', r.respondent_name,
+                'message', r.message,
+                'submitted_at', r.submitted_at,
+                'terms_accepted', r.terms_accepted,
+                'terms_url', r.terms_url,
+                'terms_document_sha', r.terms_document_sha,
+                'acceptance_statement', r.acceptance_statement
+            )
+            from public.quote_review_responses r
+            where r.review_link_id = v_link.id
+        )
+    )
+      into v_result
+      from public.quotes q
+      join public.lead_proposal_versions pv
+        on pv.id = v_link.proposal_version_id
+      left join public.clients c
+        on c.id = q.client_id
+      left join public.leads lead
+        on lead.id = q.lead_id
+     where q.id = v_link.quote_id
+       and q.proposal_version_id = v_link.proposal_version_id;
+
+    if v_result is null then
+        return jsonb_build_object('ok', false, 'error', 'The proposal linked to this review page is no longer available.');
+    end if;
+
+    return v_result;
+end;
+$function$;
+
+revoke all on function public.get_swayphics_quote_review(text)
+    from public, anon, authenticated, service_role;
+grant execute on function public.get_swayphics_quote_review(text)
+    to anon, authenticated;
+
 create or replace function public.respond_swayphics_quote_review(
     p_token text,
     p_decision text,
@@ -539,7 +654,11 @@ begin
         'response_id', v_response_id,
         'decision', p_decision,
         'quote_number', v_quote.quote_number,
-        'submitted_at', v_submitted_at
+        'submitted_at', v_submitted_at,
+        'terms_accepted', p_decision = 'accepted',
+        'terms_url', case when p_decision = 'accepted' then v_terms_url else null end,
+        'terms_document_sha', case when p_decision = 'accepted' then v_terms_sha else null end,
+        'acceptance_statement', case when p_decision = 'accepted' then v_acceptance_statement else null end
     );
 end;
 $function$;
