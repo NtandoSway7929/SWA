@@ -455,7 +455,7 @@ const { spawnSync } = require("node:child_process");
     const mockBin = fs.mkdtempSync(path.join(os.tmpdir(), "bof-firewall-audit-"));
     try {
         const mockCommands = {
-            docker: '#!/bin/sh\nif [ "$1" = "context" ] && [ "$2" = "show" ]; then printf "%s\\n" "$MOCK_DOCKER_CONTEXT_NAME"; exit 0; fi\nif [ "$1" = "context" ] && [ "$2" = "inspect" ]; then printf "%s" "$MOCK_DOCKER_CONTEXT_JSON"; exit 0; fi\nif [ "$1" = "network" ] && [ "$2" = "ls" ] && [ "$3" = "-q" ]; then printf "%s\\n" "$MOCK_DOCKER_NETWORK_IDS"; exit 0; fi\nif [ "$1" = "network" ] && [ "$2" = "inspect" ]; then printf "%s" "$MOCK_DOCKER_NETWORK_INSPECT_JSON"; exit 0; fi\necho "unexpected docker arguments: $*" >&2\nexit 1\n'
+            docker: '#!/bin/sh\nif [ "$1" = "info" ]; then printf " Firewall Backend: %s\\n" "$MOCK_DOCKER_FIREWALL_BACKEND"; exit 0; fi\nexit 1\n',
             iptables: '#!/bin/sh\nif [ "$1" = "-S" ] && [ "$2" = "DOCKER-USER" ]; then exit 0; fi\nexit 1\n',
             nft: '#!/bin/sh\nif [ "$1" = "list" ] && [ "$2" = "tables" ]; then exit 0; fi\nexit 1\n'
         };
@@ -497,7 +497,7 @@ const { spawnSync } = require("node:child_process");
     try {
         const mockCommands = {
             ip: '#!/bin/sh\ncase "$*" in\n  "-j address show") printf "%s" "$MOCK_IP_ADDRESS_JSON";;\n  "-j -4 route show table all") printf "%s" "$MOCK_IP_ROUTE4_JSON";;\n  "-j -6 route show table all") printf "%s" "$MOCK_IP_ROUTE6_JSON";;\n  *) echo "unexpected ip arguments: $*" >&2; exit 1;;\nesac\n',
-            docker: '#!/bin/sh\nif [ "$1" = "network" ] && [ "$2" = "ls" ] && [ "$3" = "-q" ]; then printf "%s\\n" "$MOCK_DOCKER_NETWORK_IDS"; exit 0; fi\nif [ "$1" = "network" ] && [ "$2" = "inspect" ]; then printf "%s" "$MOCK_DOCKER_NETWORK_INSPECT_JSON"; exit 0; fi\necho "unexpected docker arguments: $*" >&2\nexit 1\n'
+            docker: '#!/bin/sh\nif [ "$1" = "context" ] && [ "$2" = "show" ]; then printf "%s\\n" "$MOCK_DOCKER_CONTEXT_NAME"; exit 0; fi\nif [ "$1" = "context" ] && [ "$2" = "inspect" ]; then printf "%s" "$MOCK_DOCKER_CONTEXT_JSON"; exit 0; fi\nif [ "$1" = "network" ] && [ "$2" = "ls" ] && [ "$3" = "-q" ]; then printf "%s\\n" "$MOCK_DOCKER_NETWORK_IDS"; exit 0; fi\nif [ "$1" = "network" ] && [ "$2" = "inspect" ]; then printf "%s" "$MOCK_DOCKER_NETWORK_INSPECT_JSON"; exit 0; fi\necho "unexpected docker arguments: $*" >&2\nexit 1\n',
         };
         for (const [name, content] of Object.entries(mockCommands)) {
             const commandPath = path.join(networkMockBin, name);
@@ -607,6 +607,10 @@ const { spawnSync } = require("node:child_process");
                 MOCK_IP_ADDRESS_JSON: JSON.stringify(cleanAddresses),
                 MOCK_IP_ROUTE4_JSON: JSON.stringify(cleanRoutes4),
                 MOCK_IP_ROUTE6_JSON: JSON.stringify(cleanRoutes6),
+                MOCK_DOCKER_CONTEXT_NAME: "default",
+                MOCK_DOCKER_CONTEXT_JSON: JSON.stringify(localDockerContext),
+                DOCKER_HOST: "",
+                DOCKER_CONTEXT: "",
                 MOCK_DOCKER_NETWORK_IDS: "network-one",
                 MOCK_DOCKER_NETWORK_INSPECT_JSON: "not-json"
             }
