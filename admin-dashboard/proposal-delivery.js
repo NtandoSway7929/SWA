@@ -99,21 +99,22 @@
     var response = responseRows.get(quoteId);
     var activeLink = reviewLinkRows.get(quoteId);
     var expiresAt = activeLink && activeLink.expires_at ? new Date(activeLink.expires_at) : null;
-    var isActive = activeLink && !activeLink.revoked_at && !activeLink.responded_at &&
-      expiresAt && !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now();
+    var canRevoke = activeLink && !activeLink.revoked_at && !activeLink.responded_at;
+    var isActive = canRevoke && expiresAt &&
+      !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now();
     var deliveryState = response
       ? "response"
       : row.status === "draft" && row.proposal_id && row.proposal_version_id
         ? "draft"
         : row.status === "sent"
-          ? (isActive ? "sent-active" : "sent-inactive")
+          ? (isActive ? "sent-active" : canRevoke ? "sent-expired" : "sent-inactive")
           : "";
 
     var previousAction = card.querySelector("[data-proposal-delivery-action]");
     var previousState = previousAction && previousAction.getAttribute("data-proposal-delivery-state");
     var previousRevoke = card.querySelector("[data-proposal-revoke-action]");
     if (previousAction && previousState === deliveryState &&
-        (deliveryState !== "sent-active" || previousRevoke)) {
+        (!["sent-active", "sent-expired"].includes(deliveryState) || previousRevoke)) {
       return;
     }
     if (previousAction) previousAction.remove();
@@ -133,16 +134,16 @@
       action.textContent = "Send for review";
       action.addEventListener("click", function () { sendForReview(quoteId, row, action); });
     } else {
-      action.textContent = isActive ? "Awaiting response" : "Review link unavailable";
+      action.textContent = isActive ? "Awaiting response" : deliveryState === "sent-expired" ? "Review link expired" : "Review link unavailable";
       action.disabled = true;
       action.classList.add("proposal-delivery-static");
       editButton.insertAdjacentElement("afterend", action);
-      if (isActive) {
+      if (canRevoke) {
         var revoke = document.createElement("button");
         revoke.type = "button";
         revoke.className = "sway-row-action danger";
         revoke.setAttribute("data-proposal-revoke-action", quoteId);
-        revoke.textContent = "Revoke link";
+        revoke.textContent = isActive ? "Revoke link" : "Reset expired quote";
         revoke.addEventListener("click", function () {
           revokeReviewLink(quoteId, activeLink, revoke);
         });
@@ -270,6 +271,7 @@
 
   async function revokeReviewLink(quoteId, link, button) {
     if (!link || !link.id) return;
+    var originalText = button.textContent;
     if (!window.confirm("Revoke this proposal review link? The client will no longer be able to open it, and the quote will return to draft.")) return;
     button.disabled = true;
     button.textContent = "Revoking...";
@@ -286,7 +288,7 @@
       notify("The proposal review link has been revoked. The quote is back in draft and can be revised before sending again.");
     } catch (error) {
       button.disabled = false;
-      button.textContent = "Revoke link";
+      button.textContent = originalText;
       notify(error && error.message ? error.message : "Unable to revoke this review link.");
     }
   }
