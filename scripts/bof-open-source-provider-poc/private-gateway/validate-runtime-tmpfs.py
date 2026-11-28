@@ -28,7 +28,7 @@ def fail(message):
 
 
 def parse_size(value):
-    match = re.fullmatch(r"(\\d+)([kKmMgGtTpP]?)", str(value))
+    match = re.fullmatch(r"(\d+)([kKmMgGtTpP]?)", str(value))
     if not match:
         raise ValueError("unsupported tmpfs size notation")
     amount = int(match.group(1))
