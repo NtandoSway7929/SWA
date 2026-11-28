@@ -192,8 +192,8 @@
     if (existing) existing.remove();
     if (!accepted) return;
 
-    var editButton = card.querySelector('button[data-edit="quotes"]');
-    if (!editButton) return;
+    var actionHost = card.querySelector(".sway-record-card-actions");
+    if (!actionHost) return;
 
     var actions = document.createElement("div");
     actions.className = "accepted-quote-handoff-actions";
@@ -231,7 +231,7 @@
       actions.append(missingAgreement);
     }
 
-    editButton.insertAdjacentElement("afterend", actions);
+    actionHost.insertAdjacentElement("afterend", actions);
   }
 
   function renderActions() {
