@@ -5,7 +5,7 @@
 # are touched. A temporary /etc/netns resolver config is removed by the EXIT trap.
 set -Eeuo pipefail
 
-if [[ ${EUID} -ne 0 ]]; then
+if [[ "$(id -u)" != "0" ]]; then
   echo "ERROR: run as root (for example: sudo $0)" >&2
   exit 2
 fi
@@ -145,10 +145,36 @@ sleep 0.3
 echo "1/3: first DNS resolution is the simulated public address"
 ip netns exec "$ns_client" python3 - <<'PY'
 import socket
-resolved = socket.getaddrinfo("rebind-lab.test", 8080, family=socket.AF_INET, type=socket.SOCK_STREAM)
-addresses = sorted({item[4][0] for item in resolved})
-assert addresses == ["1.1.1.1"], addresses
-with socket.create_connection((addresses[0], 8080), timeout=2) as connection:
+import struct
+
+def resolve_a(host):
+    identifier = 0x4B31
+    labels = b"".join(bytes([len(label)]) + label.encode("ascii") for label in host.split("."))
+    question = labels + b"\x00" + struct.pack("!HH", 1, 1)
+    packet = struct.pack("!HHHHHH", identifier, 0x0100, 1, 0, 0, 0) + question
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as dns:
+        dns.settimeout(2)
+        dns.sendto(packet, ("127.0.0.1", 53))
+        response, _ = dns.recvfrom(2048)
+    assert struct.unpack("!H", response[:2])[0] == identifier
+    answers = struct.unpack("!H", response[6:8])[0]
+    assert answers == 1, response
+    offset = 12
+    while response[offset] != 0:
+        offset += response[offset] + 1
+    offset += 5
+    if response[offset:offset + 2] == b"\xc0\x0c":
+        offset += 2
+    else:
+        raise AssertionError("Unexpected DNS answer name encoding")
+    record_type, record_class, ttl, length = struct.unpack("!HHIH", response[offset:offset + 10])
+    offset += 10
+    assert (record_type, record_class, length) == (1, 1, 4)
+    return socket.inet_ntoa(response[offset:offset + 4])
+
+resolved = resolve_a("rebind-lab.test")
+assert resolved == "1.1.1.1", resolved
+with socket.create_connection((resolved, 8080), timeout=2) as connection:
     connection.sendall(b"GET /pinned HTTP/1.0\r\nHost: rebind-lab.test\r\n\r\n")
     chunks = []
     while True:
@@ -158,16 +184,32 @@ with socket.create_connection((addresses[0], 8080), timeout=2) as connection:
         chunks.append(chunk)
     response = b"".join(chunks)
 assert b"isolated-public-fixture" in response, response
-print("PASS: validated address can be pinned to the actual connection")
+print("PASS: controlled DNS answer was pinned to the actual socket connection")
 PY
 
 echo "2/3: second DNS resolution changes to a private address"
 if ip netns exec "$ns_client" python3 - <<'PY'
 import socket
+import struct
+
+identifier = 0x4B32
+host = "rebind-lab.test"
+labels = b"".join(bytes([len(label)]) + label.encode("ascii") for label in host.split("."))
+question = labels + b"\x00" + struct.pack("!HH", 1, 1)
+packet = struct.pack("!HHHHHH", identifier, 0x0100, 1, 0, 0, 0) + question
+with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as dns:
+    dns.settimeout(2)
+    dns.sendto(packet, ("127.0.0.1", 53))
+    response, _ = dns.recvfrom(2048)
+assert struct.unpack("!H", response[:2])[0] == identifier
+assert struct.unpack("!H", response[6:8])[0] == 1
+resolved = socket.inet_ntoa(response[-4:])
+assert resolved == "10.201.2.2", resolved
 try:
-    socket.create_connection(("rebind-lab.test", 8080), timeout=2)
+    with socket.create_connection((resolved, 8080), timeout=2) as connection:
+        connection.sendall(b"GET /rebinding HTTP/1.0\r\nHost: rebind-lab.test\r\n\r\n")
 except OSError:
-    print("PASS: connection-time egress policy blocked the rebinding destination")
+    print("PASS: changed DNS answer resolved privately and connection-time egress policy blocked it")
     raise SystemExit(0)
 raise SystemExit("FAIL: rebinding destination was reachable")
 PY
