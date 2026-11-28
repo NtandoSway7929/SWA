@@ -85,12 +85,14 @@ if [ "$ready" != true ]; then
   exit 1
 fi
 
+chromium_seen=false
+sandbox_flag_clear=false
 echo "Starting host-visible Chromium process observation and submitting a real public-page crawl."
 observer_script="$(cd "$(dirname "$0")" && pwd)/chromium-process-observer.py"
 python "$observer_script" "$name" "$log_file" "$stop_file" --interval 0.03 &
 observer_pid=$!
 curl --connect-timeout 3 --max-time 90 --fail --silent --show-error \
-  -X POST "http://127.0.0.1:\${port}/crawl" \
+  -X POST "http://127.0.0.1:${port}/crawl" \
   -H "Authorization: Bearer $token" \
   -H "Content-Type: application/json" \
   --data '{"urls":["https://example.com"],"browser_config":{},"crawler_config":{}}' \
