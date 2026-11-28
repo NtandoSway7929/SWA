@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Discover practical opportunities to strengthen your business with the Swayphics Business Opportunity Finder.">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#002096">
+  <title>Business Opportunity Finder | Swayphics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Raleway:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assessment.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="/" aria-label="Swayphics home">SWAYPHICS<span>EMPOWERING THROUGH DESIGN</span></a>
+    <a class="header-link" href="/">Back to website</a>
+  </header>
+
+  <main class="shell">
+    <section class="intro" id="intro">
+      <p class="eyebrow">A clearer view of what's possible</p>
+      <h1>Your business has opportunities.<br><span>Let's find them.</span></h1>
+      <p class="intro-copy">A short, guided assessment to understand how your business works today and where thoughtful improvements could make a difference. No website required.</p>
+      <ul class="trust-points">
+        <li><span aria-hidden="true">✓</span> Questions tailored to your business</li>
+        <li><span aria-hidden="true">✓</span> Practical, relevant recommendations</li>
+        <li><span aria-hidden="true">✓</span> No obligation to work with us</li>
+      </ul>
+      <button class="button button-primary" id="start-button" type="button">Assess my business <span aria-hidden="true">→</span></button>
+      <p class="privacy-note">The initial assessment is free. You can skip questions you don't want to answer.</p>
+    </section>
+
+    <section class="assessment-panel" id="assessment" hidden aria-live="polite">
+      <div class="assessment-topline">
+        <span class="eyebrow" id="step-label">BUSINESS DISCOVERY</span>
+        <button class="text-button" id="exit-button" type="button">Exit assessment</button>
+      </div>
+      <div class="progress-track" role="progressbar" aria-label="Assessment progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span id="progress-fill"></span>
+      </div>
+      <p class="progress-copy" id="progress-copy">A few quick questions</p>
+      <div id="question-region"></div>
+      <div class="question-actions">
+        <div class="secondary-actions"><button class="text-button" id="back-button" type="button" disabled>← Back</button><button class="text-button" id="skip-button" type="button">Skip question</button></div>
+        <button class="button button-primary" id="continue-button" type="button" disabled>Continue <span aria-hidden="true">→</span></button>
+      </div>
+      <p class="privacy-note">Your answers help us make the recommendations relevant. You can skip any question.</p>
+    </section>
+
+    <section class="results-panel" id="results" hidden aria-live="polite">
+      <p class="eyebrow">YOUR INITIAL OPPORTUNITY REPORT</p>
+      <h1 id="result-title">Your business opportunity report</h1>
+      <p class="result-intro" id="result-intro"></p>
+      <div class="evidence-note"><strong>About these findings</strong><span>This initial report is based on your answers. It is not an independently verified audit. We will clearly identify anything that still needs checking.</span></div>
+      <div id="result-findings" class="findings"></div>
+      <section class="next-step">
+        <p class="eyebrow">TAKE THE NEXT STEP</p>
+        <h2>Want help putting these opportunities into action?</h2>
+        <p>Tell us where to send your personalised proposal request. There is no obligation to purchase.</p>
+        <form id="proposal-form" novalidate>
+          <div class="form-grid">
+            <label>Business name<input name="businessName" maxlength="100" autocomplete="organization" required placeholder="Your business name"></label>
+            <label>Your name<input name="contactName" maxlength="80" autocomplete="name" required placeholder="Your name"></label>
+            <label>Email address<input name="email" type="email" maxlength="120" autocomplete="email" required placeholder="you@example.com"></label>
+            <label>WhatsApp number <span class="optional">(optional)</span><input name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="+27 ..."></label>
+          </div>
+          <label class="consent"><input type="checkbox" name="consent" required><span>I agree that Swayphics may contact me about this assessment and my proposal request.</span></label>
+          <button class="button button-primary" type="submit">Request my personalised proposal <span aria-hidden="true">→</span></button>
+          <p class="form-status" id="form-status" role="status"></p>
+        </form>
+      </section>
+      <button class="text-button restart-button" id="restart-button" type="button">Start again</button>
+    </section>
+  </main>
+
+  <footer class="site-footer"><span>SWAYPHICS</span><span>EMPOWERING THROUGH DESIGN</span></footer>
+  <script src="./assessment.js" defer></script>
+</body>
+</html>
