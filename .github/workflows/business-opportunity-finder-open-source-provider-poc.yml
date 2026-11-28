@@ -61,6 +61,8 @@ jobs:
           python3 scripts/bof-open-source-provider-poc/private-gateway/analyse-firewall-snapshot.py --self-test
           bash -n scripts/bof-open-source-provider-poc/private-gateway/network-namespace-ssrf-test.sh
           bash -n scripts/bof-open-source-provider-poc/private-gateway/dns-rebinding-namespace-test.sh
+          bash -n scripts/bof-open-source-provider-poc/private-gateway/audit-host-apparmor.sh
+          bash -n scripts/bof-open-source-provider-poc/private-gateway/audit-host-readiness.sh
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends iproute2 nftables
           sudo bash scripts/bof-open-source-provider-poc/private-gateway/network-namespace-ssrf-test.sh
