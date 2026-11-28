@@ -105,7 +105,7 @@ jobs:
           test "$(cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null || echo 1)" = "1"
           test "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" = "1"
           sudo apparmor_parser -r -W scripts/bof-open-source-provider-poc/private-gateway/apparmor-crawl4ai.profile
-          grep -q '^swayphics-bof-crawl4ai ' /sys/kernel/security/apparmor/profiles
+          sudo grep -q '^swayphics-bof-crawl4ai ' /sys/kernel/security/apparmor/profiles
           test "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" = "1"
 
       - name: Diagnose Chromium user-namespace sandbox support
