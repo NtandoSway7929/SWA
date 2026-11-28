@@ -209,7 +209,17 @@ const { spawnSync } = require("node:child_process");
         "http://2130706433/",
         "http://0177.0.0.1/",
         "http://0x7f000001/",
-        "http://127.1/"
+        "http://127.1/",
+        "https://user:password@public-business.example/",
+        "https://public-business.example:8443/",
+        "ftp://public-business.example/",
+        "file:///etc/passwd",
+        "http://service.localhost/",
+        "http://service.localdomain/",
+        "http://metadata.google.internal/",
+        "http://[::ffff:7f00:1]/",
+        "https://service.test/",
+        "https://service.invalid/"
     ]) {
         await assert.rejects(
             () => provider.fetch([unsafeUrl]),
@@ -217,6 +227,22 @@ const { spawnSync } = require("node:child_process");
         );
     }
     assert.equal(calls.length, callsBeforeUnsafeUrls, "Unsafe destination URLs must be rejected before network access");
+
+    const unsafeSearchResults = __testing.normaliseSearxngResults({
+        results: [
+            { url: "https://public-business.example/", title: "Public" },
+            { url: "http://127.0.0.1/", title: "Loopback" },
+            { url: "http://169.254.169.254/latest/meta-data/", title: "Cloud metadata" },
+            { url: "https://service.internal/", title: "Internal service" },
+            { url: "https://user:password@public-business.example/", title: "Credential URL" },
+            { url: "https://public-business.example:8443/", title: "Unexpected port" }
+        ]
+    });
+    assert.deepEqual(
+        unsafeSearchResults.map((item) => item.url),
+        ["https://public-business.example/"],
+        "Search candidates must pass the same public-URL validation as crawler targets"
+    );
 
     const crawlCall = calls.find((call) => call.url.endsWith("/crawl"));
     assert.equal(crawlCall.init.method, "POST");
