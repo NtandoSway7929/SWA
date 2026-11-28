@@ -404,6 +404,7 @@ select extensions.is(
     'quote stores the successfully created invoice relationship'
 );
 
+select set_config('swayphics.quote_invoice_conversion','on',true);
 select extensions.throws_ok(
     format(
         'update public.quotes set invoice_id=null where id=%L',
