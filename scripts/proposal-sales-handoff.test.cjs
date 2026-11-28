@@ -55,8 +55,8 @@ assert.match(reviewPage, /have read and agree to the/,
     "the acceptance statement must explicitly record agreement to the Terms & Conditions");
 assert.match(reviewPage, /terms_accepted: result\.terms_accepted === true/,
     "the public page must display the server-recorded terms acknowledgement");
-assert.match(reviewPage, /terms_document_sha/,
-    "the review page must recognise the persisted terms document revision");
+assert.match(migration, /terms_document_sha/,
+    "the sales migration must persist and return the exact terms document revision reference");
 const inlineScript = reviewPage.match(/<script>([\s\S]*?)<\/script>/);
 assert.ok(inlineScript, "the proposal review page must include its application script");
 new vm.Script(inlineScript[1], { filename: "proposal-review-inline.js" });
