@@ -651,3 +651,11 @@ The isolated workflow passed [GitHub Actions run 191](https://github.com/NtandoS
 In addition to validating the rendered Compose JSON and testing rejection of missing log limits, the live Docker smoke test inspected each running service's Docker HostConfig. SearXNG, Crawl4AI, Valkey and Caddy each reported the active logging driver and limits as `json-file 10m 3`. Cloudflared remains disabled in the smoke test; its rendered Compose configuration is covered by the static validator.
 
 This confirms Docker applied the requested log rotation settings to the four containers actually started in CI. It does not cap crawler output files, tmpfs usage, Docker image/layer storage, host system logs or other disk consumers. Disk alerts and an explicit output-retention policy remain open.
+
+
+
+### Explicit tmpfs ceilings for crawler and gateway — 28 November 2026
+
+The private-gateway Compose template now gives explicit maximum sizes to Crawl4AI's writable tmpfs mounts, Caddy's temporary/data/config mounts, and Cloudflared's temporary mount. Crawl4AI's configured tmpfs ceilings total 1,088 MiB, in addition to its 1 GiB shared-memory allocation, within its 4 GiB container memory ceiling. Caddy's three tmpfs mounts total 72 MiB; Cloudflared's temporary mount is 32 MiB.
+
+A runtime verifier reads Docker's inspected HostConfig.Tmpfs values and checks the exact byte ceilings for Crawl4AI and Caddy. Its regression tests cover missing mounts and changed sizes. This is intended to prevent unexpectedly unbounded tmpfs growth, but it does not establish that the chosen sizes are sufficient for real crawls. If a workload exceeds a mount limit, writes can fail; representative workload testing is required before deployment. Cloudflared's mount is covered by Compose configuration validation but is not runtime-tested because the tunnel connector is intentionally not started in CI.
