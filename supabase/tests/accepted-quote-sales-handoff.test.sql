@@ -184,7 +184,7 @@ select extensions.ok(
 );
 select extensions.ok(
     (select (result->>'terms_accepted')::boolean
-            and result->>'terms_url'='https://swayphics.co.za/terms-and-conditions/'
+            and result->>'terms_url'='https://swayphics.co.za/terms-and-conditions/revisions/e56d3f2fd1e4247dcff5bd40c9340542b1e414fc/'
        from sales_accept_response),
     'acceptance records explicit acknowledgement of the published Swayphics Terms & Conditions'
 );
@@ -237,14 +237,14 @@ select extensions.is(
     (select terms_url
        from public.swayphics_project_agreements
       where quote_id=current_setting('test.sales_quote_id')::uuid),
-    'https://swayphics.co.za/terms-and-conditions/',
+    'https://swayphics.co.za/terms-and-conditions/revisions/e56d3f2fd1e4247dcff5bd40c9340542b1e414fc/',
     'agreement stores the published Swayphics Terms & Conditions URL'
 );
 select extensions.is(
     (select terms_document_sha
        from public.swayphics_project_agreements
       where quote_id=current_setting('test.sales_quote_id')::uuid),
-    'fa302aec3ab9fd2e8e6458f53726f48cae765e5e',
+    'e56d3f2fd1e4247dcff5bd40c9340542b1e414fc',
     'agreement stores the exact terms document revision reference'
 );
 select extensions.ok(
@@ -269,7 +269,7 @@ select extensions.ok(
 );
 select extensions.ok(
     (select (result->'response'->>'terms_accepted')::boolean
-            and result->'response'->>'terms_document_sha'='fa302aec3ab9fd2e8e6458f53726f48cae765e5e'
+            and result->'response'->>'terms_document_sha'='e56d3f2fd1e4247dcff5bd40c9340542b1e414fc'
        from sales_review_lookup),
     'the public review page can retrieve the recorded terms acknowledgement after acceptance'
 );
