@@ -27,6 +27,7 @@ on:
       - "scripts/proposal-sales-handoff.test.cjs"
       - "supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql"
       - "supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql"
+      - "supabase/migrations/20261128140000_swayphics_task_blocked_status.sql"
       - "supabase/migrations/20261025031000_swayphics_project_delivery_settings.sql"
       - "supabase/tests/accepted-quote-sales-baseline.sql"
       - "supabase/tests/accepted-quote-sales-handoff.test.sql"
@@ -77,6 +78,7 @@ jobs:
       - name: Parse proposal and quote pricing migrations and test fixtures
         run: |
           python supabase/tests/quote-pricing-engine_sql_syntax_check.py
+          python -c "from pathlib import Path; from pglast import parse_sql; parse_sql(Path('supabase/migrations/20261128140000_swayphics_task_blocked_status.sql').read_text())"
           if [ -f supabase/tests/proposal-delivery_sql_syntax_check.py ]; then
             python supabase/tests/proposal-delivery_sql_syntax_check.py
           fi
