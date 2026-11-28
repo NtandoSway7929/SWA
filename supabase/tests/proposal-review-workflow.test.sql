@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(30);
+select extensions.plan(31);
 
 select extensions.has_table('public','quote_review_links',
     'dedicated external proposal review links table exists');
@@ -142,25 +142,84 @@ update public.lead_proposals
        updated_at=now()
  where id='99999999-9999-4999-8999-999999999923';
 
+create temporary table saved_quote_a(result jsonb);
+insert into saved_quote_a(result)
+select public.admin_save_swayphics_quote(
+    null,
+    jsonb_build_object(
+        'title','QA Website Quotation',
+        'lead_id','99999999-9999-4999-8999-999999999922',
+        'proposal_id','99999999-9999-4999-8999-999999999923',
+        'valid_until',(current_date + 7)::text,
+        'notes','QA commercial notes.'
+    ),
+    jsonb_build_array(jsonb_build_object(
+        'service_name','Website project',
+        'description','Website design and development.',
+        'quantity',1,
+        'unit_price',1500,
+        'billing_interval','none'
+    ))
+);
+
+select set_config(
+    'test.quote_id_a',
+    (select result->'quote'->>'id' from saved_quote_a),
+    true
+);
+
+-- Simulate a draft quotation saved against the earlier draft snapshot.
+update public.quotes q
+   set proposal_version_id = (
+       select pv.id
+         from public.lead_proposal_versions pv
+        where pv.proposal_id = q.proposal_id
+          and pv.version_number = 1
+   )
+ where q.id = current_setting('test.quote_id_a')::uuid;
+
+select extensions.throws_ok(
+    'select public.admin_issue_swayphics_quote_review(current_setting(''test.quote_id_a'')::uuid)',
+    '55000',
+    'This quote is linked to a different proposal revision. Reopen and save the draft quote against the current approved proposal before sending it.',
+    'a quote linked to a superseded proposal revision cannot be issued'
+);
+
+-- Explicitly re-saving the draft refreshes its immutable proposal revision
+-- link after the administrator has reviewed the approved proposal.
+insert into saved_quote_a(result)
+select public.admin_save_swayphics_quote(
+    q.id,
+    jsonb_build_object(
+        'title',q.title,
+        'lead_id',q.lead_id,
+        'client_id',q.client_id,
+        'proposal_id',q.proposal_id,
+        'valid_until',q.valid_until,
+        'notes',q.notes,
+        'discount',q.discount,
+        'vat_rate',q.vat_rate
+    ),
+    (
+        select jsonb_agg(jsonb_build_object(
+            'service_id',qi.service_id,
+            'service_name',qi.service_name_snapshot,
+            'description',qi.description,
+            'price_label',qi.price_label_snapshot,
+            'billing_interval',qi.billing_interval,
+            'quantity',qi.quantity,
+            'unit_price',qi.unit_price
+        ) order by qi.position,qi.created_at)
+        from public.quote_items qi
+        where qi.quote_id=q.id
+    )
+)
+from public.quotes q
+where q.id=current_setting('test.quote_id_a')::uuid;
+
 insert into issue_a(result)
 select public.admin_issue_swayphics_quote_review(
-    (public.admin_save_swayphics_quote(
-        null,
-        jsonb_build_object(
-            'title','QA Website Quotation',
-            'lead_id','99999999-9999-4999-8999-999999999922',
-            'proposal_id','99999999-9999-4999-8999-999999999923',
-            'valid_until',(current_date + 7)::text,
-            'notes','QA commercial notes.'
-        ),
-        jsonb_build_array(jsonb_build_object(
-            'service_name','Website project',
-            'description','Website design and development.',
-            'quantity',1,
-            'unit_price',1500,
-            'billing_interval','none'
-        ))
-    )->'quote'->>'id')::uuid
+    current_setting('test.quote_id_a')::uuid
 );
 
 select set_config('test.quote_review_token_a',result->>'token',true) from issue_a;
