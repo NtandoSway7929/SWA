@@ -111,6 +111,7 @@ jobs:
       - name: Diagnose Chromium user-namespace sandbox support
         shell: bash
         run: |
+          python3 scripts/bof-open-source-provider-poc/private-gateway/validate-chromium-seccomp.py
           bash -n scripts/bof-open-source-provider-poc/private-gateway/chromium-sandbox-runtime-test.sh
           sudo bash scripts/bof-open-source-provider-poc/private-gateway/chromium-sandbox-runtime-test.sh
 
