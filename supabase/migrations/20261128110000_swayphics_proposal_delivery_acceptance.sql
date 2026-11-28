@@ -165,6 +165,11 @@ begin
             using errcode = '55000';
     end if;
 
+    if v_quote.proposal_version_id is distinct from v_version_id then
+        raise exception 'This quote is linked to a different proposal revision. Reopen and save the draft quote against the current approved proposal before sending it.'
+            using errcode = '55000';
+    end if;
+
     if v_quote.lead_id is not null
        and v_quote.lead_id is distinct from v_proposal_lead_id then
         raise exception 'The quote and proposal must belong to the same lead.'
