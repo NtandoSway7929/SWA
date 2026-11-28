@@ -514,3 +514,16 @@ The test then made a real crawl request to the reserved public test page `https:
 **What this does not establish:** it does not prove the same sysctl/AppArmor combination is available or appropriate on a future host; that the profile is portable to all Linux distributions or Docker versions; that all Chromium renderer processes remain sandboxed under every workload; or that the full production container/gateway stack is secure. It is not a production-host acceptance test. The test log also emitted shell warnings while reading process command lines because null bytes were stripped during command substitution; the test passed, but this diagnostic output handling should be cleaned up before treating the script as final-quality tooling.
 
 The next host-independent step is to improve the runtime assertion so it verifies the renderer's kernel-enforced sandbox state (not only the absence of `--no-sandbox` in its arguments), remove the null-byte warnings, and add regression checks. A real deployment still requires a selected no-cost Linux Docker host and a read-only host capability audit; no paid server or production changes are authorised.
+
+
+### Final sandbox CI verification after Compose integration — 28 November 2026
+
+The latest isolated workflow passed [GitHub Actions run 140](https://github.com/NtandoSway7929/SWA/actions/runs/46129501671), commit `c3520288a760fbd396c62f47167a36648a376a04`. All three jobs passed:
+
+- Mocked provider, host-egress policy, private-gateway topology and Chromium seccomp invariant checks.
+- Chromium sandbox runtime diagnostic using the pinned Crawl4AI v0.9.6 image, candidate seccomp profile, Docker's default AppArmor profile, non-root `appuser`, dropped capabilities, `no-new-privileges` and read-only root filesystem.
+- Live SearXNG/Crawl4AI and private-gateway Compose smoke tests. The private-gateway stack started successfully with the seccomp profile path configured in Compose.
+
+The sandbox diagnostic set `kernel.apparmor_restrict_unprivileged_userns=0` on the disposable GitHub runner only. The reserved `https://example.com/` crawl returned readable content, and a Chromium renderer process was observed without `--no-sandbox`. This matches Crawl4AI's upstream runtime verification runbook for the sandbox-enabled path. The test does not capture the renderer's user-namespace inode or count its individual seccomp filters, so it is not a kernel-level sandbox introspection audit.
+
+**Deployment gate remains open:** the tested host combination requires unprivileged user namespaces and the host AppArmor user-namespace restriction disabled. We have not created a dedicated AppArmor profile that grants user namespaces more selectively. Do not assume the same sysctl setting is appropriate for a shared or general-purpose host. A selected Linux Docker host must undergo the read-only network/firewall audit, host-specific userns/AppArmor review and sandbox runtime test before deployment. No production service, host firewall, host sysctl, secret, paid server or public endpoint has been changed.
