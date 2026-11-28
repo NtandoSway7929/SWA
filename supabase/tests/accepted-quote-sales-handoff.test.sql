@@ -494,7 +494,7 @@ select extensions.ok(
 select extensions.is(
     (select due_date from public.client_projects
       where id=current_setting('test.sales_project_id')::uuid),
-    current_date + 14,
+    (now() at time zone 'Africa/Johannesburg')::date + 14,
     'the existing project delivery default applies its configured fourteen-day due date'
 );
 select extensions.is(
