@@ -184,7 +184,7 @@ select extensions.ok(
 );
 select extensions.ok(
     (select (result->>'terms_accepted')::boolean
-            and result->>'terms_url'='https://swayphics.co.za/terms-and-conditions/revisions/e56d3f2fd1e4247dcff5bd40c9340542b1e414fc/'
+            and result->>'terms_url'='https://swayphics.co.za/terms-and-conditions/revisions/fa302aec3ab9fd2e8e6458f53726f48cae765e5e/'
        from sales_accept_response),
     'acceptance records explicit acknowledgement of the published Swayphics Terms & Conditions'
 );
@@ -237,7 +237,7 @@ select extensions.is(
     (select terms_url
        from public.swayphics_project_agreements
       where quote_id=current_setting('test.sales_quote_id')::uuid),
-    'https://swayphics.co.za/terms-and-conditions/revisions/e56d3f2fd1e4247dcff5bd40c9340542b1e414fc/',
+    'https://swayphics.co.za/terms-and-conditions/revisions/fa302aec3ab9fd2e8e6458f53726f48cae765e5e/',
     'agreement stores the published Swayphics Terms & Conditions URL'
 );
 select extensions.is(
