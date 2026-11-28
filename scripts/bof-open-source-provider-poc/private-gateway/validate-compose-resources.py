@@ -45,14 +45,20 @@ def main():
         }
         if any(value is None for value in actual.values()):
             fail(name + " must define memory, CPU and PID limits")
-        if actual["memory"] != expected["memory"]:
+        try:
+            memory = int(actual["memory"])
+            cpus = float(actual["cpus"])
+            pids = int(actual["pids"])
+        except (TypeError, ValueError):
+            fail(name + " resource limits must be numeric")
+        if memory != expected["memory"]:
             fail(f"{name} memory limit must be {expected['memory']} bytes, got {actual['memory']}")
-        if float(actual["cpus"]) != expected["cpus"]:
+        if cpus != expected["cpus"]:
             fail(f"{name} CPU limit must be {expected['cpus']}, got {actual['cpus']}")
-        if actual["pids"] != expected["pids"]:
+        if pids != expected["pids"]:
             fail(f"{name} PID limit must be {expected['pids']}, got {actual['pids']}")
-        total_memory += actual["memory"]
-        total_cpus += float(actual["cpus"])
+        total_memory += memory
+        total_cpus += cpus
         print(f"PASS: {name} memory={actual['memory']}B cpus={actual['cpus']} pids={actual['pids']}")
 
     if total_memory > MAX_TOTAL_MEMORY:
