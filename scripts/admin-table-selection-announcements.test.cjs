@@ -17,7 +17,7 @@ assert.match(controls, /selectionStatus\.textContent !== selectionMessage/,
 assert.ok(css.includes(".sway-admin-table-selection-status {") &&
   css.includes("clip-path: inset(50%);") && !/\.sway-admin-table-selection-status\s*\{[^}]*display\s*:\s*none/i.test(css),
   "the live region must be visually hidden without display:none");
-assert.ok(html.includes("admin-workspace.css?v=20261128-lead-proposal-structured-content-1"),
+assert.ok(html.includes("admin-workspace.css?v=20261128-quote-pricing-engine-1"),
   "the updated live-region styling must use a refreshed stylesheet cache key");
 
 console.log("Admin table selection announcement tests passed.");
