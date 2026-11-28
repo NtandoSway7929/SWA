@@ -7,6 +7,7 @@ on:
       - feature/lead-proposal-draft-saving
       - feature/quote-pricing-engine
       - feature/proposal-delivery-acceptance
+      - feature/accepted-quote-sales-handoff
     paths:
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
@@ -23,6 +24,8 @@ on:
       - "admin-dashboard/proposal-sales-handoff.js"
       - "scripts/proposal-sales-handoff.test.cjs"
       - "supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql"
+      - "supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql"
+      - "supabase/migrations/20261025031000_swayphics_project_delivery_settings.sql"
       - "supabase/tests/accepted-quote-sales-baseline.sql"
       - "supabase/tests/accepted-quote-sales-handoff.test.sql"
       - "supabase/tests/accepted-quote-sales_sql_syntax_check.py"
@@ -133,6 +136,16 @@ jobs:
             BASELINE="$GITHUB_WORKSPACE/supabase/tests/accepted-quote-sales-baseline.sql"
           fi
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$BASELINE"
+
+      - name: Apply existing project delivery defaults
+        shell: bash
+        working-directory: /tmp/quote-pricing-engine-project
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          test -n "$DB_URL"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261025031000_swayphics_project_delivery_settings.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "update public.workflow_settings set default_project_task_template = '[{""title"":""Kickoff briefing"",""due_offset_days"":0,""priority"":""high""},{""title"":""Review client onboarding"",""due_offset_days"":1,""priority"":""medium""}]'::jsonb where id=1"
 
       - name: Apply proposal revision dependency migration
         shell: bash
