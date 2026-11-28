@@ -485,6 +485,112 @@ const { spawnSync } = require("node:child_process");
         fs.rmSync(mockBin, { recursive: true, force: true });
     }
 
+
+    const networkAuditScript = path.join(
+        __dirname, "bof-open-source-provider-poc", "private-gateway",
+        "audit-host-network-overlap.py"
+    );
+    assert.ok(fs.existsSync(networkAuditScript),
+        "The private gateway must include a read-only host subnet-overlap audit");
+
+    const networkMockBin = fs.mkdtempSync(path.join(os.tmpdir(), "bof-network-audit-"));
+    try {
+        const mockCommands = {
+            ip: '#!/bin/sh\ncase "$*" in\n  "-j address show") printf "%s" "$MOCK_IP_ADDRESS_JSON";;\n  "-j -4 route show table all") printf "%s" "$MOCK_IP_ROUTE4_JSON";;\n  "-j -6 route show table all") printf "%s" "$MOCK_IP_ROUTE6_JSON";;\n  *) echo "unexpected ip arguments: $*" >&2; exit 1;;\nesac\n',
+            docker: '#!/bin/sh\nif [ "$1" = "network" ] && [ "$2" = "ls" ] && [ "$3" = "-q" ]; then printf "%s\\n" "$MOCK_DOCKER_NETWORK_IDS"; exit 0; fi\nif [ "$1" = "network" ] && [ "$2" = "inspect" ]; then printf "%s" "$MOCK_DOCKER_NETWORK_INSPECT_JSON"; exit 0; fi\necho "unexpected docker arguments: $*" >&2\nexit 1\n'
+        };
+        for (const [name, content] of Object.entries(mockCommands)) {
+            const commandPath = path.join(networkMockBin, name);
+            fs.writeFileSync(commandPath, content, { mode: 0o755 });
+            fs.chmodSync(commandPath, 0o755);
+        }
+
+        const cleanAddresses = [
+            { ifname: "lo", addr_info: [{ family: "inet", local: "127.0.0.1", prefixlen: 8 }] },
+            { ifname: "eth0", addr_info: [{ family: "inet", local: "192.0.2.10", prefixlen: 24 }] },
+            { ifname: "eth0", addr_info: [{ family: "inet6", local: "2001:db8:1::10", prefixlen: 64 }] }
+        ];
+        const cleanRoutes4 = [
+            { dst: "default", gateway: "192.0.2.1", dev: "eth0" },
+            { dst: "192.0.2.0/24", dev: "eth0" }
+        ];
+        const cleanRoutes6 = [
+            { dst: "default", gateway: "2001:db8:1::1", dev: "eth0" },
+            { dst: "2001:db8:1::/64", dev: "eth0" }
+        ];
+        const cleanDockerNetworks = [
+            { Name: "bridge", IPAM: { Config: [{ Subnet: "172.17.0.0/16" }] } },
+            { Name: "existing-app", IPAM: { Config: [{ Subnet: "192.168.40.0/24" }] } }
+        ];
+
+        const runNetworkAudit = ({
+            addresses = cleanAddresses,
+            routes4 = cleanRoutes4,
+            routes6 = cleanRoutes6,
+            dockerNetworks = cleanDockerNetworks,
+            dockerIds = "network-one\nnetwork-two"
+        } = {}) => spawnSync("python3", [networkAuditScript], {
+            encoding: "utf8",
+            env: {
+                ...process.env,
+                PATH: networkMockBin + path.delimiter + process.env.PATH,
+                MOCK_IP_ADDRESS_JSON: JSON.stringify(addresses),
+                MOCK_IP_ROUTE4_JSON: JSON.stringify(routes4),
+                MOCK_IP_ROUTE6_JSON: JSON.stringify(routes6),
+                MOCK_DOCKER_NETWORK_IDS: dockerIds,
+                MOCK_DOCKER_NETWORK_INSPECT_JSON: JSON.stringify(dockerNetworks)
+            }
+        });
+
+        const cleanAudit = runNetworkAudit();
+        assert.equal(cleanAudit.status, 0, cleanAudit.stderr);
+        assert.match(cleanAudit.stdout, /PASS: no overlap detected/);
+        assert.match(cleanAudit.stdout, /non-default routes/);
+
+        const interfaceConflict = runNetworkAudit({
+            addresses: [
+                { ifname: "eth0", addr_info: [{ family: "inet", local: "10.77.8.5", prefixlen: 21 }] }
+            ]
+        });
+        assert.equal(interfaceConflict.status, 1, interfaceConflict.stderr);
+        assert.match(interfaceConflict.stdout, /host interface eth0/);
+        assert.match(interfaceConflict.stdout, /10\.77\.10\.0\/24/);
+
+        const routeConflict = runNetworkAudit({
+            routes4: [{ dst: "default" }, { dst: "10.77.0.0/16", dev: "vpn0" }]
+        });
+        assert.equal(routeConflict.status, 1, routeConflict.stderr);
+        assert.match(routeConflict.stdout, /IPv4 route via vpn0/);
+        assert.match(routeConflict.stdout, /10\.77\.0\.0\/16/);
+
+        const dockerConflict = runNetworkAudit({
+            dockerNetworks: [
+                { Name: "existing-gateway", IPAM: { Config: [{ Subnet: "10.77.50.0/24" }] } }
+            ],
+            dockerIds: "network-one"
+        });
+        assert.equal(dockerConflict.status, 1, dockerConflict.stderr);
+        assert.match(dockerConflict.stdout, /Docker network existing-gateway/);
+        assert.match(dockerConflict.stdout, /10\.77\.50\.0\/24/);
+
+        const malformedDockerInventory = spawnSync("python3", [networkAuditScript], {
+            encoding: "utf8",
+            env: {
+                ...process.env,
+                PATH: networkMockBin + path.delimiter + process.env.PATH,
+                MOCK_IP_ADDRESS_JSON: JSON.stringify(cleanAddresses),
+                MOCK_IP_ROUTE4_JSON: JSON.stringify(cleanRoutes4),
+                MOCK_IP_ROUTE6_JSON: JSON.stringify(cleanRoutes6),
+                MOCK_DOCKER_NETWORK_IDS: "network-one",
+                MOCK_DOCKER_NETWORK_INSPECT_JSON: "not-json"
+            }
+        });
+        assert.equal(malformedDockerInventory.status, 2);
+        assert.match(malformedDockerInventory.stderr, /audit incomplete/i);
+    } finally {
+        fs.rmSync(networkMockBin, { recursive: true, force: true });
+    }
+
     console.log("Swayphics business identity matcher contract tests passed.");
     console.log("Business Opportunity Finder open-source provider adapter tests passed.");
 })().catch((error) => {

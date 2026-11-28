@@ -21,6 +21,20 @@ Caddy has no egress network. Valkey is reachable only on \`search_internal\`. Se
 
 Before deployment, inspect all host, VPN, LAN, existing Docker and cloud-provider routes. None of the six ranges may overlap. If any range changes, update Compose and this policy together; the limiter's trusted Caddy address \`10.77.10.254/32\` must also remain synchronised with the gateway's fixed IP. Caddy uses `.254` in each subnet so dynamic container addresses can use the low end of the range without colliding with the gateway.
 
+### Read-only subnet-overlap preflight
+
+Run the overlap audit on the Linux machine that hosts the local Docker daemon, before creating any of the private-gateway Compose networks:
+
+    python3 scripts/bof-open-source-provider-poc/private-gateway/audit-host-network-overlap.py
+
+The audit compares all six planned IPv4 subnets against every IPv4 and IPv6 host-interface prefix, every non-default IPv4 and IPv6 route in all routing tables, and every subnet in the IPAM configuration of every existing Docker network.
+
+Default routes are excluded because they necessarily cover the entire address space. More-specific and broader non-default routes are both checked for overlap. The script is read-only and does not create networks, change routes, or modify firewall rules.
+
+Exit codes are 0 for a complete inventory with no overlap, 1 when an overlap is found, and 2 when the inventory cannot be completed or parsed. Treat exit code 2 as a failed preflight, not as evidence that the ranges are free.
+
+Run the command on the Docker host itself, using its local Docker context. A remote Docker context would compare the local machine's routes with another machine's Docker networks and is not a valid preflight. The audit cannot discover routes or address reservations held only in an external cloud, office, or VPN control plane and not installed on the host; review those allocations separately. Resolve every reported overlap before deployment. The audit intentionally treats an existing network using one of the six planned ranges as a conflict, so run it before creating this stack.
+
 ## 2. Required egress policy
 
 Apply filtering to forwarded traffic from the three egress source subnets, not merely to host-originated \`OUTPUT\` traffic. A default-deny policy is required for traffic sourced from these subnets.
@@ -126,6 +140,6 @@ Do not mark host egress security complete until all of the following are evidenc
 
 ## 6. Current status
 
-The POC Compose file now pins all three egress networks to stable source subnets. The new audit script detects the Docker firewall backend and the correct policy attachment point without changing the machine. Automated tests use mocked \`docker\`, \`iptables\` and \`nft\` commands to verify both supported branches and the unknown-backend fail-closed behaviour.
+The POC Compose file now pins all three egress networks to stable source subnets. The read-only preflight audits host interface prefixes, all non-default IPv4/IPv6 routes, and existing Docker IPAM subnets against the six planned ranges. A separate read-only audit identifies the Docker firewall backend and expected policy attachment point. Automated tests use mocked \`docker\`, \`iptables\` and \`nft\` commands to verify both supported branches and the unknown-backend fail-closed behaviour.
 
 No host firewall rules have been installed. No host, VM, tunnel, production secret or live endpoint has been selected or provisioned. Do not apply firewall commands until the actual host and firewall backend are known and an out-of-band recovery route is available.
