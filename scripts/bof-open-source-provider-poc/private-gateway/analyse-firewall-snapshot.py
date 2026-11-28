@@ -111,7 +111,7 @@ def parse_nft_forward_chains(snapshot: str) -> list[tuple[str, str, int]]:
             if depth <= 0:
                 body = " ".join(chain_lines)
                 if re.search(r"\bhook\s+forward\b", body):
-                    priority_match = re.search(r"\bpriority\s+([^;\s]+)", body)
+                    priority_match = re.search(r"\bpriority\s+([^;]+?)\s*;", body)
                     if priority_match:
                         priority = _priority_value(priority_match.group(1))
                         if priority is not None:
