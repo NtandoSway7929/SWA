@@ -446,3 +446,14 @@ All four test stages passed in run 103. The lab creates temporary Linux network 
 **Scope limitation:** this is a controlled IPv4 DNS-rebinding and redirect test against an isolated router policy. It does not prove host Docker-forwarding enforcement, IPv6 DNS-rebinding behavior, real resolver/cache behavior, Crawl4AI or Chromium subrequest handling, Cloudflare Tunnel egress, or production security. The earlier dual-stack namespace test covers direct IPv4/IPv6 private and metadata destinations and redirects, but does not make this DNS-rebinding test dual-stack.
 
 The next gate remains host-dependent and is not being simulated as complete: select an existing no-cost Linux Docker environment if available, perform the read-only host/network/firewall inventory, and only then design controlled staging enforcement. Chromium sandbox operation also remains unverified. No paid host is required or authorised for this POC.
+
+
+## Chromium sandbox runtime verification — 28 November 2026
+
+A dedicated CI job now launches the pinned Crawl4AI v0.9.6 image with `CRAWL4AI_CHROMIUM_SANDBOX=true`, non-root `appuser`, all Linux capabilities dropped, `no-new-privileges`, a read-only root filesystem, bounded tmpfs mounts and Docker's default seccomp profile. It attempts a real crawl of the reserved public test page `https://example.com/` and observes Chromium process arguments to ensure `--no-sandbox` is absent.
+
+The first attempt on GitHub's Ubuntu 26.04 hosted runner failed with Chromium's explicit `No usable sandbox!` fatal error. The runner reported `kernel.unprivileged_userns_clone=1` but `kernel.apparmor_restrict_unprivileged_userns=1`. This isolates the immediate failure to the host's AppArmor restriction on unprivileged user namespaces; the test did not demonstrate a working sandbox.
+
+The CI job was then updated to set `kernel.apparmor_restrict_unprivileged_userns=0` only on the disposable GitHub-hosted runner before retrying. This is a temporary test-host setting, not a change to the Crawl4AI container, any Swayphics machine, Docker daemon configuration, or production. The next run must still prove that Chromium launches and completes the crawl under Docker's default seccomp profile. If it fails, preserve the failure and evaluate a narrowly scoped seccomp/AppArmor configuration rather than disabling Chromium's sandbox.
+
+**Current status:** sandbox verification remains open until that retry passes. A passing GitHub-hosted test would establish compatibility with that runner's kernel and Docker configuration only. It would not establish that a future host supports the same policy, nor prove production readiness. The selected deployment host must still pass its own runtime test. The hosted test does not change the private-gateway secure default of `CRAWL4AI_CHROMIUM_SANDBOX=true`.
