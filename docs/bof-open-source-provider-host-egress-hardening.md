@@ -110,6 +110,16 @@ The script never installs, deletes, flushes or reloads firewall rules and does n
 
 This is an inventory aid, not a policy validator. It does not prove that current rules are safe, that every container path is filtered, or that a proposed policy will execute before Docker's accept rules. Those properties still require inspection of the actual host and controlled packet-level staging tests.
 
+### Offline firewall snapshot structure analyser
+
+Save the output of the read-only snapshot command to a protected local file, then run:
+
+    python3 scripts/bof-open-source-provider-poc/private-gateway/analyse-firewall-snapshot.py /path/to/firewall-snapshot.txt
+
+Alternatively, pipe the snapshot to standard input. The analyser does not execute host commands or alter the snapshot. For iptables it checks whether the visible IPv4 FORWARD rules jump to DOCKER-USER first, and flags an absent or later jump. It reports whether a BOF/Swayphics-named policy jump is visible in DOCKER-USER, but treats that as a manual-review item because it does not inspect the referenced chain's complete semantics. For nftables it compares the priority of a visible administrator-owned BOF forward base chain with a visible Docker-owned forward base chain; it fails when the BOF priority is not earlier and reports REVIEW when either chain cannot be identified reliably.
+
+The analyser is intentionally conservative. It does not prove that rules match the intended source subnets, that deny rules precede allows inside a custom chain, that IPv6 is equivalently protected, or that all Docker forwarding paths traverse the inspected chains. It cannot infer rule semantics from names alone. A PASS is only a structural ordering signal and still prints DEPLOYMENT GATE: NOT READY. Treat REVIEW and FAIL as blockers until an administrator inspects the full host ruleset and completes controlled packet-level staging tests. CI runs offline parser fixtures for positive, negative and ambiguous cases; those fixtures do not represent a live host.
+
 ## 4. SSRF validation matrix for staging
 
 A successful host firewall deployment must be verified from the actual Crawl4AI container and its egress network. Use controlled test endpoints and a test-only DNS zone. Do not send probes at the real cloud metadata service or production infrastructure.
