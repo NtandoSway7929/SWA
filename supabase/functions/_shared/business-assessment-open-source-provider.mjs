@@ -262,16 +262,36 @@ function normaliseCrawlResult(item, requestedUrl) {
         };
     }
 
+    const requestedOrigin = (() => {
+        try {
+            const url = new URL(requestedUrl);
+            return url.protocol === "http:" || url.protocol === "https:" ? url.origin : null;
+        } catch {
+            return null;
+        }
+    })();
+    const finalOrigin = (() => {
+        try {
+            const url = new URL(finalUrl);
+            return url.protocol === "http:" || url.protocol === "https:" ? url.origin : null;
+        } catch {
+            return null;
+        }
+    })();
+    const redirectStayedOnOrigin = Boolean(requestedOrigin && finalOrigin &&
+        requestedOrigin === finalOrigin);
     const text = markdownText(item?.markdown) ||
         (typeof item?.extracted_content === "string" ? item.extracted_content : "");
     const statusCode = Number.isInteger(item?.status_code) ? item.status_code : null;
     const httpStatusAcceptable = statusCode === null || (statusCode >= 200 && statusCode < 300);
     const hasReadableText = Boolean(text.trim());
-    const success = item?.success === true && httpStatusAcceptable && hasReadableText;
+    const success = item?.success === true && httpStatusAcceptable &&
+        hasReadableText && redirectStayedOnOrigin;
     const errorCode = item?.success !== true
         ? "fetch_error"
         : !httpStatusAcceptable ? "http_status_" + statusCode
-            : !hasReadableText ? "empty_content" : null;
+            : !redirectStayedOnOrigin ? "cross_origin_redirect"
+                : !hasReadableText ? "empty_content" : null;
 
     return {
         url: requestedUrl,
