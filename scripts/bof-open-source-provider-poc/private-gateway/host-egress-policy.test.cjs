@@ -30,6 +30,8 @@ function composeFixture(policy) {
         services.gateway.networks[name].ipv4_address = address;
     }
     services.cloudflared.profiles = [topology.cloudflared_profile];
+    // docker compose config --format json resolves the secure fallback to the string "true".
+    services.crawl4ai.environment = { CRAWL4AI_CHROMIUM_SANDBOX: "true" };
     return {
         services,
         networks: Object.fromEntries(topology.networks.map(n => [n.name, {
@@ -95,6 +97,9 @@ expectComposeRejected("a host port is published", c => {
 });
 expectComposeRejected("the cloudflared tunnel profile is made unconditional", c => {
     c.services.cloudflared.profiles = [];
+});
+expectComposeRejected("Chromium sandboxing is disabled in the private gateway", c => {
+    c.services.crawl4ai.environment.CRAWL4AI_CHROMIUM_SANDBOX = "false";
 });
 expectComposeRejected("the gateway fixed limiter address drifts", c => {
     c.services.gateway.networks.search_internal.ipv4_address = "10.77.10.253";
