@@ -6,12 +6,14 @@ on:
       - main
       - feature/lead-proposal-draft-saving
       - feature/quote-pricing-engine
+      - feature/proposal-delivery-acceptance
     paths:
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
       - "admin-dashboard/index.html"
       - "admin-dashboard/proposal-delivery.js"
       - "admin-dashboard/proposal-delivery.css"
+      - "admin-dashboard/proposal-sales-handoff.css"
       - "proposal-review/index.html"
       - "scripts/proposal-delivery.test.cjs"
       - "supabase/migrations/20261128110000_swayphics_proposal_delivery_acceptance.sql"
