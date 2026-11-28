@@ -22,7 +22,8 @@
           443
         ],
         "destination_policy": "public-global-unicast-only"
-      }
+      },
+      "compose_network": "search_egress"
     },
     {
       "service": "crawl4ai",
@@ -36,7 +37,8 @@
           443
         ],
         "destination_policy": "public-global-unicast-only"
-      }
+      },
+      "compose_network": "crawl_egress"
     },
     {
       "service": "cloudflared",
@@ -101,7 +103,8 @@
           ]
         },
         "refresh_before_deployment": true
-      }
+      },
+      "compose_network": "cloudflare_egress"
     }
   ],
   "default_policy": {
@@ -229,5 +232,98 @@
       "checked_on": "2026-11-28",
       "use": "Source for the regional Tunnel endpoint hostname/address snapshot and TCP/UDP 7844 requirement. Optional TCP 443 destinations are intentionally excluded."
     }
-  ]
+  ],
+  "topology": {
+    "compose_file": "scripts/bof-open-source-provider-poc/private-gateway/compose.yml",
+    "networks": [
+      {
+        "name": "tunnel_internal",
+        "subnet": "10.77.30.0/24",
+        "internal": true,
+        "members": [
+          "gateway",
+          "cloudflared"
+        ]
+      },
+      {
+        "name": "search_internal",
+        "subnet": "10.77.10.0/24",
+        "internal": true,
+        "members": [
+          "searxng",
+          "valkey",
+          "gateway"
+        ]
+      },
+      {
+        "name": "crawl_internal",
+        "subnet": "10.77.20.0/24",
+        "internal": true,
+        "members": [
+          "crawl4ai",
+          "gateway"
+        ]
+      },
+      {
+        "name": "search_egress",
+        "subnet": "10.77.40.0/24",
+        "internal": false,
+        "members": [
+          "searxng"
+        ]
+      },
+      {
+        "name": "crawl_egress",
+        "subnet": "10.77.50.0/24",
+        "internal": false,
+        "members": [
+          "crawl4ai"
+        ]
+      },
+      {
+        "name": "cloudflare_egress",
+        "subnet": "10.77.60.0/24",
+        "internal": false,
+        "members": [
+          "cloudflared"
+        ]
+      }
+    ],
+    "services": {
+      "searxng": [
+        "search_internal",
+        "search_egress"
+      ],
+      "crawl4ai": [
+        "crawl_internal",
+        "crawl_egress"
+      ],
+      "valkey": [
+        "search_internal"
+      ],
+      "gateway": [
+        "tunnel_internal",
+        "search_internal",
+        "crawl_internal"
+      ],
+      "cloudflared": [
+        "tunnel_internal",
+        "cloudflare_egress"
+      ]
+    },
+    "gateway_fixed_addresses": {
+      "tunnel_internal": "10.77.30.254",
+      "search_internal": "10.77.10.254",
+      "crawl_internal": "10.77.20.254"
+    },
+    "cloudflared_profile": "tunnel",
+    "services_must_not_publish_host_ports": [
+      "searxng",
+      "crawl4ai",
+      "valkey",
+      "gateway",
+      "cloudflared"
+    ],
+    "egress_service_networks_must_match_manifest": true
+  }
 }

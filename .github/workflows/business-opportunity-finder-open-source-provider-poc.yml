@@ -60,6 +60,15 @@ jobs:
             BOF_GATEWAY_PUBLIC_URL=https://bof-inspect.swayphics.co.za \
             CLOUDFLARED_TUNNEL_TOKEN_FILE="$token_file" \
             docker compose --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml config --quiet
+          env \
+            SEARXNG_SECRET=ci-placeholder-only \
+            CRAWL4AI_API_TOKEN=ci-placeholder-only \
+            BOF_GATEWAY_PUBLIC_URL=https://bof-inspect.swayphics.co.za \
+            CLOUDFLARED_TUNNEL_TOKEN_FILE="$token_file" \
+            docker compose --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml config --format json \
+              > "$RUNNER_TEMP/bof-private-gateway-compose.json"
+          node scripts/bof-open-source-provider-poc/private-gateway/validate-host-egress-policy.cjs \
+            --compose "$RUNNER_TEMP/bof-private-gateway-compose.json"
           docker run --rm --network none --entrypoint caddy \
             --volume "$PWD/scripts/bof-open-source-provider-poc/private-gateway/gateway:/etc/caddy:ro" \
             caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 \

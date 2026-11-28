@@ -177,3 +177,6 @@ The Cloudflare endpoint snapshot was checked on 28 November 2026 against the Clo
 CI runs the manifest regression tests and schema validation as part of the mocked contract job. Passing those checks proves only that the declarative file meets the encoded invariants. It does not validate a real host's firewall backend, route table, DNS path, destination policy, Docker forwarding behaviour or rollback plan.
 
 No firewall rules have been generated or applied. No host, VM, tunnel, production secret or live endpoint has been provisioned.
+
+
+The manifest also records the expected six-network topology and exact service membership. CI now converts the Compose file to canonical JSON and checks it against the manifest. This catches drift such as a provider changing subnet, Valkey gaining an egress attachment, Caddy gaining an outbound network, a host port being published, or the Cloudflare Tunnel profile becoming unconditional. The Compose comparison is a static configuration check; the existing live CI job separately confirms runtime network membership and unpublished ports.

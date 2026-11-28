@@ -69,6 +69,8 @@ function validatePolicy(policy) {
         seenCidrs.add(source.source_cidr);
         assert(sameArray(source.new_outbound_allow?.protocols, expected.protocols), "Unexpected protocol allowance for " + expected.service + ".");
         assert(sameArray(source.new_outbound_allow?.ports, expected.ports), "Unexpected port allowance for " + expected.service + ".");
+        assert(typeof source.compose_network === "string" && source.compose_network.length > 0,
+            "Compose egress network is missing for " + expected.service + ".");
     }
 
     assert(policy.default_policy?.new_outbound_connections === "deny", "New outbound connections must default to deny.");
@@ -109,7 +111,7 @@ function validatePolicy(policy) {
     assert(sameArray(tunnel.new_outbound_allow.hostname_allowlist, EXPECTED_CLOUDFLARE_HOSTS), "Cloudflared must use only the documented standard regional hostname allowlist.");
     assert(tunnel.new_outbound_allow.refresh_before_deployment === true, "Cloudflare endpoint data must be refreshed before deployment.");
     const endpoints = tunnel.new_outbound_allow.endpoint_address_snapshot;
-    assert(endpoints && endpoints.ipv4?.length === 20 && endpoints.ipv6?.length === 20, "Cloudflare endpoint snapshot must contain both address families for both standard regions.");
+    assert(endpoints && endpoints.ipv4?.length === 20 && endpoints.ipv6?.length === 20, "Cloudflare endpoint snapshot must contain both standard regional address sets.");
     endpoints.ipv4.forEach((ip) => validateIp(ip, 4, "Cloudflare endpoint snapshot"));
     endpoints.ipv6.forEach((ip) => validateIp(ip, 6, "Cloudflare endpoint snapshot"));
     assert(!tunnel.new_outbound_allow.ports.includes(443), "Optional TCP 443 must not be granted to cloudflared by default.");
@@ -125,14 +127,128 @@ function validatePolicy(policy) {
     const sources = policy.reference_sources || [];
     assert(sources.some((item) => item.publisher === "IANA" && item.url === "https://www.iana.org/assignments/iana-ipv4-special-registry"), "Official IANA IPv4 registry reference is required.");
     assert(sources.some((item) => item.publisher === "IANA" && item.url === "https://www.iana.org/assignments/iana-ipv6-special-registry"), "Official IANA IPv6 registry reference is required.");
-    assert(sources.some((item) => item.publisher === "Cloudflare" && item.url === "https://developers.cloudflare.com/tunnel/configuration/"), "Official Cloudflare Tunnel firewall documentation is required.");
+    assert(sources.some((item) => item.publisher === "Cloudflare" && item.url === "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/tunnel-with-firewall/"), "Official Cloudflare Tunnel firewall reference is required.");
+
+    const topology = policy.topology;
+    assert(topology && topology.compose_file && Array.isArray(topology.networks), "A Compose topology contract is required.");
+    assert(topology.networks.length === 6, "Exactly six private-gateway networks are expected.");
+    assert(topology.services && Object.keys(topology.services).length === 5, "Exactly five Compose services are expected.");
+    for (const network of topology.networks) {
+        assert(typeof network.name === "string" && typeof network.subnet === "string", "Network name and subnet are required.");
+        validateCidr(network.subnet, 4, network.name + " subnet");
+        assert(typeof network.internal === "boolean", "Network internal flag must be explicit for " + network.name + ".");
+        assert(Array.isArray(network.members) && network.members.length > 0, "Expected network members are required for " + network.name + ".");
+        assert(new Set(network.members).size === network.members.length, "Duplicate member on " + network.name + ".");
+    }
+    assert(new Set(topology.networks.map(x => x.name)).size === topology.networks.length, "Duplicate network names in topology contract.");
+    assert(new Set(topology.networks.map(x => x.subnet)).size === topology.networks.length, "Duplicate network subnets in topology contract.");
+    for (const [service, networks] of Object.entries(topology.services)) {
+        assert(Array.isArray(networks) && networks.length > 0, "Expected network membership is missing for " + service + ".");
+        assert(new Set(networks).size === networks.length, "Duplicate network membership for " + service + ".");
+        for (const networkName of networks) {
+            assert(topology.networks.some(x => x.name === networkName && x.members.includes(service)),
+                "Topology membership mismatch for " + service + " on " + networkName + ".");
+        }
+    }
+    for (const network of topology.networks) {
+        for (const service of network.members) {
+            assert(topology.services[service]?.includes(network.name),
+                "Reverse topology membership mismatch for " + service + " on " + network.name + ".");
+        }
+    }
+    for (const source of policy.source_networks) {
+        const network = topology.networks.find(x => x.name === source.compose_network);
+        assert(network && network.subnet === source.source_cidr && !network.internal,
+            "Egress source CIDR does not match its Compose egress network for " + source.service + ".");
+        assert(topology.services[source.service]?.includes(source.compose_network),
+            source.service + " is not declared on its manifest egress network.");
+    }
+    assert(topology.services.valkey?.length === 1 && topology.services.valkey[0] === "search_internal",
+        "Valkey must remain isolated on search_internal.");
+    assert(!topology.services.gateway?.some(name => topology.networks.find(n => n.name === name)?.internal === false),
+        "Caddy gateway must not attach to an egress network.");
+    assert(topology.services.cloudflared?.includes("cloudflare_egress"),
+        "cloudflared must attach to its isolated egress network.");
+    assert(topology.gateway_fixed_addresses?.tunnel_internal === "10.77.30.254" &&
+        topology.gateway_fixed_addresses?.search_internal === "10.77.10.254" &&
+        topology.gateway_fixed_addresses?.crawl_internal === "10.77.20.254",
+        "Gateway fixed addresses must remain synchronised with the current network plan.");
+    assert(topology.cloudflared_profile === "tunnel", "cloudflared must remain opt-in behind the tunnel profile.");
+    assert(sameArray(topology.services_must_not_publish_host_ports, Object.keys(topology.services)),
+        "Every gateway service must be prohibited from publishing host ports.");
+    assert(topology.egress_service_networks_must_match_manifest === true,
+        "Compose egress membership must be checked against the manifest.");
+    return true;
+}
+
+function validateComposeConfig(compose, policy) {
+    assert(compose && typeof compose === "object", "Compose config must be a JSON object.");
+    const topology = policy.topology;
+    const services = compose.services;
+    const networks = compose.networks;
+    assert(services && typeof services === "object" && !Array.isArray(services), "Canonical Compose config has no services object.");
+    assert(networks && typeof networks === "object" && !Array.isArray(networks), "Canonical Compose config has no networks object.");
+    assert(sameArray(Object.keys(services), Object.keys(topology.services)),
+        "Canonical Compose service set differs from the manifest topology.");
+
+    for (const expected of topology.networks) {
+        const actual = networks[expected.name];
+        assert(actual && typeof actual === "object", "Compose is missing network " + expected.name + ".");
+        assert(actual.internal === expected.internal,
+            "Compose internal flag differs for " + expected.name + ".");
+        const configs = actual.ipam?.config;
+        assert(Array.isArray(configs) && configs.length === 1,
+            "Compose must define exactly one IPAM subnet for " + expected.name + ".");
+        assert(configs[0].subnet === expected.subnet,
+            "Compose subnet differs from the manifest for " + expected.name + ".");
+        if (!expected.internal) {
+            assert(actual.driver === undefined || actual.driver === "bridge",
+                "Egress network must use the bridge driver: " + expected.name + ".");
+        }
+    }
+    assert(sameArray(Object.keys(networks), topology.networks.map(x => x.name)),
+        "Canonical Compose network set differs from the manifest topology.");
+
+    for (const [serviceName, expectedNetworks] of Object.entries(topology.services)) {
+        const service = services[serviceName];
+        assert(service && typeof service === "object", "Compose is missing service " + serviceName + ".");
+        assert(service.networks && typeof service.networks === "object", "Compose has no networks for " + serviceName + ".");
+        assert(sameArray(Object.keys(service.networks), expectedNetworks),
+            "Compose network membership differs for " + serviceName + ".");
+        if (serviceName === "gateway") {
+            for (const [networkName, address] of Object.entries(topology.gateway_fixed_addresses)) {
+                assert(service.networks[networkName]?.ipv4_address === address,
+                    "Gateway fixed IP differs for " + networkName + ".");
+            }
+        }
+        if (serviceName === "cloudflared") {
+            assert(sameArray(service.profiles, [topology.cloudflared_profile]),
+                "cloudflared must be opt-in behind the tunnel profile.");
+        }
+    }
+
+    for (const serviceName of topology.services_must_not_publish_host_ports) {
+        const ports = services[serviceName]?.ports;
+        assert(ports === undefined || (Array.isArray(ports) && ports.length === 0),
+            serviceName + " must not publish a host port.");
+    }
     return true;
 }
 
 function main() {
     const manifestPath = path.join(__dirname, "host-egress-policy.json");
+    let policy;
     try {
-        validatePolicy(JSON.parse(fs.readFileSync(manifestPath, "utf8")));
+        policy = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+        validatePolicy(policy);
+        const args = process.argv.slice(2);
+        if (args.length) {
+            assert(args.length === 2 && args[0] === "--compose",
+                "Usage: validate-host-egress-policy.cjs [--compose <canonical-compose-json>]");
+            const compose = JSON.parse(fs.readFileSync(path.resolve(args[1]), "utf8"));
+            validateComposeConfig(compose, policy);
+            console.log("Canonical Docker Compose topology matches the policy manifest.");
+        }
     } catch (error) {
         console.error("BOF host egress policy validation failed: " + error.message);
         process.exitCode = 1;
@@ -141,4 +257,4 @@ function main() {
     console.log("BOF host egress policy manifest valid. Design-only; no host rules were generated or applied.");
 }
 if (require.main === module) main();
-module.exports = { validatePolicy };
+module.exports = { validatePolicy, validateComposeConfig };
