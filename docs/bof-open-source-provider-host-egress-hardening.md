@@ -240,3 +240,12 @@ The target namespace hosts local HTTP fixtures on ports 8080 (IPv4) and 8081 (IP
 - IPv4 and IPv6 HTTP redirects to private destinations are blocked on their follow-up connections.
 
 This is a packet-level test of a temporary dual-stack nftables forwarding policy in disposable network namespaces. It is not proof that the selected production host's Docker bridge traffic traverses the same hook or rule order. It does not test the actual DOCKER-USER iptables path, Docker's host nftables integration, live DNS rebinding, Chromium subrequests, Cloudflare Tunnel egress, or host-specific destination ranges. Do not use its result to mark the deployment gate ready. Preserve the host-specific preflight and rollback requirements above.
+
+
+### Additional offline regression coverage — 28 November 2026
+
+The policy simulator's self-test suite also checks a mixed IPv4/IPv6 answer set containing an IPv6 metadata destination, a three-hop redirect chain whose final hop targets RFC1918 space, and malformed DNS answer data. Every supplied address is classified and the chain stops at the first unsafe hop. These tests strengthen the decision-logic regression set; they do not perform DNS lookups or HTTP connections.
+
+**Important TOCTOU limitation:** the simulator models a hostname resolving to a public address on one evaluation and a blocked address on a later evaluation. It does not simulate a DNS answer changing after validation but before the HTTP client opens its socket. A resolver pre-check alone cannot close that race if Crawl4AI/Chromium performs a second lookup. Production enforcement must either pin each connection to the exact validated address while preserving the original Host header and TLS SNI, and repeat validation for every redirect and browser subrequest, or route all crawler traffic through an egress proxy/firewall that enforces destination policy at connection time. The packet-level host egress filter remains mandatory even if application-level address pinning is implemented.
+
+Do not describe the offline suite as proof of DNS-rebinding resistance. The selected Linux staging host must still pass controlled DNS rebinding and redirect tests at the network boundary before any production use.
