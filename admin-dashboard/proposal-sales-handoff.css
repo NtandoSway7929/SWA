@@ -1,0 +1,27 @@
+.accepted-quote-handoff-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(111,123,135,.18);
+}
+.accepted-quote-handoff-actions small{
+  flex-basis:100%;
+  color:#77818b;
+  font-size:11px;
+  line-height:1.5;
+}
+.accepted-quote-convert{border-color:#0152F4!important;color:#0152F4!important}
+.accepted-quote-static{opacity:.65;cursor:default!important}
+.sway-project-agreement-card{width:min(780px,calc(100vw - 30px));max-height:min(88vh,900px);overflow:auto}
+.sway-project-agreement-content{display:grid;gap:18px;padding:22px 26px}
+.sway-project-agreement-content section{display:grid;gap:9px;min-width:0}
+.sway-project-agreement-content section>strong{font-size:13px;color:#252B31}
+.sway-project-agreement-content pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;margin:0;padding:14px;border:1px solid #E1E5E9;border-radius:9px;background:#F6F8F9;color:#48515A;font:11px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}
+.sway-project-agreement-content p{margin:0;color:#56616B;font-size:12px;line-height:1.7}
+.sway-project-agreement-content a{font-size:12px;color:#0152F4}
+.sway-project-agreement-content small{font-size:10px;color:#7B858E;overflow-wrap:anywhere}
+.sway-project-agreement-footer{display:flex;justify-content:flex-end;padding:0 26px 22px}
+@media(max-width:640px){.sway-project-agreement-content{padding:18px}.sway-project-agreement-footer{padding:0 18px 18px}}
