@@ -178,6 +178,7 @@ jobs:
           if [ -f "$GITHUB_WORKSPACE/supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql" ]; then
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql"
           fi
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128140000_swayphics_task_blocked_status.sql"
 
       - name: Run quote pricing and invoice conversion database tests
         working-directory: /tmp/quote-pricing-engine-project
