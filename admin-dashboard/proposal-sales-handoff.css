@@ -32,7 +32,7 @@
 .sway-project-kickoff-form{display:grid;gap:14px;padding:22px 26px}
 .sway-project-kickoff-form>label{display:grid;gap:7px;color:#303943;font-size:12px;font-weight:750}
 .sway-project-kickoff-form>label span{color:#87919a;font-weight:500}
-.sway-project-kickoff-form input,.sway-project-kickoff-form textarea{width:100%;min-width:0;padding:11px 12px;border:1px solid #DCE2E8;border-radius:8px;background:#fff;color:#27313a;font:500 13px/1.5 inherit;outline:none}
+.sway-project-kickoff-form input,.sway-project-kickoff-form textarea{width:100%;min-width:0;padding:11px 12px;border:1px solid #DCE2E8;border-radius:8px;background:#fff;color:#27313a;font:inherit;font-size:13px;font-weight:500;line-height:1.5;outline:none}
 .sway-project-kickoff-form input:focus,.sway-project-kickoff-form textarea:focus{border-color:#0152F4;box-shadow:0 0 0 3px rgba(1,82,244,.10)}
 .sway-project-kickoff-form textarea{resize:vertical;min-height:112px}
 .sway-project-kickoff-summary{display:grid;gap:6px;padding:13px 14px;border:1px solid #E4E9EF;border-radius:9px;background:#F7F9FB}
