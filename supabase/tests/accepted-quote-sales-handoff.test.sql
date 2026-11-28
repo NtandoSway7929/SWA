@@ -94,8 +94,9 @@ create temporary table sales_invoice_retry(result jsonb);
 create temporary table sales_saved_rejected_quote(result jsonb);
 create temporary table sales_issue_rejected_link(result jsonb);
 create temporary table sales_reject_response(result jsonb);
+create temporary table manual_accepted_quote(result jsonb);
 
-grant insert,select on sales_saved_quote,sales_issue_link,sales_converted_client,
+grant insert,select on manual_accepted_quote,sales_saved_quote,sales_issue_link,sales_converted_client,
     sales_converted_client_retry,sales_invoice_created,sales_invoice_retry,
     sales_saved_rejected_quote,sales_issue_rejected_link to authenticated;
 grant insert,select on sales_accept_response,sales_review_lookup,sales_reject_response to anon;
@@ -446,8 +447,6 @@ select extensions.throws_ok(
 reset role;
 
 set local role authenticated;
-create temporary table manual_accepted_quote(result jsonb);
-grant insert,select on manual_accepted_quote to authenticated;
 insert into manual_accepted_quote(result)
 select public.admin_save_swayphics_quote(
     null,
