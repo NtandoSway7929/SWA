@@ -125,6 +125,7 @@
         </div>
         <p class="recurrence-note">The initial amount due includes once-off services and the first monthly or yearly billing periods. Monthly and yearly figures show the recurring charges separately. Future recurring invoices are not automatically issued by this quotation.</p>
         <p class="validity" id="quote-validity"></p>
+        <p class="validity" id="review-expiry"></p>
         <p class="section-copy" id="quote-notes"></p>
       </section>
       <section class="section response-panel" id="response-panel">
@@ -181,6 +182,15 @@
         var d = new Date(String(value) + "T00:00:00");
         if (Number.isNaN(d.getTime())) return String(value);
         return new Intl.DateTimeFormat("en-ZA", { year: "numeric", month: "long", day: "numeric" }).format(d);
+      }
+      function dateTimeLabel(value) {
+        if (!value) return "Not specified";
+        var d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "Not specified";
+        return new Intl.DateTimeFormat("en-ZA", {
+          year: "numeric", month: "long", day: "numeric",
+          hour: "numeric", minute: "2-digit", timeZone: "Africa/Johannesburg"
+        }).format(d);
       }
       function plainValue(value) {
         if (value === null || value === undefined) return "";
@@ -306,7 +316,10 @@
         el("discount").textContent = currency(quote.discount);
         el("vat").textContent = currency(quote.vat_amount) + (Number(quote.vat_rate || 0) ? " (" + Number(quote.vat_rate) + "%)" : "");
         el("amount").textContent = currency(quote.amount);
-        el("quote-validity").textContent = "Quotation valid until " + dateLabel(quote.valid_until) + ".";
+        el("quote-validity").textContent = quote.valid_until
+          ? "Quotation valid until " + dateLabel(quote.valid_until) + "."
+          : "No separate quotation validity date has been specified.";
+        el("review-expiry").textContent = "This private review link expires on " + dateTimeLabel(data.expires_at) + ".";
         el("quote-notes").textContent = quote.notes || "";
         if (data.response && data.response.decision) showExistingResponse(data.response);
         else if (quote.status !== "sent") {
