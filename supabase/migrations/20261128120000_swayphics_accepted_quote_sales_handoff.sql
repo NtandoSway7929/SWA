@@ -607,7 +607,11 @@ begin
                 'already_submitted', true,
                 'decision', v_existing.decision,
                 'quote_id', v_existing.quote_id,
-                'submitted_at', v_existing.submitted_at
+                'submitted_at', v_existing.submitted_at,
+                'terms_accepted', v_existing.terms_accepted,
+                'terms_url', v_existing.terms_url,
+                'terms_document_sha', v_existing.terms_document_sha,
+                'acceptance_statement', v_existing.acceptance_statement
             );
         end if;
         raise exception 'A response has already been recorded for this proposal.'
