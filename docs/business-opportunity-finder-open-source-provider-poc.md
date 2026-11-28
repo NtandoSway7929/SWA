@@ -610,3 +610,22 @@ The isolated POC workflow passed [GitHub Actions run 172](https://github.com/Nta
 A new isolated regression suite covers the read-only AppArmor host audit. It confirms the audit accepts an enforced named profile with the host user-namespace restriction enabled, and fails closed for a missing profile, complain-mode profile, disabled user-namespace restriction, disabled AppArmor module, or missing apparmor_parser. The audit reads AppArmor securityfs without modifying it and falls back to non-interactive sudo only when ordinary access fails.
 
 This completes the host-readiness script's static/regression coverage for AppArmor reporting. It does not constitute a real deployment-host audit: no production or personal machine has been selected, and the script has not been run against a host with its actual LAN/VPN/Docker routes and firewall state.
+
+
+
+### Explicit private-gateway resource ceilings — 28 November 2026
+
+The private-gateway Compose template now defines hard CPU, memory and PID ceilings for all five services. The rendered Compose configuration is checked in CI by validate-compose-resources.py, and regression tests reject missing or changed per-service ceilings.
+
+| Service | CPU ceiling | Memory ceiling | PID ceiling |
+|---|---:|---:|---:|
+| SearXNG | 0.75 CPU | 1 GiB | 256 |
+| Crawl4AI | 1.5 CPU | 4 GiB | 512 |
+| Valkey | 0.25 CPU | 384 MiB | 128 |
+| Caddy gateway | 0.25 CPU | 256 MiB | 128 |
+| Cloudflared | 0.25 CPU | 128 MiB | 128 |
+| **Aggregate** | **3.0 CPU** | **5.75 GiB** | Not additive |
+
+The aggregate CPU ceiling leaves up to one CPU core outside the containers on a four-vCPU host, if every service simultaneously reaches its configured quota. The aggregate memory ceilings leave 2.25 GiB below an 8 GiB host's nominal capacity for the OS, Docker, filesystem cache and other host processes. These are arithmetic budgets, not performance benchmarks or a claim that an 8 GiB/four-vCPU host is sufficient. The crawler's 4 GiB ceiling includes its shared-memory allocation; runtime headroom and actual peak memory still need measurement under representative concurrent crawls.
+
+The current POC has no measured production concurrency target. Before any deployment, establish a low initial concurrency limit, verify Compose enforces the limits on the selected Docker version, measure CPU/RAM/PID peaks, disk growth and restart behaviour, and tune only from observed workload. Do not increase host size or purchase a server based on this CI check. The resource validator proves configuration shape and ceilings only; it does not prove runtime enforcement, latency, throughput, or resilience.
