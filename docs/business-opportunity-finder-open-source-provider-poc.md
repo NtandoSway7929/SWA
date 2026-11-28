@@ -474,3 +474,17 @@ The Moby `clone3` rule remains `SCMP_ACT_ERRNO` with `ENOSYS` (38), so Chromium 
 **This is still a candidate, not an approved deployment profile.** It must pass the actual Crawl4AI v0.9.6 / Chromium 158 runtime test, and the AppArmor policy/host configuration must be validated separately. The candidate profile is not yet wired into the private-gateway Compose deployment template. Do not copy `apparmor=unconfined` into deployment.
 
 The design is informed by the Playwright Docker guidance that a separate unprivileged browser user should be combined with a seccomp profile that allows the browser's namespace operations, but this POC deliberately narrows the syscall argument flags rather than allowing `clone`, `setns` and `unshare` unconditionally. See [Playwright's Docker guidance](https://playwright.dev/docs/docker), [Docker seccomp documentation](https://docs.docker.com/engine/security/seccomp/) and [Chromium's Linux sandbox design](https://chromium.googlesource.com/chromium/src/+/main/docs/security/).
+
+
+### Candidate seccomp runtime result — 28 November 2026
+
+The isolated POC workflow passed [GitHub Actions run 117](https://github.com/NtandoSway7929/SWA/actions/runs/46126677958), commit `904ca1ab5a4c6677cf6b38bf4d53844a6fac53f0`. All three jobs passed: mocked adapter/policy contracts, Chromium sandbox host capability diagnostic, and the live provider/private-gateway Docker smoke test.
+
+The Chromium diagnostic specifically verified:
+
+- The candidate profile passed its static invariants: default-deny, filtered `clone` and `unshare`, `clone3` returning ENOSYS, no blanket `setns` or mount-family allowance, and the scoped `chroot` rule.
+- The pinned Crawl4AI v0.9.6 image started with `CRAWL4AI_CHROMIUM_SANDBOX=true`, non-root `appuser`, all capabilities dropped, `no-new-privileges`, read-only rootfs and resource limits.
+- A real crawl of `https://example.com/` returned readable content.
+- A Chromium renderer process was observed without `--no-sandbox`.
+
+**Important limitation:** the diagnostic set `kernel.apparmor_restrict_unprivileged_userns=0` on the disposable GitHub runner and used `apparmor=unconfined` for the test container. It did use the candidate filtered seccomp profile. Therefore the run proves the Chromium sandbox can launch with this seccomp candidate in that ephemeral environment; it does not validate an AppArmor profile, a production host, or the complete private-gateway security boundary. The private-gateway Compose template has not been changed to use the candidate profile. Next, validate the default Docker AppArmor profile with the host user-namespace setting and/or develop a narrow dedicated AppArmor policy, then repeat the sandbox test with AppArmor confinement enabled. Only after that should the candidate seccomp profile be considered for Compose integration.
