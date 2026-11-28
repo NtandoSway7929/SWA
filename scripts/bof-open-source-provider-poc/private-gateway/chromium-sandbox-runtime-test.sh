@@ -114,15 +114,17 @@ for path in glob.glob("/proc/[0-9]*/cmdline"):
         pass
 ' 2>/dev/null || true)"
   if [ -n "$observation" ]; then
-    chromium_seen=true
     printf '%s\n' "$observation" >>"$log_file"
-    if ! grep -q -- '--no-sandbox' <<<"$observation"; then
-      sandbox_flag_clear=true
-    fi
-    if grep -q 'SECCOMP=2' <<<"$observation" &&
-       grep -q 'NNP=1' <<<"$observation" &&
-       grep -q 'USERNS_DIFF=True' <<<"$observation"; then
-      kernel_sandbox_verified=true
+    if grep -Eiq 'chrom(e|ium).*--type=(renderer|zygote)|--type=(renderer|zygote).*chrom(e|ium)' <<<"$observation"; then
+      chromium_seen=true
+      if ! grep -q -- '--no-sandbox' <<<"$observation"; then
+        sandbox_flag_clear=true
+      fi
+      if grep -q 'SECCOMP=2' <<<"$observation" &&
+         grep -q 'NNP=1' <<<"$observation" &&
+         grep -q 'USERNS_DIFF=True' <<<"$observation"; then
+        kernel_sandbox_verified=true
+      fi
     fi
   fi
   sleep 0.05
@@ -140,7 +142,7 @@ for path in glob.glob("/proc/[0-9]*/cmdline"):
     try:
         raw = open(path, "rb").read().replace(bytes([0]), b" ").decode("utf-8", "replace")
         low = raw.lower()
-        if "chrom" not in low or not any(tag in low for tag in ("--type=renderer", "--type=zygote")):
+        if not raw:
             continue
         status = {}
         for line in open(f"/proc/{pid}/status", encoding="utf-8"):
@@ -154,15 +156,17 @@ for path in glob.glob("/proc/[0-9]*/cmdline"):
         pass
 ' 2>/dev/null || true)"
 if [ -n "$observation" ]; then
-  chromium_seen=true
   printf '%s\n' "$observation" >>"$log_file"
-  if ! grep -q -- '--no-sandbox' <<<"$observation"; then
-    sandbox_flag_clear=true
-  fi
-  if grep -q 'SECCOMP=2' <<<"$observation" &&
-     grep -q 'NNP=1' <<<"$observation" &&
-     grep -q 'USERNS_DIFF=True' <<<"$observation"; then
-    kernel_sandbox_verified=true
+  if grep -Eiq 'chrom(e|ium).*--type=(renderer|zygote)|--type=(renderer|zygote).*chrom(e|ium)' <<<"$observation"; then
+    chromium_seen=true
+    if ! grep -q -- '--no-sandbox' <<<"$observation"; then
+      sandbox_flag_clear=true
+    fi
+    if grep -q 'SECCOMP=2' <<<"$observation" &&
+       grep -q 'NNP=1' <<<"$observation" &&
+       grep -q 'USERNS_DIFF=True' <<<"$observation"; then
+      kernel_sandbox_verified=true
+    fi
   fi
 fi
 
