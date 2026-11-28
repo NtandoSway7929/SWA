@@ -94,6 +94,7 @@
         aiFocusedRecord: null,
         leadProposals: [],
         leadProposalVersions: [],
+        quoteItems: [],
         aiChatSessions: [],
         aiActiveChatId: "",
         aiBriefing: null,
@@ -4499,7 +4500,8 @@
             optionalApi("/rest/v1/budget_category_allocations?select=*&order=period_month.desc,category.asc", []),
             optionalApi("/rest/v1/payment_refunds?select=*&order=created_at.desc", []),
             optionalApi("/rest/v1/payment_attempts?select=id,invoice_id,payment_id,provider,environment,status&order=created_at.desc", []),
-            optionalApi("/rest/v1/lead_proposal_versions?select=*&order=created_at.desc", [])
+            optionalApi("/rest/v1/lead_proposal_versions?select=*&order=created_at.desc", []),
+            optionalApi("/rest/v1/quote_items?select=*&order=position.asc,created_at.asc", [])
         ]);
 
         state.tasks = results[0] || [];
@@ -4524,6 +4526,7 @@
         state.paymentRefunds = results[19] || [];
         state.paymentAttempts = results[20] || [];
         state.leadProposalVersions = results[21] || [];
+        state.quoteItems = results[22] || [];
 
         await loadAdminNotifications();
 
@@ -14338,6 +14341,8 @@ function simpleBars(items, color) {
     function renderQuotes() {
         const cards = state.quotes.map(function (item) {
             const contactDetails = communicationContactDetails(item);
+            const monthly = Number(item.monthly_recurring_subtotal || 0);
+            const yearly = Number(item.yearly_recurring_subtotal || 0);
             return (
                 '<article class="sway-record-card" data-ai-record="quotes:' + esc(item.id) + '">' +
                     '<div class="sway-record-card-top"><span class="sway-record-card-eyebrow">QUOTE</span>' +
@@ -14349,7 +14354,10 @@ function simpleBars(items, color) {
                     '</button>' +
                     '<div class="sway-record-card-details">' +
                         '<div class="sway-record-card-detail"><span>Contact</span><strong>' + esc(contactDetails.primary) + '</strong></div>' +
-                        '<div class="sway-record-card-detail"><span>Amount</span><strong>' + esc(money(item.amount)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Initial amount due</span><strong>' + esc(money(item.amount)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Once-off</span><strong>' + esc(money(item.once_off_subtotal || 0)) + '</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Monthly recurring</span><strong>' + esc(money(monthly)) + ' / month</strong></div>' +
+                        '<div class="sway-record-card-detail"><span>Yearly recurring</span><strong>' + esc(money(yearly)) + ' / year</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Valid until</span><strong>' + esc(date(item.valid_until)) + '</strong></div>' +
                         '<div class="sway-record-card-detail"><span>Invoice</span><strong>' + (item.invoice_id ? '<span class="sway-chip success">Invoice linked</span>' : "Not linked") + '</strong></div>' +
                     '</div>' +
@@ -14359,7 +14367,9 @@ function simpleBars(items, color) {
                                 (item.status === "accepted" && !item.invoice_id
                                     ? '<button class="sway-row-action" data-create-invoice-from-quote="' + esc(item.id) + '">Create invoice</button>'
                                     : "") +
-                                '<button class="sway-row-action" data-edit="quotes" data-id="' + esc(item.id) + '">Edit</button>' +
+                                '<button class="sway-row-action" data-edit="quotes" data-id="' + esc(item.id) + '">' +
+                                    (item.status === "draft" ? "Edit draft" : "View / revise") +
+                                '</button>' +
                                 '<button class="sway-row-action danger" data-delete="quotes" data-id="' + esc(item.id) + '">Delete</button>' +
                             '</div>' +
                         '</details>' +
@@ -14372,13 +14382,14 @@ function simpleBars(items, color) {
             heading('<button class="sway-workspace-button primary" data-add="quotes">+ New quote</button>') +
             panel(
                 "Quotes",
-                "Track proposals and expected work value.",
+                "Itemised commercial pricing with once-off and recurring commitments separated.",
                 state.quotes.length
                     ? '<div class="sway-record-card-grid">' + cards + '</div>'
                     : empty("No quotes yet.")
             )
         );
     }
+
     function invoiceServicePrice(service) {
         if (!service) {
             return 0;
@@ -14416,6 +14427,40 @@ function simpleBars(items, color) {
                     : ""
             )
         );
+    }
+
+    function quotePricingTotals(lines, discount, vatRate) {
+        function roundedLineTotal(line) {
+            const quantity = Math.round(Number(line.quantity || 0) * 100) / 100;
+            const unitPrice = Math.round(Number(line.unit_price || 0) * 100) / 100;
+            return Math.round(quantity * unitPrice * 100) / 100;
+        }
+
+        const onceOffSubtotal = (lines || []).reduce(function (sum, line) {
+            return sum + (line.billing_interval === "none" ? roundedLineTotal(line) : 0);
+        }, 0);
+        const monthlySubtotal = (lines || []).reduce(function (sum, line) {
+            return sum + (line.billing_interval === "monthly" ? roundedLineTotal(line) : 0);
+        }, 0);
+        const yearlySubtotal = (lines || []).reduce(function (sum, line) {
+            return sum + (line.billing_interval === "yearly" ? roundedLineTotal(line) : 0);
+        }, 0);
+        const initialSubtotal = onceOffSubtotal + monthlySubtotal + yearlySubtotal;
+        const safeDiscount = Math.min(Math.max(Number(discount || 0), 0), initialSubtotal);
+        const safeVatRate = Math.max(0, Math.min(Number(vatRate || 0), 100));
+        const vatAmount = Math.round(
+            ((initialSubtotal - safeDiscount) * safeVatRate / 100 + Number.EPSILON) * 100
+        ) / 100;
+        return {
+            onceOffSubtotal: onceOffSubtotal,
+            monthlySubtotal: monthlySubtotal,
+            yearlySubtotal: yearlySubtotal,
+            initialSubtotal: initialSubtotal,
+            discount: safeDiscount,
+            vatRate: safeVatRate,
+            vatAmount: vatAmount,
+            initialAmount: initialSubtotal - safeDiscount + vatAmount
+        };
     }
 
     function invoiceTotals(lines, discount, vatRate) {
@@ -20738,6 +20783,481 @@ function simpleBars(items, color) {
             );
     }
 
+    async function openQuoteEditor(quoteId, prefill) {
+        const quote =
+            quoteId
+                ? state.quotes.find(function (item) {
+                    return String(item.id) === String(quoteId);
+                })
+                : null;
+
+        if (quoteId && !quote) {
+            swayAlert("That quote could not be found. Refresh the workspace and try again.");
+            return;
+        }
+
+        const options = prefill && typeof prefill === "object" ? prefill : {};
+        const sourceQuote =
+            options.sourceQuoteId
+                ? state.quotes.find(function (item) {
+                    return String(item.id) === String(options.sourceQuoteId);
+                })
+                : null;
+        const seedQuote = quote || sourceQuote || null;
+        const isEditableDraft = !quote || String(quote.status || "draft") === "draft";
+
+        let localLines = quote
+            ? (state.quoteItems || []).filter(function (item) {
+                return String(item.quote_id || "") === String(quote.id);
+            }).map(function (item) {
+                return {
+                    service_id: item.service_id || "",
+                    service_name_snapshot: item.service_name_snapshot || "Custom item",
+                    description: item.description || "",
+                    pricing_type_snapshot: item.pricing_type_snapshot || "custom",
+                    price_label_snapshot: item.price_label_snapshot || "Custom price",
+                    billing_interval: item.billing_interval || "none",
+                    quantity: Number(item.quantity || 1),
+                    unit_price: Number(item.unit_price || 0)
+                };
+            })
+            : sourceQuote
+                ? (state.quoteItems || []).filter(function (item) {
+                    return String(item.quote_id || "") === String(sourceQuote.id);
+                }).map(function (item) {
+                    return {
+                        service_id: item.service_id || "",
+                        service_name_snapshot: item.service_name_snapshot || "Custom item",
+                        description: item.description || "",
+                        pricing_type_snapshot: item.pricing_type_snapshot || "custom",
+                        price_label_snapshot: item.price_label_snapshot || "Custom price",
+                        billing_interval: item.billing_interval || "none",
+                        quantity: Number(item.quantity || 1),
+                        unit_price: Number(item.unit_price || 0)
+                    };
+                })
+                : [];
+
+        if (quote && !localLines.length) {
+            try {
+                const loaded = await api(
+                    "/rest/v1/quote_items?select=*&quote_id=eq." +
+                    encodeURIComponent(quote.id) +
+                    "&order=position.asc,created_at.asc"
+                );
+                localLines = (loaded || []).map(function (item) {
+                    return {
+                        service_id: item.service_id || "",
+                        service_name_snapshot: item.service_name_snapshot || "Custom item",
+                        description: item.description || "",
+                        pricing_type_snapshot: item.pricing_type_snapshot || "custom",
+                        price_label_snapshot: item.price_label_snapshot || "Custom price",
+                        billing_interval: item.billing_interval || "none",
+                        quantity: Number(item.quantity || 1),
+                        unit_price: Number(item.unit_price || 0)
+                    };
+                });
+            } catch (error) {
+                swayAlert(error.message || "Unable to load quote line items.");
+                return;
+            }
+        }
+
+        const settings = state.invoiceSettings || {};
+        const leadValue = quote
+            ? quote.lead_id || ""
+            : (options.lead_id || (seedQuote && seedQuote.lead_id) || "");
+        const linkedLead = (state.leads || []).find(function (item) {
+            return String(item.id) === String(leadValue);
+        });
+        const clientValue = quote
+            ? quote.client_id || ""
+            : (options.client_id || (seedQuote && seedQuote.client_id) || (linkedLead && linkedLead.converted_client_id) || "");
+        const proposalValue = quote
+            ? quote.proposal_id || ""
+            : (options.proposal_id || (seedQuote && seedQuote.proposal_id) || "");
+        const initialTitle =
+            quote
+                ? quote.title
+                : sourceQuote
+                    ? String(sourceQuote.title || "Quote") + " (Revised)"
+                    : (options.title || "Swayphics commercial quote");
+        const modal = document.createElement("div");
+        modal.className = "sway-modal sway-quote-editor-modal";
+
+        function option(value, label, selected) {
+            return '<option value="' + esc(value) + '"' + (selected ? " selected" : "") + '>' + esc(label) + '</option>';
+        }
+
+        const leadOptions =
+            '<option value="">No lead selected</option>' +
+            (state.leads || []).map(function (item) {
+                return option(item.id, item.business_name || "Unnamed lead", String(item.id) === String(leadValue));
+            }).join("");
+        const clientOptions =
+            '<option value="">No client selected</option>' +
+            (state.clients || []).filter(function (item) {
+                return item.status !== "archived";
+            }).map(function (item) {
+                return option(item.id, item.business_name || "Unnamed client", String(item.id) === String(clientValue));
+            }).join("");
+        const proposalOptions =
+            '<option value="">No proposal linked</option>' +
+            (state.leadProposals || []).map(function (item) {
+                const linkedLeadItem = (state.leads || []).find(function (leadItem) {
+                    return String(leadItem.id) === String(item.lead_id);
+                });
+                return option(
+                    item.id,
+                    (linkedLeadItem ? linkedLeadItem.business_name + " | " : "") + (item.title || "Swayphics proposal") + " | " + formatDisplayText(item.status || "draft"),
+                    String(item.id) === String(proposalValue)
+                );
+            }).join("");
+
+        const statusOptions = ["draft","sent","accepted","rejected","expired"].map(function (value) {
+            return option(value, formatDisplayText(value), String((quote && quote.status) || "draft") === value);
+        }).join("");
+
+        modal.innerHTML =
+            '<div class="sway-modal-backdrop" data-quote-close></div>' +
+            '<div class="sway-modal-card sway-quote-editor-card" role="dialog" aria-modal="true" aria-labelledby="sway-quote-editor-title">' +
+                '<div class="sway-modal-header">' +
+                    '<div>' +
+                        '<span class="admin-label">SWAYPHICS · COMMERCIAL PRICING</span>' +
+                        '<h3 id="sway-quote-editor-title">' + (quote ? (isEditableDraft ? "Edit quote" : "Review quote") : (sourceQuote ? "Create revised quote" : "Build commercial quote")) + '</h3>' +
+                        '<p class="sway-quote-editor-subtitle">' +
+                            (quote ? esc(quote.quote_number || "") + " · " : "") +
+                            'Once-off and recurring charges are calculated separately.' +
+                        '</p>' +
+                    '</div>' +
+                    '<button type="button" class="sway-modal-close" data-quote-close aria-label="Close quote editor">×</button>' +
+                '</div>' +
+                '<form id="sway-quote-editor-form">' +
+                    '<div class="sway-quote-fields">' +
+                        '<label>Quote title<input id="sway-quote-title" type="text" value="' + esc(initialTitle) + '"' + (isEditableDraft ? "" : " readonly") + ' required></label>' +
+                        '<label>Lead<select id="sway-quote-lead"' + (isEditableDraft ? "" : " disabled") + '>' + leadOptions + '</select></label>' +
+                        '<label>Client<select id="sway-quote-client"' + (isEditableDraft ? "" : " disabled") + '>' + clientOptions + '</select></label>' +
+                        '<label>Proposal<select id="sway-quote-proposal"' + (isEditableDraft ? "" : " disabled") + '>' + proposalOptions + '</select></label>' +
+                        '<label>Valid until<input id="sway-quote-valid-until" type="date" value="' + esc(dateInput((quote && quote.valid_until) || (sourceQuote && sourceQuote.valid_until) || "")) + '"' + (isEditableDraft ? "" : " readonly") + '></label>' +
+                        (quote && isEditableDraft
+                            ? '<label>Quote status<select id="sway-quote-status">' + statusOptions + '</select></label>'
+                            : '<label>Quote status<input type="text" value="' + esc(formatDisplayText((quote && quote.status) || "draft")) + '" readonly></label>') +
+                        '<label class="sway-quote-notes-field">Commercial notes<textarea id="sway-quote-notes" rows="3"' + (isEditableDraft ? "" : " readonly") + '>' + esc((quote && quote.notes) || (sourceQuote && sourceQuote.notes) || "") + '</textarea></label>' +
+                    '</div>' +
+                    '<div class="sway-quote-lines-heading">' +
+                        '<div><strong>Priced services and deliverables</strong><span>Catalogue prices are starting references. The saved unit price is a quote-specific snapshot.</span></div>' +
+                        (isEditableDraft ? '<button type="button" class="sway-workspace-button" id="sway-quote-add-service">+ Add service</button>' : "") +
+                    '</div>' +
+                    '<div id="sway-quote-line-list" class="sway-quote-line-list"></div>' +
+                    (isEditableDraft ? '<button type="button" class="sway-row-action" id="sway-quote-add-custom">+ Add custom line</button>' : "") +
+                    '<div class="sway-quote-financials">' +
+                        '<div class="sway-quote-tax-fields">' +
+                            '<label>Initial discount (ZAR)<input id="sway-quote-discount" type="number" min="0" step="0.01" value="' + esc(Number((quote && quote.discount) || (sourceQuote && sourceQuote.discount) || 0)) + '"' + (isEditableDraft ? "" : " readonly") + '></label>' +
+                            '<label>VAT rate (%)<input id="sway-quote-vat-rate" type="number" min="0" max="100" step="0.01" value="' +
+                                esc(quote ? Number(quote.vat_rate || 0) : (sourceQuote ? Number(sourceQuote.vat_rate || 0) : (settings.vat_registered ? 15 : 0))) +
+                                '"' + (isEditableDraft && settings.vat_registered ? "" : " readonly") + '>' +
+                                '<small>' + (settings.vat_registered ? "VAT is enabled in Invoice settings." : "VAT is disabled in Invoice settings; no VAT will be charged.") + '</small>' +
+                            '</label>' +
+                        '</div>' +
+                        '<div class="sway-quote-totals">' +
+                            '<div><span>Once-off services</span><strong id="sway-quote-once-off">R0.00</strong></div>' +
+                            '<div><span>Monthly recurring</span><strong id="sway-quote-monthly">R0.00 / month</strong></div>' +
+                            '<div><span>Yearly recurring</span><strong id="sway-quote-yearly">R0.00 / year</strong></div>' +
+                            '<div><span>Initial subtotal</span><strong id="sway-quote-subtotal">R0.00</strong></div>' +
+                            '<div><span>Initial discount</span><strong id="sway-quote-discount-total">R0.00</strong></div>' +
+                            '<div><span>VAT</span><strong id="sway-quote-vat-total">R0.00</strong></div>' +
+                            '<div class="total"><span>Initial amount due</span><strong id="sway-quote-initial-amount">R0.00</strong></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="sway-quote-editor-actions">' +
+                        '<button type="button" class="sway-workspace-button" data-quote-close>Close</button>' +
+                        (isEditableDraft
+                            ? '<button type="button" class="sway-workspace-button primary" id="sway-quote-save">Save quote</button>'
+                            : '<button type="button" class="sway-workspace-button primary" id="sway-quote-revise">Create new draft from this quote</button>') +
+                    '</div>' +
+                    '<p class="sway-quote-editor-note">Recurring figures show the agreed monthly/yearly cadence. This workflow does not automatically issue future recurring invoices.</p>' +
+                '</form>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+
+        const root = modal;
+        const lineList = root.querySelector("#sway-quote-line-list");
+        const discountInput = root.querySelector("#sway-quote-discount");
+        const vatRateInput = root.querySelector("#sway-quote-vat-rate");
+
+        function close() {
+            modal.remove();
+        }
+
+        function makeCustomLine() {
+            return {
+                service_id: "",
+                service_name_snapshot: "Custom item",
+                description: "",
+                pricing_type_snapshot: "custom",
+                price_label_snapshot: "Custom price",
+                billing_interval: "none",
+                quantity: 1,
+                unit_price: 0
+            };
+        }
+
+        if (!localLines.length && isEditableDraft) {
+            localLines.push(makeCustomLine());
+        }
+
+        function serviceOptions(selectedId) {
+            return '<option value="">Custom item</option>' +
+                (state.services || []).filter(function (service) {
+                    return service.active === true;
+                }).map(function (service) {
+                    const label = service.name + (service.price_label ? " · " + service.price_label : "");
+                    return option(service.id, label, String(service.id) === String(selectedId));
+                }).join("");
+        }
+
+        function renderLines() {
+            if (!localLines.length) {
+                lineList.innerHTML = '<p class="sway-quote-no-lines">No priced items have been added.</p>';
+                return;
+            }
+
+            lineList.innerHTML = localLines.map(function (line, index) {
+                const helper = line.price_label_snapshot
+                    ? '<small class="sway-quote-price-hint">' + esc(line.price_label_snapshot) + '</small>'
+                    : "";
+                return (
+                    '<div class="sway-quote-line" data-quote-line="' + index + '">' +
+                        '<label>Service<select data-quote-line-service' + (isEditableDraft ? "" : " disabled") + '>' +
+                            serviceOptions(line.service_id) +
+                        '</select></label>' +
+                        '<label>Description<input type="text" data-quote-line-description value="' + esc(line.description || "") + '"' + (isEditableDraft ? "" : " readonly") + '>' + helper + '</label>' +
+                        '<label>Qty<input type="number" min="0.01" step="0.01" data-quote-line-quantity value="' + esc(line.quantity) + '"' + (isEditableDraft ? "" : " readonly") + '></label>' +
+                        '<label>Unit price (ZAR)<input type="number" min="0" step="0.01" data-quote-line-price value="' + esc(line.unit_price) + '"' + (isEditableDraft ? "" : " readonly") + '></label>' +
+                        '<label>Billing interval<select data-quote-line-interval' + (isEditableDraft ? "" : " disabled") + '>' +
+                            option("none","Once-off",line.billing_interval === "none") +
+                            option("monthly","Monthly",line.billing_interval === "monthly") +
+                            option("yearly","Yearly",line.billing_interval === "yearly") +
+                        '</select></label>' +
+                        '<strong class="sway-quote-line-total">' + esc(money(Number(line.quantity || 0) * Number(line.unit_price || 0))) + '</strong>' +
+                        (isEditableDraft ? '<button type="button" class="sway-row-action danger" data-quote-line-remove aria-label="Remove quote item">Remove</button>' : "") +
+                    '</div>'
+                );
+            }).join("");
+        }
+
+        function updateTotals() {
+            const totals = quotePricingTotals(
+                localLines,
+                discountInput ? discountInput.value : 0,
+                vatRateInput ? vatRateInput.value : 0
+            );
+            root.querySelector("#sway-quote-once-off").textContent = money(totals.onceOffSubtotal);
+            root.querySelector("#sway-quote-monthly").textContent = money(totals.monthlySubtotal) + " / month";
+            root.querySelector("#sway-quote-yearly").textContent = money(totals.yearlySubtotal) + " / year";
+            root.querySelector("#sway-quote-subtotal").textContent = money(totals.initialSubtotal);
+            root.querySelector("#sway-quote-discount-total").textContent = money(totals.discount);
+            root.querySelector("#sway-quote-vat-total").textContent = money(totals.vatAmount);
+            root.querySelector("#sway-quote-initial-amount").textContent = money(totals.initialAmount);
+        }
+
+        function syncLineInputs() {
+            lineList.querySelectorAll("[data-quote-line]").forEach(function (row) {
+                const index = Number(row.dataset.quoteLine);
+                const line = localLines[index];
+                if (!line) return;
+                line.description = String(row.querySelector("[data-quote-line-description]")?.value || "").trim();
+                line.quantity = Number(row.querySelector("[data-quote-line-quantity]")?.value || 0);
+                line.unit_price = Number(row.querySelector("[data-quote-line-price]")?.value || 0);
+                line.billing_interval = row.querySelector("[data-quote-line-interval]")?.value || "none";
+            });
+        }
+
+        lineList.addEventListener("input", function (event) {
+            if (event.target.matches("[data-quote-line-description], [data-quote-line-quantity], [data-quote-line-price]")) {
+                syncLineInputs();
+                const row = event.target.closest("[data-quote-line]");
+                const line = row && localLines[Number(row.dataset.quoteLine)];
+                if (row && line) {
+                    const total = row.querySelector(".sway-quote-line-total");
+                    if (total) total.textContent = money(Number(line.quantity || 0) * Number(line.unit_price || 0));
+                }
+                updateTotals();
+            }
+        });
+
+        lineList.addEventListener("change", function (event) {
+            const row = event.target.closest("[data-quote-line]");
+            if (!row) return;
+            const index = Number(row.dataset.quoteLine);
+            if (event.target.matches("[data-quote-line-service]")) {
+                syncLineInputs();
+                const service = (state.services || []).find(function (item) {
+                    return String(item.id) === String(event.target.value);
+                });
+                if (service) {
+                    localLines[index] = {
+                        service_id: service.id,
+                        service_name_snapshot: service.name,
+                        description: service.description || service.name,
+                        pricing_type_snapshot: service.pricing_type || "custom",
+                        price_label_snapshot: service.price_label || "",
+                        billing_interval: service.recurring_interval || "none",
+                        quantity: 1,
+                        unit_price: invoiceServicePrice(service)
+                    };
+                } else {
+                    localLines[index] = makeCustomLine();
+                }
+                renderLines();
+                updateTotals();
+                return;
+            }
+            syncLineInputs();
+            updateTotals();
+        });
+
+        lineList.addEventListener("click", function (event) {
+            const button = event.target.closest("[data-quote-line-remove]");
+            if (!button) return;
+            const row = button.closest("[data-quote-line]");
+            if (!row) return;
+            syncLineInputs();
+            localLines.splice(Number(row.dataset.quoteLine), 1);
+            renderLines();
+            updateTotals();
+        });
+
+        root.querySelector("#sway-quote-add-service")?.addEventListener("click", function () {
+            localLines.push(makeCustomLine());
+            renderLines();
+            updateTotals();
+        });
+        root.querySelector("#sway-quote-add-custom")?.addEventListener("click", function () {
+            localLines.push(makeCustomLine());
+            renderLines();
+            updateTotals();
+        });
+
+        [discountInput, vatRateInput].forEach(function (input) {
+            input?.addEventListener("input", updateTotals);
+        });
+
+        root.querySelectorAll("[data-quote-close]").forEach(function (button) {
+            button.addEventListener("click", close);
+        });
+
+        root.querySelector("#sway-quote-revise")?.addEventListener("click", function () {
+            close();
+            openQuoteEditor(null, { sourceQuoteId: quote.id });
+        });
+
+        root.querySelector("#sway-quote-save")?.addEventListener("click", async function () {
+            if (!isEditableDraft) return;
+            syncLineInputs();
+
+            const title = String(root.querySelector("#sway-quote-title")?.value || "").trim();
+            const leadId = String(root.querySelector("#sway-quote-lead")?.value || "");
+            const clientId = String(root.querySelector("#sway-quote-client")?.value || "");
+            const proposalId = String(root.querySelector("#sway-quote-proposal")?.value || "");
+            const discount = Number(discountInput.value || 0);
+            const vatRate = Number(vatRateInput.value || 0);
+
+            if (!title) {
+                swayAlert("Enter a quote title.");
+                return;
+            }
+            if (!leadId && !clientId) {
+                swayAlert("Link the quote to a lead or an existing client.");
+                return;
+            }
+            if (!localLines.length) {
+                swayAlert("Add at least one priced service or custom line.");
+                return;
+            }
+            if (localLines.some(function (line) {
+                return !String(line.description || "").trim() ||
+                    Number(line.quantity) <= 0 ||
+                    Number(line.unit_price) < 0;
+            })) {
+                swayAlert("Every quote line needs a description, positive quantity and a valid unit price.");
+                return;
+            }
+            if (discount < 0 || vatRate < 0 || vatRate > 100) {
+                swayAlert("Check the discount and VAT rate values.");
+                return;
+            }
+            if (!settings.vat_registered && vatRate > 0) {
+                swayAlert("VAT cannot be charged while VAT registration is disabled in Invoice settings.");
+                return;
+            }
+
+            const saveButton = root.querySelector("#sway-quote-save");
+            saveButton.disabled = true;
+            saveButton.textContent = "Saving…";
+
+            try {
+                const result = await api(
+                    "/rest/v1/rpc/admin_save_swayphics_quote",
+                    {
+                        method: "POST",
+                        headers: headers({ "Content-Type": "application/json" }),
+                        body: JSON.stringify({
+                            p_quote_id: quote ? quote.id : null,
+                            p_quote: {
+                                title: title,
+                                lead_id: leadId || null,
+                                client_id: clientId || null,
+                                proposal_id: proposalId || null,
+                                valid_until: root.querySelector("#sway-quote-valid-until")?.value || null,
+                                notes: String(root.querySelector("#sway-quote-notes")?.value || "").trim() || null,
+                                discount: discount,
+                                vat_rate: vatRate,
+                                status: quote ? String(root.querySelector("#sway-quote-status")?.value || quote.status || "draft") : "draft"
+                            },
+                            p_items: localLines.map(function (line) {
+                                return {
+                                    service_id: line.service_id || null,
+                                    service_name: line.service_name_snapshot || "Custom item",
+                                    description: String(line.description || "").trim(),
+                                    price_label: line.price_label_snapshot || null,
+                                    billing_interval: line.billing_interval || "none",
+                                    quantity: Number(line.quantity),
+                                    unit_price: Number(line.unit_price)
+                                };
+                            })
+                        })
+                    }
+                );
+
+                const savedQuote = result && result.quote;
+                if (!savedQuote || !savedQuote.id) {
+                    throw new Error("The quote was not saved.");
+                }
+
+                state.quotes = (state.quotes || []).filter(function (item) {
+                    return String(item.id) !== String(savedQuote.id);
+                }).concat([savedQuote]);
+                state.quoteItems = (state.quoteItems || []).filter(function (item) {
+                    return String(item.quote_id) !== String(savedQuote.id);
+                }).concat(Array.isArray(result.items) ? result.items : []);
+
+                close();
+                renderView();
+                swayAlert("Quote " + String(savedQuote.quote_number || "") + " saved with an itemised price snapshot.");
+            } catch (error) {
+                saveButton.disabled = false;
+                saveButton.textContent = "Save quote";
+                swayAlert(error.message || "Unable to save this quote.");
+            }
+        });
+
+        renderLines();
+        updateTotals();
+    }
+
+
     async function createInvoiceFromQuote(quoteId) {
         const quote =
             state.quotes.find(function (item) {
@@ -20747,120 +21267,53 @@ function simpleBars(items, color) {
         if (!quote) return;
 
         if (quote.status !== "accepted") {
-            swayAlert(
-                "Only accepted quotes can be converted into invoices."
-            );
+            swayAlert("Only accepted quotes can be converted into invoices.");
             return;
         }
 
         if (quote.invoice_id) {
-            swayAlert(
-                "This quote is already linked to an invoice."
-            );
+            swayAlert("This quote is already linked to an invoice.");
             return;
         }
 
         if (!quote.client_id) {
-            swayAlert(
-                "Convert the lead to a client before creating the invoice."
-            );
+            swayAlert("Convert the lead to a client before creating an invoice.");
             return;
         }
 
+        const button = document.querySelector(
+            '[data-create-invoice-from-quote="' + CSS.escape(quoteId) + '"]'
+        );
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Creating…";
+        }
+
         try {
-            const created =
-                await api(
-                    "/rest/v1/invoices",
-                    {
-                        method: "POST",
-                        headers: headers({
-                            "Prefer":
-                                "return=representation"
-                        }),
-                        body:
-                            JSON.stringify({
-                                client_id: quote.client_id,
-                                issue_date: dashboardTodayISO(),
-                                status: "draft",
-                                currency: "ZAR",
-                                subtotal: Number(quote.amount || 0),
-                                total: Number(quote.amount || 0),
-                                notes:
-                                    "Created from " +
-                                    (
-                                        quote.quote_number ||
-                                        "accepted quote"
-                                    ) +
-                                    "."
-                            })
-                    }
-                );
-
-            const invoiceId =
-                Array.isArray(created)
-                    ? created[0]?.id
-                    : created?.id;
-
-            if (!invoiceId) {
-                throw new Error(
-                    "The invoice was not created."
-                );
-            }
-
-            await api(
-                "/rest/v1/invoice_items",
+            const result = await api(
+                "/rest/v1/rpc/admin_create_invoice_from_quote",
                 {
                     method: "POST",
-                    headers: headers({
-                        "Prefer":
-                            "return=minimal"
-                    }),
-                    body:
-                        JSON.stringify({
-                            invoice_id: invoiceId,
-                            description:
-                                quote.title ||
-                                "Quoted services",
-                            quantity: 1,
-                            unit_price:
-                                Number(quote.amount || 0)
-                        })
+                    headers: headers({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ p_quote_id: quote.id })
                 }
             );
 
-            await api(
-                "/rest/v1/quotes?id=eq." +
-                encodeURIComponent(quote.id),
-                {
-                    method: "PATCH",
-                    headers: headers({
-                        "Prefer":
-                            "return=minimal"
-                    }),
-                    body:
-                        JSON.stringify({
-                            invoice_id: invoiceId,
-                            updated_at: new Date().toISOString()
-                        })
-                }
-            );
-
-            await logActivity(
-                "Created invoice from accepted quote",
-                "invoices",
-                invoiceId
-            );
+            const invoiceId = result && result.invoice_id;
+            if (!invoiceId) {
+                throw new Error("The invoice was not created from this quote.");
+            }
 
             await refreshData();
             renderShell();
             renderView();
-
             await openInvoiceBuilder(invoiceId);
         } catch (error) {
-            swayAlert(
-                error.message ||
-                "Unable to create the invoice from this quote."
-            );
+            if (button) {
+                button.disabled = false;
+                button.textContent = "Create invoice";
+            }
+            swayAlert(error.message || "Unable to create the invoice from this quote.");
         }
     }
 
@@ -21923,6 +22376,18 @@ function simpleBars(items, color) {
             .sort(function (a, b) {
                 return Number(b.version_number || 0) - Number(a.version_number || 0);
             });
+        const linkedQuotes = (state.quotes || [])
+            .filter(function (item) {
+                return String(item.proposal_id || "") === String(proposal.id);
+            })
+            .slice()
+            .sort(function (a, b) {
+                return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
+            });
+        const currentProposalVersion = proposalVersions.find(function (item) {
+            return Number(item.version_number) === Number(proposal.current_version || 1);
+        });
+
 
         const modal = document.createElement("div");
         modal.className = "sway-modal sway-proposal-review-modal";
@@ -21999,7 +22464,33 @@ function simpleBars(items, color) {
                     '</div>' +
                     '<div class="sway-proposal-pricing-placeholder">' +
                         '<strong>Commercial investment</strong>' +
-                        '<p>Pricing will be linked from the approved commercial quote in the pricing-engine stage. Do not enter totals here.</p>' +
+                        (
+                            linkedQuotes.length
+                                ? '<div class="sway-quote-linked-proposals">' + linkedQuotes.map(function (quote) {
+                                    const isCurrent = currentProposalVersion &&
+                                        quote.proposal_version_id === currentProposalVersion.id;
+                                    return (
+                                        '<div class="sway-proposal-linked-quote">' +
+                                            '<span><strong>' + esc(quote.quote_number || "Draft quote") + '</strong>' +
+                                                '<small>' + esc(quote.title || "Commercial quote") + ' · ' +
+                                                    esc(formatDisplayText(quote.status || "draft")) +
+                                                    (isCurrent ? " · Current proposal version" : " · Earlier proposal version") +
+                                                '</small></span>' +
+                                            '<strong>' + esc(money(quote.amount || 0)) + '</strong>' +
+                                            '<button type="button" class="sway-row-action" data-proposal-open-quote="' + esc(quote.id) + '">Open quote</button>' +
+                                        '</div>'
+                                    );
+                                }).join("") + '</div>'
+                                : '<p>No commercial quote is linked to this proposal yet.</p>'
+                        ) +
+                        (
+                            isEditableDraft
+                                ? '<button type="button" class="sway-workspace-button" data-proposal-create-quote="' + esc(proposal.id) + '">' +
+                                    (linkedQuotes.length ? "Create another quote option" : "Build commercial quote") +
+                                  '</button>'
+                                : '<p class="sway-proposal-review-note">This approved proposal is read-only. Its linked quote snapshots remain available above.</p>'
+                        ) +
+                        '<small>Initial amount due includes once-off work and the first monthly/yearly billing periods. Future recurring invoices are not automated by this stage.</small>' +
                     '</div>' +
                     '<section class="sway-proposal-history-section">' +
                         '<div><strong>Revision history</strong><span>Previous saved snapshots are read-only.</span></div>' +
@@ -22170,6 +22661,25 @@ function simpleBars(items, color) {
                 }
             }
         );
+
+        modal.querySelectorAll("[data-proposal-open-quote]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const quoteId = String(button.dataset.proposalOpenQuote || "");
+                if (!quoteId) return;
+                close();
+                openQuoteEditor(quoteId);
+            });
+        });
+
+        modal.querySelector("[data-proposal-create-quote]")?.addEventListener("click", function () {
+            close();
+            openQuoteEditor(null, {
+                proposal_id: proposal.id,
+                lead_id: lead ? lead.id : proposal.lead_id,
+                client_id: lead && lead.converted_client_id ? lead.converted_client_id : "",
+                title: "Commercial quote | " + (lead && lead.business_name ? lead.business_name : "Proposal")
+            });
+        });
 
         modal.querySelector("[data-proposal-create-revision]")?.addEventListener(
             "click",
@@ -24952,6 +25462,10 @@ function simpleBars(items, color) {
     }
 
     async function createOrEdit(type, id, prefill) {
+        if (type === "quotes") {
+            return await openQuoteEditor(id, prefill);
+        }
+
         const config = configs[type];
 
         if (!config) return;
