@@ -128,7 +128,7 @@ server_pid=$!
 
 sleep 0.3
 
-echo "1/3: permitted simulated public destination"
+echo "1/6: permitted simulated public IPv4 destination"
 ip netns exec "$ns_client" python3 - <<'PY'
 from urllib.request import urlopen
 with urlopen("http://1.1.1.1:8080/", timeout=2) as response:
@@ -137,7 +137,7 @@ assert body == b"public-test-target", body
 print("PASS: permitted destination reachable")
 PY
 
-echo "2/3: direct private destination must be blocked"
+echo "2/6: direct private IPv4 destination must be blocked"
 if ip netns exec "$ns_client" python3 - <<'PY'
 from urllib.request import urlopen
 try:
@@ -153,7 +153,7 @@ else
   exit 1
 fi
 
-echo "3/3: HTTP redirect to private destination must be blocked"
+echo "3/6: IPv4 HTTP redirect to private destination must be blocked"
 if ip netns exec "$ns_client" python3 - <<'PY'
 from urllib.request import urlopen
 try:
