@@ -23,8 +23,14 @@ else
     status=2
 fi
 
+profiles_content=""
 if [[ -r "$profiles_file" ]]; then
-    profile_line="$(grep -F "$profile_name " "$profiles_file" | head -n 1 || true)"
+    profiles_content="$(cat "$profiles_file" 2>/dev/null || true)"
+elif command -v sudo >/dev/null 2>&1; then
+    profiles_content="$(sudo -n cat "$profiles_file" 2>/dev/null || true)"
+fi
+if [[ -n "$profiles_content" ]]; then
+    profile_line="$(printf '%s\\n' "$profiles_content" | grep -F "$profile_name " | head -n 1 || true)"
     if [[ -z "$profile_line" ]]; then
         echo "Crawl4AI AppArmor profile: NOT LOADED"
         status=2
@@ -35,7 +41,7 @@ if [[ -r "$profiles_file" ]]; then
         status=2
     fi
 else
-    echo "Crawl4AI AppArmor profile: INCOMPLETE (profile list is not readable)"
+    echo "Crawl4AI AppArmor profile: INCOMPLETE (profile list is not readable; run with root or passwordless sudo access)"
     status=2
 fi
 
