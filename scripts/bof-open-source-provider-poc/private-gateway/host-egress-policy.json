@@ -1,0 +1,233 @@
+{
+  "policy_id": "bof-private-provider-host-egress-v1",
+  "schema_version": 1,
+  "reviewed_on": "2026-11-28",
+  "lifecycle": "design-only-not-host-validated",
+  "scope": {
+    "purpose": "Describe intended forwarded egress controls for the isolated BOF private-provider stack.",
+    "host_firewall_rules_applied": false,
+    "host_firewall_commands_generated": false,
+    "forwarding_sysctls_changed": false,
+    "production_services_changed": false
+  },
+  "source_networks": [
+    {
+      "service": "searxng",
+      "source_cidr": "10.77.40.0/24",
+      "new_outbound_allow": {
+        "protocols": [
+          "tcp"
+        ],
+        "ports": [
+          443
+        ],
+        "destination_policy": "public-global-unicast-only"
+      }
+    },
+    {
+      "service": "crawl4ai",
+      "source_cidr": "10.77.50.0/24",
+      "new_outbound_allow": {
+        "protocols": [
+          "tcp"
+        ],
+        "ports": [
+          80,
+          443
+        ],
+        "destination_policy": "public-global-unicast-only"
+      }
+    },
+    {
+      "service": "cloudflared",
+      "source_cidr": "10.77.60.0/24",
+      "new_outbound_allow": {
+        "protocols": [
+          "tcp",
+          "udp"
+        ],
+        "ports": [
+          7844
+        ],
+        "destination_policy": "current-cloudflare-tunnel-regional-endpoints-only",
+        "hostname_allowlist": [
+          "region1.v2.argotunnel.com",
+          "region2.v2.argotunnel.com"
+        ],
+        "endpoint_address_snapshot": {
+          "ipv4": [
+            "198.41.192.167",
+            "198.41.192.67",
+            "198.41.192.57",
+            "198.41.192.107",
+            "198.41.192.27",
+            "198.41.192.7",
+            "198.41.192.227",
+            "198.41.192.47",
+            "198.41.192.37",
+            "198.41.192.77",
+            "198.41.200.13",
+            "198.41.200.193",
+            "198.41.200.33",
+            "198.41.200.233",
+            "198.41.200.53",
+            "198.41.200.63",
+            "198.41.200.113",
+            "198.41.200.73",
+            "198.41.200.43",
+            "198.41.200.23"
+          ],
+          "ipv6": [
+            "2606:4700:a0::1",
+            "2606:4700:a0::2",
+            "2606:4700:a0::3",
+            "2606:4700:a0::4",
+            "2606:4700:a0::5",
+            "2606:4700:a0::6",
+            "2606:4700:a0::7",
+            "2606:4700:a0::8",
+            "2606:4700:a0::9",
+            "2606:4700:a0::10",
+            "2606:4700:a8::1",
+            "2606:4700:a8::2",
+            "2606:4700:a8::3",
+            "2606:4700:a8::4",
+            "2606:4700:a8::5",
+            "2606:4700:a8::6",
+            "2606:4700:a8::7",
+            "2606:4700:a8::8",
+            "2606:4700:a8::9",
+            "2606:4700:a8::10"
+          ]
+        },
+        "refresh_before_deployment": true
+      }
+    }
+  ],
+  "default_policy": {
+    "new_outbound_connections": "deny",
+    "unsolicited_inbound_connections": "deny",
+    "established_return": {
+      "action": "allow",
+      "conntrack_states": [
+        "ESTABLISHED",
+        "RELATED"
+      ],
+      "direction": "responses-to-connections-originated-by-egress-services-only",
+      "destination_scope": "the-three-egress-source-subnets-only"
+    },
+    "unrelated_host_and_docker_traffic": "unchanged"
+  },
+  "evaluation": {
+    "new_egress_order": [
+      "deny baseline non-public and host-specific internal destinations",
+      "allow only the matching source service ports and approved destination scope",
+      "deny all remaining new outbound connections from the three egress source subnets"
+    ],
+    "return_path": "allow only ESTABLISHED or RELATED responses to connections initiated by the three egress source subnets",
+    "destination_denials_precede_service_port_allows": true
+  },
+  "destination_denials": {
+    "evaluation_target": "destination address after the connection has resolved to an IP address",
+    "ipv4_baseline": [
+      "0.0.0.0/8",
+      "10.0.0.0/8",
+      "100.64.0.0/10",
+      "127.0.0.0/8",
+      "169.254.0.0/16",
+      "172.16.0.0/12",
+      "192.0.0.0/24",
+      "192.0.2.0/24",
+      "192.168.0.0/16",
+      "198.18.0.0/15",
+      "198.51.100.0/24",
+      "203.0.113.0/24",
+      "224.0.0.0/4",
+      "240.0.0.0/4",
+      "255.255.255.255/32"
+    ],
+    "ipv6_baseline": [
+      "::/128",
+      "::1/128",
+      "::ffff:0:0/96",
+      "64:ff9b::/96",
+      "64:ff9b:1::/48",
+      "100::/64",
+      "2001:db8::/32",
+      "fc00::/7",
+      "fe80::/10",
+      "ff00::/8"
+    ],
+    "host_specific_ranges_required": true,
+    "host_specific_ranges": [],
+    "host_specific_required_inputs": [
+      "host LAN and management interface address ranges",
+      "VPN and office address ranges, including routes not currently active",
+      "all existing Docker bridge, overlay and other container network ranges",
+      "cloud-provider metadata and control-plane destination ranges",
+      "any other private or reserved ranges routed inside the selected host environment"
+    ],
+    "note": "The baseline is deliberately conservative and incomplete. It is not a generated or exhaustive copy of the live IANA registries. Populate and review host-specific ranges before enforcement."
+  },
+  "ipv6": {
+    "filtering_required": true,
+    "required_coverage": "filter forwarded IPv6 egress, or independently prove that no IPv6 forwarded path exists",
+    "forwarding_audit_required": true,
+    "must_not_assume_disabled_forwarding_alone_proves_no_path": true
+  },
+  "dns": {
+    "docker_embedded_resolver_path": "inspect and document on the selected host before enforcement",
+    "direct_external_dns_from_provider_containers": "deny unless a specific resolver IP and required protocol/port are explicitly approved",
+    "arbitrary_dns_egress": "deny",
+    "note": "Do not add broad UDP/TCP 53 allowances as a troubleshooting shortcut. Egress destination filtering must still apply after resolution."
+  },
+  "backend_attachments": {
+    "iptables": {
+      "attachment": "administrator-owned chain reached from DOCKER-USER in the filter/FORWARD path",
+      "preserve_existing_chain": true,
+      "do_not_flush_or_replace_docker_user": true,
+      "policy_must_precede_docker_forward_accepts": true
+    },
+    "nftables": {
+      "attachment": "separate administrator-owned table with a forward base chain",
+      "example_table": "inet swayphics_bof",
+      "policy_must_precede_docker_forward_accepts": true,
+      "do_not_create_docker_user": true,
+      "do_not_modify_docker_managed_tables": true
+    }
+  },
+  "host_preflight_required": [
+    "identify Docker firewall backend from the daemon",
+    "audit host interfaces, all non-default IPv4 and IPv6 routes, Docker IPAM and external VPN/cloud allocations",
+    "capture IPv4 and IPv6 forwarding state and complete active firewall ruleset",
+    "confirm the actual Docker DNS resolver path",
+    "refresh Cloudflare Tunnel regional endpoint addresses and confirm host firewall support for a maintained destination set",
+    "design a rollback path that does not depend on the affected SSH/network path"
+  ],
+  "reference_sources": [
+    {
+      "publisher": "IANA",
+      "title": "IPv4 Special-Purpose Address Registry",
+      "url": "https://www.iana.org/assignments/iana-ipv4-special-registry",
+      "registry_last_updated": "2025-10-09",
+      "checked_on": "2026-11-28",
+      "use": "Reference for reviewing the IPv4 baseline; not a claim that the manifest contains every registry entry."
+    },
+    {
+      "publisher": "IANA",
+      "title": "IPv6 Special-Purpose Address Registry",
+      "url": "https://www.iana.org/assignments/iana-ipv6-special-registry",
+      "registry_last_updated": "2025-10-09",
+      "checked_on": "2026-11-28",
+      "use": "Reference for reviewing the IPv6 baseline; not a claim that the manifest contains every registry entry."
+    },
+    {
+      "publisher": "Cloudflare",
+      "title": "Cloudflare Tunnel configuration and firewall requirements",
+      "url": "https://developers.cloudflare.com/tunnel/configuration/",
+      "page_last_updated": "2026-09-29",
+      "checked_on": "2026-11-28",
+      "use": "Source for the regional Tunnel endpoint hostname/address snapshot and TCP/UDP 7844 requirement. Optional TCP 443 destinations are intentionally excluded."
+    }
+  ]
+}

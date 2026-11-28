@@ -155,3 +155,25 @@ Do not mark host egress security complete until all of the following are evidenc
 The POC Compose file now pins all three egress networks to stable source subnets. The read-only preflight verifies a local Linux Docker Unix-socket context (rejecting remote endpoints and `DOCKER_HOST` overrides), then audits host interface prefixes, all non-default IPv4/IPv6 routes, and existing Docker IPAM subnets against the six planned ranges. A separate read-only audit identifies the Docker firewall backend and expected policy attachment point. A further read-only snapshot records IPv4/IPv6 forwarding settings and the active iptables chains or nftables ruleset for host-specific policy design. Automated tests use mocked \`docker\`, \`iptables\` and \`nft\` commands to verify both supported branches and the unknown-backend fail-closed behaviour.
 
 No host firewall rules have been installed. No host, VM, tunnel, production secret or live endpoint has been selected or provisioned. Do not apply firewall commands until the actual host and firewall backend are known and an out-of-band recovery route is available.
+
+
+## 7. Machine-readable policy manifest
+
+The declarative policy is stored at:
+
+    scripts/bof-open-source-provider-poc/private-gateway/host-egress-policy.json
+
+Validate its structure and safety invariants without contacting or changing a host:
+
+    node scripts/bof-open-source-provider-poc/private-gateway/validate-host-egress-policy.cjs
+    node scripts/bof-open-source-provider-poc/private-gateway/host-egress-policy.test.cjs
+
+The manifest records the three fixed source subnets, service-specific protocol/port allowances, default-deny behaviour, the narrow established-return path, IPv4/IPv6 destination-deny baselines, DNS restrictions and the required attachment points for iptables and nftables. It is data for review only. The validator emits no firewall commands and has no host access.
+
+The IPv4 and IPv6 lists are explicitly conservative baselines, not an exhaustive export of every IANA special-purpose or non-globally-reachable prefix. The IANA registries can change, and their entries include exceptions and different reachability properties. Review the live registries and add the selected host's LAN, management, VPN, Docker and cloud metadata/control-plane ranges before enforcement. The manifest intentionally leaves `host_specific_ranges` empty until those ranges are observed on an actual host.
+
+The Cloudflare endpoint snapshot was checked on 28 November 2026 against the Cloudflare Tunnel configuration page, which states TCP/UDP port 7844 and lists the standard regional endpoints. Refresh the FQDN/IP set immediately before deployment and verify that the selected firewall can maintain the required endpoint set. Optional TCP 443 is not included in the default cloudflared allowance; add it only for a separately approved feature and destination list. The snapshot is not a promise that those addresses will remain unchanged.
+
+CI runs the manifest regression tests and schema validation as part of the mocked contract job. Passing those checks proves only that the declarative file meets the encoded invariants. It does not validate a real host's firewall backend, route table, DNS path, destination policy, Docker forwarding behaviour or rollback plan.
+
+No firewall rules have been generated or applied. No host, VM, tunnel, production secret or live endpoint has been provisioned.

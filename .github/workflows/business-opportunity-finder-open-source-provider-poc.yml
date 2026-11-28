@@ -14,6 +14,7 @@ on:
       - "scripts/business-assessment-private-gateway.integration.cjs"
       - "scripts/bof-open-source-provider-poc/**"
       - "docs/business-opportunity-finder-open-source-provider-poc.md"
+      - "docs/bof-open-source-provider-host-egress-hardening.md"
       - ".github/workflows/business-opportunity-finder-open-source-provider-poc.yml"
   workflow_dispatch:
 
@@ -40,6 +41,11 @@ jobs:
 
       - name: Run isolated mocked tests
         run: node scripts/business-assessment-open-source-provider.test.cjs
+
+      - name: Validate declarative host egress policy
+        run: |
+          node scripts/bof-open-source-provider-poc/private-gateway/host-egress-policy.test.cjs
+          node scripts/bof-open-source-provider-poc/private-gateway/validate-host-egress-policy.cjs
 
       - name: Validate private gateway Compose configuration without starting services
         shell: bash
