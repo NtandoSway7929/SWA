@@ -202,3 +202,15 @@ The report deliberately prints DEPLOYMENT GATE: NOT READY even when its inventor
 CI tests the report with mocked Docker, interface, route, sysctl and firewall commands. CI does not run the host audit against the shared runner and does not retain host inventory output. The test suite covers clean inventory, subnet conflict, incomplete inventory, unsupported backend, remote Docker context, sensitive-output suppression, and the absence of any apply mode.
 
 This script is read-only. It does not create Docker networks, alter routes, change sysctls, install firewall rules, deploy provider containers, or configure a tunnel.
+
+## 9. Offline DNS and redirect policy simulator
+
+The POC includes an offline decision simulator:
+
+    python3 scripts/bof-open-source-provider-poc/private-gateway/ssrf-policy-simulator.py --self-test
+
+It loads the declarative destination-deny baseline and tests policy decisions for public IPv4/IPv6, loopback, RFC1918, carrier-grade NAT, link-local and metadata addresses, IPv4-mapped IPv6, NAT64, mixed public/private DNS answer sets, later DNS rebinding, redirect-to-loopback, unsupported schemes, URL credentials and unapproved ports. Each redirect hop is evaluated independently against its supplied DNS answer set.
+
+This is deliberately a **policy-logic regression harness**, not a live DNS server, HTTP proxy, packet filter or Crawl4AI network test. It does not resolve names, open sockets, intercept browser subrequests, enforce address pinning, or prove that the host firewall drops packets. It also cannot populate the still-empty host-specific destination ranges. Passing it demonstrates only that the encoded decision logic fails closed for the supplied test vectors.
+
+The test is run in the POC CI mocked-contract job. Production and host readiness gates remain unchanged: an actual isolated Linux staging host must still demonstrate packet-level denial for DNS rebinding, mixed A/AAAA answers, redirects, browser subrequests, IPv4 and IPv6 private/metadata destinations, and unapproved ports before deployment can be considered.
