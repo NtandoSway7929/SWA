@@ -600,3 +600,13 @@ The Compose file now explicitly requires the named AppArmor profile to be loaded
 The first two attempts to add this AppArmor check to the host-readiness test exposed a securityfs permission issue. The audit now retries the read with non-interactive sudo when ordinary file access fails. Run 167 confirms the mocked host-readiness suite and all other CI jobs pass.
 
 **Deployment remains blocked.** The profile is tested on the GitHub-hosted Ubuntu runner and pinned Crawl4AI image only. No real Linux deployment host has been selected or audited. Host-specific IPv4/IPv6 egress enforcement, DNS rebinding and redirect behavior through the actual Docker forwarding path, Cloudflare Tunnel/Access, Supabase staging connectivity, operations/retention, vulnerability scanning, legal review and rollback remain outstanding. No server has been purchased. No production branch, service, secret, or host firewall was changed.
+
+
+
+### AppArmor host-audit regression suite passed — 28 November 2026
+
+The isolated POC workflow passed [GitHub Actions run 172](https://github.com/NtandoSway7929/SWA/actions/runs/46133282376), commit 3d4b65c85fc4cba988bb093b3a361c54f39fd0d2. The three workflow jobs passed.
+
+A new isolated regression suite covers the read-only AppArmor host audit. It confirms the audit accepts an enforced named profile with the host user-namespace restriction enabled, and fails closed for a missing profile, complain-mode profile, disabled user-namespace restriction, disabled AppArmor module, or missing apparmor_parser. The audit reads AppArmor securityfs without modifying it and falls back to non-interactive sudo only when ordinary access fails.
+
+This completes the host-readiness script's static/regression coverage for AppArmor reporting. It does not constitute a real deployment-host audit: no production or personal machine has been selected, and the script has not been run against a host with its actual LAN/VPN/Docker routes and firewall state.
