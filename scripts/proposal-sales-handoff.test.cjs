@@ -32,6 +32,8 @@ assert.match(adminScript, /Convert to client/,
     "accepted quotes linked to leads must expose client conversion");
 assert.match(adminScript, /View accepted agreement/,
     "accepted quotes must expose the persisted agreement snapshot");
+assert.match(adminScript, /card\.querySelector\("\.sway-record-card-actions"\)/,
+    "sales handoff controls must be appended after the existing quote card actions, not inside the quote title or details");
 assert.match(adminScript, /data-create-invoice-from-quote/,
     "the sales handoff must preserve the existing quote invoice action");
 assert.match(adminScript, /invoiceButton\.hidden = accepted && !hasClient/,
