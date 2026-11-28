@@ -90,6 +90,8 @@ assert.match(migration, /Only an authenticated Swayphics administrator/,
     "link creation and revocation must require an authenticated Swayphics admin");
 assert.match(migration, /p_confirmed is not true/,
     "acceptance must require an affirmative authority confirmation");
+assert.match(migration, /v_quote\.proposal_version_id is distinct from v_version_id/,
+    "delivery must reject a quote priced against a different proposal revision");
 assert.match(migration, /Africa\/Johannesburg/,
     "quote validity dates must be interpreted in the South African timezone");
 assert.match(databaseTest, /select extensions\.plan\(30\)/,
