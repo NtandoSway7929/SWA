@@ -104,6 +104,7 @@ jobs:
           echo "::add-mask::$crawl_token"
           echo "SEARXNG_SECRET=$searx_secret" >> "$GITHUB_ENV"
           echo "CRAWL4AI_API_TOKEN=$crawl_token" >> "$GITHUB_ENV"
+          echo "CRAWL4AI_CHROMIUM_SANDBOX=true" >> "$GITHUB_ENV"
 
       - name: Start pinned local provider containers
         run: docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml up --detach
@@ -164,6 +165,45 @@ jobs:
           SEARXNG_BASE_URL: http://127.0.0.1:8080
           CRAWL4AI_BASE_URL: http://127.0.0.1:11235
         run: node scripts/business-assessment-open-source-provider.integration.cjs
+
+      - name: Verify Chromium launches with its sandbox enabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_id="$(docker compose --file scripts/bof-open-source-provider-poc/docker-compose.yml ps -q crawl4ai)"
+          test -n "$container_id"
+          found=false
+          for attempt in $(seq 1 20); do
+            process_list="$(docker exec "$container_id" sh -c '
+              for file in /proc/[0-9]*/cmdline; do
+                [ -r "$file" ] || continue
+                command_line="$(tr "\\000" " " < "$file" 2>/dev/null || true)"
+                case "$command_line" in
+                  *chrome*|*chromium*)
+                    case "$command_line" in
+                      *chrome_crashpad_handler*) continue ;;
+                    esac
+                    printf "%s\\n" "$command_line"
+                    ;;
+                esac
+              done
+            ')"
+            if [ -n "$process_list" ]; then
+              found=true
+              if printf "%s\\n" "$process_list" | grep -q -- '--no-sandbox'; then
+                echo "Chromium process still contains --no-sandbox despite sandbox opt-in."
+                printf "%s\\n" "$process_list"
+                exit 1
+              fi
+              echo "Chromium process is running without --no-sandbox."
+              break
+            fi
+            sleep 1
+          done
+          if [ "$found" != true ]; then
+            echo "No Chromium process found after the live crawl; sandbox launch could not be verified."
+            exit 1
+          fi
 
       - name: Benchmark South African official-domain discovery
         env:
