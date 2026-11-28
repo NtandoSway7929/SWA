@@ -100,7 +100,7 @@ for path in glob.glob("/proc/[0-9]*/cmdline"):
     try:
         raw = open(path, "rb").read().replace(bytes([0]), b" ").decode("utf-8", "replace")
         low = raw.lower()
-        if "chrom" not in low or not any(tag in low for tag in ("--type=renderer", "--type=zygote")):
+        if "chrom" not in low:
             continue
         status = {}
         for line in open(f"/proc/{pid}/status", encoding="utf-8"):
