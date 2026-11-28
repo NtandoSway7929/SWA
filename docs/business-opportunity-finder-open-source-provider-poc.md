@@ -562,4 +562,23 @@ The captured renderer record showed:
 
 The test now asserts all three kernel-state properties on the same renderer record, in addition to a successful sandbox-enabled crawl. All three workflow jobs passed, including the live private-gateway Compose smoke test. This closes the POC's Chromium runtime sandbox evidence gap for the tested combination: candidate filtered seccomp profile, Docker default AppArmor profile, non-root user, dropped capabilities, no-new-privileges and read-only filesystem.
 
-**Remaining host policy decision:** the GitHub runner still required `kernel.apparmor_restrict_unprivileged_userns=0`. This was changed only on the disposable runner. Before deployment, investigate a narrowly scoped AppArmor `userns,` rule for the Crawl4AI container so the host-wide Ubuntu restriction can potentially remain enabled. Do not apply the global sysctl change to a real/shared host without a separate security decision. No host or production configuration was modified.
+**Status at run 147:** the GitHub runner required `kernel.apparmor_restrict_unprivileged_userns=0` with Docker's default AppArmor profile. This limitation was subsequently addressed by a dedicated scoped AppArmor profile, tested with the host restriction left enabled; see the later run 158 evidence below.
+
+
+
+### Scoped AppArmor profile verified with host restriction enabled — 28 November 2026
+
+The isolated POC workflow passed [GitHub Actions run 158](https://github.com/NtandoSway7929/SWA/actions/runs/46131678082), commit 626ed3d570006b357cbdb20eaba6a360b8cf46fb. All three jobs passed: mocked adapter and policy contracts, Chromium sandbox runtime verification, and live provider/private-gateway integration.
+
+The new candidate profile is stored at scripts/bof-open-source-provider-poc/private-gateway/apparmor-crawl4ai.profile. It is derived from Docker/Moby's default AppArmor profile and adds one explicit userns permission. The validator checks required confinement rules, rejects broadening tokens such as unconfined mode and CAP_SYS_ADMIN, and requires exactly one userns rule.
+
+The Chromium runtime job:
+- Confirmed kernel.apparmor_restrict_unprivileged_userns remained enabled (value 1) throughout the test; it did not relax the host-wide restriction.
+- Loaded the scoped AppArmor profile and applied it to the Crawl4AI container.
+- Applied the candidate filtered seccomp profile, ran as non-root appuser, dropped all capabilities, enabled no-new-privileges and a read-only root filesystem.
+- Completed a real sandbox-enabled fetch of reserved https://example.com/.
+- Observed the renderer through Docker's host-visible PID table and verified no --no-sandbox argument, Seccomp=2, NoNewPrivs=1 and a user namespace distinct from the container init process.
+
+The private-gateway Compose template now applies both the candidate seccomp profile and the named AppArmor profile to Crawl4AI. The live gateway job loads that profile in its own disposable runner before starting Compose. Its smoke test confirmed Valkey health, no published ports, Caddy without outbound egress, expected service network membership, no cloudflared connector, and a successful reserved example.com fetch through the gateway to Crawl4AI.
+
+This is a meaningful POC security milestone, not production approval. The profile has been tested on the current GitHub-hosted Ubuntu runner and pinned Crawl4AI image; it has not yet been validated across other kernel versions/distributions or on a selected deployment host. The network egress/SSRF controls still need host-specific firewall enforcement and live validation. The Cloudflare Tunnel/Access path, Supabase Edge Function call, operational monitoring, resource/load limits, retention/log policy, legal/vendor review and rollback process remain unverified. No paid server was purchased or selected, no host firewall was changed, and no production service or secret was touched.
