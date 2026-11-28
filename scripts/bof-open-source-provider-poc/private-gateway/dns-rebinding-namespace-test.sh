@@ -145,7 +145,13 @@ addresses = sorted({item[4][0] for item in resolved})
 assert addresses == ["1.1.1.1"], addresses
 with socket.create_connection((addresses[0], 8080), timeout=2) as connection:
     connection.sendall(b"GET /pinned HTTP/1.0\r\nHost: rebind-lab.test\r\n\r\n")
-    response = connection.recv(4096)
+    chunks = []
+    while True:
+        chunk = connection.recv(4096)
+        if not chunk:
+            break
+        chunks.append(chunk)
+    response = b"".join(chunks)
 assert b"isolated-public-fixture" in response, response
 print("PASS: validated address can be pinned to the actual connection")
 PY
