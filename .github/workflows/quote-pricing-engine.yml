@@ -6,6 +6,7 @@ on:
       - main
       - feature/lead-proposal-draft-saving
       - feature/quote-pricing-engine
+      - feature/proposal-delivery-acceptance
     paths:
       - "admin-dashboard/admin-workspace.js"
       - "admin-dashboard/admin-workspace.css"
