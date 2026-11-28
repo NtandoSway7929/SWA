@@ -111,11 +111,19 @@ sleep 1
 touch "$stop_file"
 wait "$observer_pid" || observer_status=$?
 observer_pid=""
-if [ -s "$log_file" ] && grep -q 'RENDERER=True' "$log_file"; then
+renderer_record="$(grep 'RENDERER=True' "$log_file" | head -n 1 || true)"
+if [ -n "$renderer_record" ]; then
   chromium_seen=true
+  if ! grep -q -- '--no-sandbox' <<<"$renderer_record"; then
+    sandbox_flag_clear=true
+  fi
 fi
-if [ "$chromium_seen" = true ] && ! grep -q -- '--no-sandbox' "$log_file"; then
-  sandbox_flag_clear=true
+kernel_sandbox_verified=false
+if [ -n "$renderer_record" ] &&
+   grep -q 'SECCOMP=2' <<<"$renderer_record" &&
+   grep -q 'NNP=1' <<<"$renderer_record" &&
+   grep -q 'USERNS_DIFF=True' <<<"$renderer_record"; then
+  kernel_sandbox_verified=true
 fi
 python - "$response_file" <<'PY'
 import json, sys
@@ -137,12 +145,17 @@ if [ "$chromium_seen" != true ]; then
   exit 1
 fi
 if [ "$sandbox_flag_clear" != true ]; then
-  echo "FAIL: Chromium process was observed with --no-sandbox or no sandbox-free process could be confirmed" >&2
+  echo "FAIL: Chromium renderer process was observed with --no-sandbox or no sandbox-free renderer could be confirmed" >&2
+  cat "$log_file" >&2
+  exit 1
+fi
+if [ "$kernel_sandbox_verified" != true ]; then
+  echo "FAIL: renderer kernel state did not show Seccomp=2, NoNewPrivs=1 and a distinct user namespace" >&2
   cat "$log_file" >&2
   exit 1
 fi
 
 echo "PASS: Chromium renderer process was observed without --no-sandbox."
-echo "PASS: Chromium sandbox launched with user namespaces under the candidate filtered seccomp profile."
+echo "PASS: renderer kernel state confirms Seccomp=2, NoNewPrivs=1 and a user namespace distinct from the container init process."
 echo "PASS: Docker's default AppArmor profile and the candidate filtered seccomp profile allowed Chromium's sandbox with the host userns restriction disabled."
 echo "LIMIT: the host sysctl was changed only on the disposable runner; production host configuration and operational impact still require review."
