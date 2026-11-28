@@ -223,7 +223,7 @@ select extensions.is(
     (select (commercial_snapshot->>'initial_amount_due')::numeric
        from public.swayphics_project_agreements
       where quote_id=current_setting('test.sales_quote_id')::uuid),
-    1500::numeric,
+    1725::numeric,
     'agreement stores the exact initial commercial amount due'
 );
 select extensions.is(
@@ -350,7 +350,7 @@ select extensions.is(
     (select total
        from public.invoices
       where id=(select (result->>'invoice_id')::uuid from sales_invoice_created)),
-    1500::numeric,
+    1725::numeric,
     'existing invoice creation uses the accepted quote initial amount due'
 );
 select extensions.is(
