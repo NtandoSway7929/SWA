@@ -102,7 +102,7 @@ assert.match(migration, /public\.admin_create_invoice_from_quote/,
 assert.match(deliveryMigration, /create table if not exists public\.quote_review_responses/,
     "the sales migration must depend on the existing proposal response table");
 
-assert.match(databaseTest, /select extensions\.plan\(43\)/,
+assert.match(databaseTest, /select extensions\.plan\(44\)/,
     "the accepted quote sales test must declare its full assertion plan");
 assert.match(databaseTest, /acceptance automatically creates one immutable agreement snapshot/,
     "the database test must verify agreement snapshot creation");
