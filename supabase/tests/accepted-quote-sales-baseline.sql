@@ -79,8 +79,39 @@ insert into public.invoice_settings (id,vat_registered) values (1,true);
 create table public.client_projects (
     id uuid primary key default gen_random_uuid(),
     client_id uuid references public.clients(id) on delete cascade,
-    name text not null
+    name text not null,
+    service text,
+    description text,
+    status text not null default 'planning'
+        check (status in ('planning','in progress','review','completed','paused','cancelled')),
+    value numeric(12,2) not null default 0,
+    due_date date,
+    assigned_to uuid references public.admin_users(user_id) on delete set null,
+    payment_status text not null default 'not invoiced'
+        check (payment_status in ('not invoiced','invoice drafted','invoice sent','partially paid','paid','overdue')),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
 );
+
+create table public.tasks (
+    id uuid primary key default gen_random_uuid(),
+    title text not null,
+    description text,
+    assigned_to uuid references public.admin_users(user_id) on delete set null,
+    client_id uuid references public.clients(id) on delete cascade,
+    project_id uuid references public.client_projects(id) on delete cascade,
+    priority text not null default 'medium' check (priority in ('low','medium','high','urgent')),
+    status text not null default 'todo' check (status in ('todo','in progress','review','completed')),
+    due_date date,
+    completed_at timestamptz,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+create table public.workflow_settings (
+    id integer primary key default 1
+);
+insert into public.workflow_settings (id) values (1);
 
 create sequence public.swayphics_invoice_number_seq start 1;
 

@@ -25,3 +25,23 @@
 .sway-project-agreement-content small{font-size:10px;color:#7B858E;overflow-wrap:anywhere}
 .sway-project-agreement-footer{display:flex;justify-content:flex-end;padding:0 26px 22px}
 @media(max-width:640px){.sway-project-agreement-content{padding:18px}.sway-project-agreement-footer{padding:0 18px 18px}}
+
+.accepted-quote-project-create{border-color:#0152F4!important;color:#0152F4!important}
+.sway-project-kickoff-card{width:min(700px,calc(100vw - 30px));max-height:min(92vh,920px);overflow:auto}
+.sway-project-kickoff-subtitle{margin-top:5px;color:#78828c;font-size:11px;line-height:1.5}
+.sway-project-kickoff-form{display:grid;gap:14px;padding:22px 26px}
+.sway-project-kickoff-form>label{display:grid;gap:7px;color:#303943;font-size:12px;font-weight:750}
+.sway-project-kickoff-form>label span{color:#87919a;font-weight:500}
+.sway-project-kickoff-form input,.sway-project-kickoff-form textarea{width:100%;min-width:0;padding:11px 12px;border:1px solid #DCE2E8;border-radius:8px;background:#fff;color:#27313a;font:inherit;font-size:13px;font-weight:500;line-height:1.5;outline:none}
+.sway-project-kickoff-form input:focus,.sway-project-kickoff-form textarea:focus{border-color:#0152F4;box-shadow:0 0 0 3px rgba(1,82,244,.10)}
+.sway-project-kickoff-form textarea{resize:vertical;min-height:112px}
+.sway-project-kickoff-summary{display:grid;gap:6px;padding:13px 14px;border:1px solid #E4E9EF;border-radius:9px;background:#F7F9FB}
+.sway-project-kickoff-summary strong{color:#35404b;font-size:11px}
+.sway-project-kickoff-summary p,.sway-project-kickoff-note{margin:0;color:#68747e;font-size:11px;line-height:1.65;white-space:pre-line}
+.sway-project-kickoff-note{padding:0 1px}
+.sway-project-kickoff-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:5px}
+@media(max-width:640px){
+  .sway-project-kickoff-form{padding:18px}
+  .sway-project-kickoff-actions{flex-direction:column-reverse}
+  .sway-project-kickoff-actions button{width:100%}
+}

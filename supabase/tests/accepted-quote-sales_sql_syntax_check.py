@@ -8,6 +8,8 @@ FILES = [
     "supabase/migrations/20261128100000_swayphics_quote_pricing_engine.sql",
     "supabase/migrations/20261128110000_swayphics_proposal_delivery_acceptance.sql",
     "supabase/migrations/20261128120000_swayphics_accepted_quote_sales_handoff.sql",
+    "supabase/migrations/20261128130000_swayphics_accepted_quote_project_kickoff.sql",
+    "supabase/migrations/20261025031000_swayphics_project_delivery_settings.sql",
     "supabase/tests/accepted-quote-sales-handoff.test.sql",
 ]
 
