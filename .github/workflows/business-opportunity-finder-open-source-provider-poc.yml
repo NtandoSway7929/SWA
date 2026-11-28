@@ -240,11 +240,10 @@ jobs:
             fi
           }
 
-          prefix="bof-private-gateway-ci_"
-          check_networks gateway "\${prefix}tunnel_internal" "\${prefix}search_internal" "\${prefix}crawl_internal"
-          check_networks searxng "\${prefix}search_internal" "\${prefix}search_egress"
-          check_networks crawl4ai "\${prefix}crawl_internal" "\${prefix}crawl_egress"
-          check_networks valkey "\${prefix}search_internal"
+          check_networks gateway "bof-private-gateway-ci_tunnel_internal" "bof-private-gateway-ci_search_internal" "bof-private-gateway-ci_crawl_internal"
+          check_networks searxng "bof-private-gateway-ci_search_internal" "bof-private-gateway-ci_search_egress"
+          check_networks crawl4ai "bof-private-gateway-ci_crawl_internal" "bof-private-gateway-ci_crawl_egress"
+          check_networks valkey "bof-private-gateway-ci_search_internal"
 
           tunnel_id="$(docker ps --filter "label=com.docker.compose.project=bof-private-gateway-ci" --filter "label=com.docker.compose.service=cloudflared" -q)"
           test -z "$tunnel_id"
