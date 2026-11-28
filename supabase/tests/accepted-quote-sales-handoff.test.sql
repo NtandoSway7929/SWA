@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(41);
+select extensions.plan(43);
 
 select extensions.has_table('public','swayphics_project_agreements',
     'accepted project agreement snapshot table exists');
@@ -442,6 +442,54 @@ select extensions.throws_ok(
     '55000',
     'Only an accepted quote can be converted into a client record.',
     'a rejected quotation cannot be converted into a client'
+);
+reset role;
+
+set local role authenticated;
+create temporary table manual_accepted_quote(result jsonb);
+grant insert,select on manual_accepted_quote to authenticated;
+insert into manual_accepted_quote(result)
+select public.admin_save_swayphics_quote(
+    null,
+    jsonb_build_object(
+        'title','Manually Accepted QA Quote',
+        'lead_id','99999999-9999-4999-8999-999999999932',
+        'proposal_id','99999999-9999-4999-8999-999999999933',
+        'valid_until',(current_date + 7)::text
+    ),
+    jsonb_build_array(jsonb_build_object(
+        'service_name','Website Design',
+        'description','Website design and development.',
+        'quantity',1,
+        'unit_price',1500,
+        'billing_interval','none'
+    ))
+);
+select set_config(
+    'test.sales_manual_quote_id',
+    (select result->'quote'->>'id' from manual_accepted_quote),
+    true
+);
+reset role;
+
+update public.quotes
+   set status='accepted',
+       updated_at=now()
+ where id=current_setting('test.sales_manual_quote_id')::uuid;
+
+select extensions.is(
+    (select count(*)::integer from public.swayphics_project_agreements
+      where quote_id=current_setting('test.sales_manual_quote_id')::uuid),
+    0,
+    'manually changing quote status does not fabricate a client acceptance agreement'
+);
+
+set local role authenticated;
+select extensions.throws_ok(
+    'select public.admin_convert_accepted_quote_to_client(current_setting(''test.sales_manual_quote_id'')::uuid)',
+    '55000',
+    'A recorded client acceptance and Terms & Conditions acknowledgement are required before converting this quote into a client.',
+    'a manually accepted quote without a recorded agreement cannot be converted into a client'
 );
 reset role;
 
