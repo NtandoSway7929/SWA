@@ -145,7 +145,7 @@ jobs:
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$DB_URL"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261025031000_swayphics_project_delivery_settings.sql"
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "update public.workflow_settings set default_project_task_template = '[{""title"":""Kickoff briefing"",""due_offset_days"":0,""priority"":""high""},{""title"":""Review client onboarding"",""due_offset_days"":1,""priority"":""medium""}]'::jsonb where id=1"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "update public.workflow_settings set default_project_task_template = jsonb_build_array(jsonb_build_object('title','Kickoff briefing','due_offset_days',0,'priority','high'),jsonb_build_object('title','Review client onboarding','due_offset_days',1,'priority','medium')) where id=1"
 
       - name: Apply proposal revision dependency migration
         shell: bash
