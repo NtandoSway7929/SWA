@@ -165,8 +165,8 @@ begin
                 where qi.quote_id = v_quote.id
             ), '[]'::jsonb)
         ),
-        coalesce(new.terms_url, 'https://swayphics.co.za/terms-and-conditions/'),
-        coalesce(new.terms_document_sha, 'fa302aec3ab9fd2e8e6458f53726f48cae765e5e'),
+        coalesce(new.terms_url, 'https://swayphics.co.za/terms-and-conditions/revisions/e56d3f2fd1e4247dcff5bd40c9340542b1e414fc/'),
+        coalesce(new.terms_document_sha, 'e56d3f2fd1e4247dcff5bd40c9340542b1e414fc'),
         v_terms_statement,
         new.respondent_name,
         new.respondent_email,
@@ -550,8 +550,8 @@ declare
     v_message text;
     v_response_id uuid;
     v_submitted_at timestamptz;
-    v_terms_url text := 'https://swayphics.co.za/terms-and-conditions/';
-    v_terms_sha text := 'fa302aec3ab9fd2e8e6458f53726f48cae765e5e';
+    v_terms_url text := 'https://swayphics.co.za/terms-and-conditions/revisions/e56d3f2fd1e4247dcff5bd40c9340542b1e414fc/';
+    v_terms_sha text := 'e56d3f2fd1e4247dcff5bd40c9340542b1e414fc';
     v_acceptance_statement text :=
         'I confirm that I am authorised to accept this proposal on behalf of the business and agree to the proposal, commercial quotation and Swayphics Terms & Conditions.';
 begin
