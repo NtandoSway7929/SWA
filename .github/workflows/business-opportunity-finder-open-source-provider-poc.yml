@@ -59,6 +59,7 @@ jobs:
           node scripts/bof-open-source-provider-poc/private-gateway/host-readiness.test.cjs
           node scripts/bof-open-source-provider-poc/private-gateway/audit-host-apparmor.test.cjs
           node scripts/bof-open-source-provider-poc/private-gateway/validate-compose-resources.test.cjs
+          node scripts/bof-open-source-provider-poc/private-gateway/validate-runtime-tmpfs.test.cjs
           python3 scripts/bof-open-source-provider-poc/private-gateway/ssrf-policy-simulator.py --self-test
           python3 scripts/bof-open-source-provider-poc/private-gateway/analyse-firewall-snapshot.py --self-test
           bash -n scripts/bof-open-source-provider-poc/private-gateway/network-namespace-ssrf-test.sh
@@ -346,6 +347,10 @@ jobs:
               exit 1
             fi
             echo "PASS: $service runtime log rotation is $log_config"
+          done
+          for service in crawl4ai gateway; do
+            container_id="$("${compose[@]}" ps --quiet "$service")"
+            docker inspect "$container_id" | python3 scripts/bof-open-source-provider-poc/private-gateway/validate-runtime-tmpfs.py --service "$service"
           done
 
           tunnel_id="$(docker ps --filter "label=com.docker.compose.project=bof-private-gateway-ci" --filter "label=com.docker.compose.service=cloudflared" -q)"
