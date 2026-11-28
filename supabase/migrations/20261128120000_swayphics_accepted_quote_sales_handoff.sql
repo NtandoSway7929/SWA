@@ -287,6 +287,8 @@ $function$;
 revoke all on function public.guard_swayphics_quote_commercial_record()
     from public, anon, authenticated, service_role;
 
+-- Invoice creation remains in the existing public.admin_create_invoice_from_quote(uuid)
+-- RPC from the quote-pricing milestone; this migration does not duplicate billing logic.
 create or replace function public.admin_convert_accepted_quote_to_client(
     p_quote_id uuid
 )
