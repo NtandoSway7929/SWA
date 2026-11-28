@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(48);
+select extensions.plan(66);
 
 select extensions.has_table('public','swayphics_project_agreements',
     'accepted project agreement snapshot table exists');
@@ -12,6 +12,27 @@ select extensions.has_column('public','quote_review_responses','terms_accepted',
     'client review responses persist explicit terms acknowledgement');
 select extensions.has_column('public','quote_review_responses','terms_document_sha',
     'client review responses preserve the exact published terms document reference');
+select extensions.has_column('public','client_projects','source_quote_id',
+    'project kickoff records preserve their originating accepted quotation');
+select extensions.has_column('public','client_projects','source_agreement_id',
+    'project kickoff records preserve their originating accepted agreement');
+select extensions.ok(
+    (select prosecdef and proconfig @> array['search_path=""']
+       from pg_proc
+      where oid='public.validate_swayphics_project_source_agreement()'::regprocedure),
+    'project source agreement validation uses a security-definer trigger with an empty search_path'
+);
+select extensions.ok(
+    (select prosecdef and proconfig @> array['search_path=""']
+       from pg_proc
+      where oid='public.admin_create_project_from_accepted_quote(uuid,text,text,text,date,uuid)'::regprocedure),
+    'project kickoff uses a security-definer RPC with an empty search_path'
+);
+select extensions.ok(
+    has_function_privilege('authenticated','public.admin_create_project_from_accepted_quote(uuid,text,text,text,date,uuid)','EXECUTE')
+    and not has_function_privilege('anon','public.admin_create_project_from_accepted_quote(uuid,text,text,text,date,uuid)','EXECUTE'),
+    'only authenticated sessions can invoke accepted quote project kickoff'
+);
 select extensions.ok(
     (select relrowsecurity from pg_class where oid='public.swayphics_project_agreements'::regclass),
     'accepted agreement snapshots have row-level security enabled'
@@ -99,6 +120,8 @@ create temporary table sales_converted_client(result jsonb);
 create temporary table sales_converted_client_retry(result jsonb);
 create temporary table sales_invoice_created(result jsonb);
 create temporary table sales_invoice_retry(result jsonb);
+create temporary table sales_project_created(result jsonb);
+create temporary table sales_project_retry(result jsonb);
 create temporary table sales_saved_rejected_quote(result jsonb);
 create temporary table sales_issue_rejected_link(result jsonb);
 create temporary table sales_reject_response(result jsonb);
@@ -106,7 +129,7 @@ create temporary table manual_accepted_quote(result jsonb);
 
 grant insert,select on manual_accepted_quote,sales_saved_quote,sales_issue_link,sales_converted_client,
     sales_converted_client_retry,sales_invoice_created,sales_invoice_retry,
-    sales_saved_rejected_quote,sales_issue_rejected_link to authenticated;
+    sales_project_created,sales_project_retry,sales_saved_rejected_quote,sales_issue_rejected_link to authenticated;
 grant insert,select on sales_accept_response,sales_review_lookup,sales_reject_response to anon;
 
 set local role authenticated;
@@ -426,6 +449,120 @@ select extensions.ok(
 );
 
 set local role authenticated;
+insert into sales_project_created(result)
+select public.admin_create_project_from_accepted_quote(
+    current_setting('test.sales_quote_id')::uuid,
+    'Accepted Website Project',
+    'Website Design',
+    'Design, build and launch the accepted business website.',
+    null,
+    null
+);
+reset role;
+
+select set_config(
+    'test.sales_project_id',
+    (select result->>'project_id' from sales_project_created),
+    true
+);
+
+select extensions.ok(
+    (select (result->>'success')::boolean and result->>'project_id' is not null
+       from sales_project_created),
+    'an administrator can start a project after accepted quote and client conversion'
+);
+select extensions.ok(
+    (select p.client_id=current_setting('test.sales_client_id')::uuid
+            and p.source_quote_id=current_setting('test.sales_quote_id')::uuid
+            and p.source_agreement_id=a.id
+       from public.client_projects p
+       join public.swayphics_project_agreements a
+         on a.id=p.source_agreement_id
+      where p.id=current_setting('test.sales_project_id')::uuid),
+    'the new project links the converted client, exact accepted quote and matching agreement'
+);
+select extensions.ok(
+    (select name='Accepted Website Project'
+            and service='Website Design'
+            and description='Design, build and launch the accepted business website.'
+            and status='planning'
+            and value=1725
+       from public.client_projects
+      where id=current_setting('test.sales_project_id')::uuid),
+    'project kickoff preserves administrator scope details and the accepted quote value'
+);
+select extensions.is(
+    (select due_date from public.client_projects
+      where id=current_setting('test.sales_project_id')::uuid),
+    current_date + 14,
+    'the existing project delivery default applies its configured fourteen-day due date'
+);
+select extensions.is(
+    (select (result->>'task_count')::integer from sales_project_created),
+    2,
+    'the existing project task template creates both configured kickoff tasks'
+);
+select extensions.is(
+    (select count(*)::integer
+       from public.tasks
+      where project_id=current_setting('test.sales_project_id')::uuid
+        and client_id=current_setting('test.sales_client_id')::uuid
+        and status='todo'),
+    2,
+    'default kickoff tasks attach to the correct client and project'
+);
+select extensions.is(
+    (select project_id
+       from public.invoices
+      where id=(select (result->>'invoice_id')::uuid from sales_invoice_created)),
+    current_setting('test.sales_project_id')::uuid,
+    'the already-created accepted quote invoice is linked to the new project'
+);
+
+set local role authenticated;
+insert into sales_project_retry(result)
+select public.admin_create_project_from_accepted_quote(
+    current_setting('test.sales_quote_id')::uuid,
+    'A Duplicate Project Name Must Be Ignored',
+    'Website Design',
+    'A second call must not create another project.',
+    null,
+    null
+);
+reset role;
+
+select extensions.ok(
+    (select (result->>'already_created')::boolean
+            and result->>'project_id'=current_setting('test.sales_project_id')
+       from sales_project_retry),
+    'repeating project kickoff returns the existing project instead of creating a duplicate'
+);
+select extensions.is(
+    (select count(*)::integer from public.client_projects
+      where source_quote_id=current_setting('test.sales_quote_id')::uuid),
+    1,
+    'only one project can be created for an accepted quotation'
+);
+select extensions.is(
+    (select count(*)::integer from public.tasks
+      where project_id=current_setting('test.sales_project_id')::uuid),
+    2,
+    'repeating project kickoff does not duplicate the existing default tasks'
+);
+select extensions.throws_ok(
+    'update public.client_projects set source_quote_id = null where id = current_setting(''test.sales_project_id'')::uuid',
+    '55000',
+    'A project source quote and accepted agreement cannot be changed after kickoff.',
+    'a project cannot be detached from its accepted quotation after kickoff'
+);
+select extensions.throws_ok(
+    'update public.client_projects set source_agreement_id = null where id = current_setting(''test.sales_project_id'')::uuid',
+    '55000',
+    'A project source quote and accepted agreement cannot be changed after kickoff.',
+    'a project cannot be detached from its accepted agreement after kickoff'
+);
+
+set local role authenticated;
 
 insert into sales_saved_rejected_quote(result)
 select public.admin_save_swayphics_quote(
@@ -542,6 +679,12 @@ select extensions.throws_ok(
     '55000',
     'A recorded client acceptance and Terms & Conditions acknowledgement are required before creating an invoice.',
     'a manually accepted quote with a client link cannot bypass the agreement gate to create an invoice'
+);
+select extensions.throws_ok(
+    'select public.admin_create_project_from_accepted_quote(current_setting(''test.sales_manual_quote_id'')::uuid, ''Unauthorised Project'', null, null, null, null)',
+    '55000',
+    'A matching accepted agreement and Terms & Conditions acknowledgement are required before project kickoff.',
+    'a manually accepted quote without an accepted agreement cannot start a project'
 );
 reset role;
 
