@@ -326,19 +326,23 @@ begin
             using errcode = '55000';
     end if;
 
+    if not exists (
+        select 1
+          from public.swayphics_project_agreements a
+          join public.quote_review_responses r
+            on r.id = a.review_response_id
+         where a.quote_id = v_quote.id
+           and a.proposal_version_id = v_quote.proposal_version_id
+           and r.decision = 'accepted'
+           and r.terms_accepted is true
+    ) then
+        raise exception 'A recorded client acceptance and Terms & Conditions acknowledgement are required before converting this quote into a client.'
+            using errcode = '55000';
+    end if;
+
     if v_quote.client_id is not null then
         v_client_id := v_quote.client_id;
     else
-        if not exists (
-            select 1
-              from public.swayphics_project_agreements a
-             where a.quote_id = v_quote.id
-               and a.proposal_version_id = v_quote.proposal_version_id
-               and nullif(btrim(a.terms_acceptance_statement), '') is not null
-        ) then
-            raise exception 'A recorded client acceptance and Terms & Conditions acknowledgement are required before converting this quote into a client.'
-                using errcode = '55000';
-        end if;
 
         if v_quote.lead_id is null then
             raise exception 'This accepted quote is not linked to a lead that can be converted.'
@@ -411,6 +415,157 @@ $function$;
 revoke all on function public.admin_convert_accepted_quote_to_client(uuid)
     from public, anon, authenticated, service_role;
 grant execute on function public.admin_convert_accepted_quote_to_client(uuid)
+    to authenticated;
+
+create or replace function public.admin_create_invoice_from_quote(
+    p_quote_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_quote public.quotes%rowtype;
+    v_invoice_id uuid;
+    v_invoice_number text;
+    v_item_count integer;
+begin
+    if auth.uid() is null or not public.is_swayphics_admin() then
+        raise exception 'Only an authenticated Swayphics administrator can convert a quote to an invoice.'
+            using errcode = '42501';
+    end if;
+
+    select *
+      into v_quote
+      from public.quotes q
+     where q.id = p_quote_id
+     for update;
+
+    if not found then
+        raise exception 'The quote could not be found.'
+            using errcode = 'P0002';
+    end if;
+
+    if v_quote.invoice_id is not null then
+        return jsonb_build_object(
+            'invoice_id', v_quote.invoice_id,
+            'already_created', true
+        );
+    end if;
+
+    if v_quote.status <> 'accepted' then
+        raise exception 'Only accepted quotes can be converted into invoices.'
+            using errcode = '55000';
+    end if;
+
+    if not exists (
+        select 1
+          from public.swayphics_project_agreements a
+          join public.quote_review_responses r
+            on r.id = a.review_response_id
+         where a.quote_id = v_quote.id
+           and a.proposal_version_id = v_quote.proposal_version_id
+           and r.decision = 'accepted'
+           and r.terms_accepted is true
+    ) then
+        raise exception 'A recorded client acceptance and Terms & Conditions acknowledgement are required before creating an invoice.'
+            using errcode = '55000';
+    end if;
+
+    if v_quote.client_id is null then
+        raise exception 'Convert the linked lead to a client before creating an invoice.'
+            using errcode = '23502';
+    end if;
+
+    select count(*)::integer
+      into v_item_count
+      from public.quote_items qi
+     where qi.quote_id = v_quote.id;
+
+    if v_item_count < 1 then
+        raise exception 'The accepted quote has no saved line items.'
+            using errcode = '23514';
+    end if;
+
+    insert into public.invoices (
+        client_id,
+        issue_date,
+        status,
+        currency,
+        subtotal,
+        discount,
+        vat_rate,
+        vat_amount,
+        total,
+        amount_paid,
+        amount_outstanding,
+        notes,
+        created_by
+    ) values (
+        v_quote.client_id,
+        current_date,
+        'draft',
+        'ZAR',
+        v_quote.initial_subtotal,
+        v_quote.discount,
+        v_quote.vat_rate,
+        v_quote.vat_amount,
+        v_quote.amount,
+        0,
+        v_quote.amount,
+        'Created from accepted quote ' || coalesce(v_quote.quote_number, v_quote.id::text) ||
+            '. The invoice includes the first service period for any recurring line items.' ||
+            case when v_quote.notes is not null then E'
+
+' || v_quote.notes else '' end,
+        auth.uid()
+    )
+    returning id, invoice_number into v_invoice_id, v_invoice_number;
+
+    insert into public.invoice_items (
+        invoice_id,
+        service_id,
+        description,
+        quantity,
+        unit_price
+    )
+    select
+        v_invoice_id,
+        qi.service_id,
+        qi.description ||
+            case qi.billing_interval
+                when 'monthly' then ' (monthly service)'
+                when 'yearly' then ' (yearly service)'
+                else ''
+            end,
+        qi.quantity,
+        qi.unit_price
+    from public.quote_items qi
+    where qi.quote_id = v_quote.id
+    order by qi.position, qi.created_at;
+
+    perform pg_catalog.set_config('swayphics.quote_invoice_conversion', 'on', true);
+
+    update public.quotes
+       set invoice_id = v_invoice_id,
+           updated_at = now()
+     where id = v_quote.id;
+
+    perform pg_catalog.set_config('swayphics.quote_invoice_conversion', 'off', true);
+
+    return jsonb_build_object(
+        'invoice_id', v_invoice_id,
+        'invoice_number', v_invoice_number,
+        'already_created', false
+    );
+end;
+$function$;
+
+
+revoke all on function public.admin_create_invoice_from_quote(uuid)
+    from public, anon, authenticated, service_role;
+grant execute on function public.admin_create_invoice_from_quote(uuid)
     to authenticated;
 
 -- Preserve the original proposal-response contract while recording explicit
