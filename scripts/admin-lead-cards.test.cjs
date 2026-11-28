@@ -135,4 +135,42 @@ assert.match(css, /\.sway-lead-profile-modal[\s\S]*?max-height/);
 assert.match(css, /body\.sway-dark-mode[\s\S]*?sway-lead-profile/);
 assert.match(css, /@media \(max-width: 680px\)/);
 
-console.log("Admin lead-card and profile contract tests passed.");
+const proposalReviewStart = workspace.indexOf("    function openLeadProposalReview(");
+assert.ok(proposalReviewStart >= 0, "the lead proposal review function must exist");
+const proposalReviewEnd = workspace.indexOf("\n    function ", proposalReviewStart + 1);
+assert.ok(proposalReviewEnd > proposalReviewStart, "the lead proposal review function must have an end marker");
+const proposalReview = workspace.slice(proposalReviewStart, proposalReviewEnd);
+assert.match(proposalReview, /data-proposal-save-draft=/,
+    "proposal review must expose a dedicated save-draft action");
+assert.match(proposalReview, /\[data-proposal-save-draft\]/,
+    "the save-draft action must have a click handler");
+assert.match(proposalReview, /status:\s*"draft"/,
+    "saving must retain the proposal in draft status");
+assert.match(proposalReview, /approved_by:\s*null[\s\S]*approved_at:\s*null/,
+    "saving a draft must clear internal approval metadata");
+assert.match(proposalReview, /data-proposal-close/,
+    "the proposal editor must provide an explicit close-without-saving action");
+assert.match(proposalReview, /isEditableDraft/,
+    "only draft proposals may be edited or approved");
+assert.match(proposalReview, /Only a draft revision can be approved/,
+    "approval must be blocked for a non-draft proposal");
+
+assert.match(proposalReview, /structured_content:\s*\{/,
+    "saving proposal sections must persist structured JSON content");
+assert.match(proposalReview, /data-proposal-section=/,
+    "the editor must expose individual structured proposal sections");
+assert.match(proposalReview, /scope_and_deliverables/,
+    "the agreed scope and deliverables section must be present");
+assert.match(proposalReview, /business_understanding/,
+    "the agreed business understanding section must be present");
+assert.match(proposalReview, /Commercial investment/,
+    "the commercial investment section must be reserved for linked quote data");
+assert.match(proposalReview, /lead_proposal_versions/,
+    "proposal revision history must be loaded from its immutable snapshot table");
+assert.match(proposalReview, /data-proposal-create-revision=/,
+    "approved or rejected proposals must offer an explicit new draft revision action");
+assert.match(proposalReview, /missingRequiredSections/,
+    "internal approval must require the key structured proposal sections");
+assert.match(proposalReview, /current_version/,
+    "the current proposal revision number must be shown and retained");
+console.log("Admin lead-card and proposal draft tests passed.");

@@ -10821,3 +10821,202 @@ body.sway-dark-mode .sway-budget-forecast-heading {
         grid-column: auto;
     }
 }
+
+/* Structured proposal editor and immutable revision history */
+.sway-proposal-structure-heading,
+.sway-proposal-history-section > div:first-child {
+    display: grid;
+    gap: 4px;
+}
+.sway-proposal-structure-heading strong,
+.sway-proposal-history-section > div:first-child strong {
+    color: var(--sway-dark, #081533);
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+.sway-proposal-structure-heading > span,
+.sway-proposal-history-section > div:first-child > span {
+    color: #66748A;
+    font-size: 0.74rem;
+    line-height: 1.6;
+}
+.sway-proposal-sections {
+    display: grid;
+    gap: 13px;
+}
+.sway-proposal-section-field {
+    display: grid;
+    gap: 7px;
+}
+.sway-proposal-section-field > span {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--sway-dark, #081533);
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+.sway-proposal-section-field > span .sway-proposal-required {
+    color: #53647D;
+    font-size: 0.62rem;
+    font-weight: 700;
+}
+.sway-proposal-section-field textarea {
+    width: 100%;
+    min-height: 108px;
+    resize: vertical;
+    padding: 12px 13px;
+    border: 1px solid rgba(0,32,150,0.13);
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: #17243B;
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.65;
+}
+.sway-proposal-section-field textarea:focus,
+.sway-proposal-review-fields input:focus {
+    outline: 2px solid rgba(1,82,244,0.16);
+    outline-offset: 1px;
+    border-color: rgba(1,82,244,0.48);
+}
+.sway-proposal-section-field textarea[readonly],
+.sway-proposal-review-fields input[readonly] {
+    background: #F5F7FB;
+    color: #5D6A7E;
+    cursor: default;
+}
+.sway-proposal-section-field > small {
+    color: #758197;
+    font-size: 0.68rem;
+    line-height: 1.55;
+}
+.sway-proposal-pricing-placeholder {
+    padding: 13px 14px;
+    border: 1px solid rgba(0,32,150,0.11);
+    border-radius: 10px;
+    background: #F5F7FB;
+}
+.sway-proposal-pricing-placeholder strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #17243B;
+    font-size: 0.76rem;
+}
+.sway-proposal-pricing-placeholder p {
+    margin: 0;
+    color: #66748A;
+    font-size: 0.72rem;
+    line-height: 1.6;
+}
+.sway-proposal-history-section {
+    display: grid;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(0,32,150,0.1);
+}
+.sway-proposal-version-history {
+    display: grid;
+    gap: 8px;
+}
+.sway-proposal-version-item {
+    border: 1px solid rgba(0,32,150,0.1);
+    border-radius: 9px;
+    background: #FFFFFF;
+    overflow: hidden;
+}
+.sway-proposal-version-item summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 11px 12px;
+    color: #46556B;
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.7rem;
+}
+.sway-proposal-version-item summary::-webkit-details-marker {
+    display: none;
+}
+.sway-proposal-version-item summary strong {
+    color: #17243B;
+}
+.sway-proposal-version-item summary time {
+    margin-left: auto;
+    color: #7B8798;
+}
+.sway-proposal-version-snapshot {
+    display: grid;
+    gap: 8px;
+    padding: 0 12px 12px;
+}
+.sway-proposal-version-snapshot > strong {
+    color: #17243B;
+    font-size: 0.74rem;
+}
+.sway-proposal-version-snapshot pre {
+    max-height: 240px;
+    overflow: auto;
+    margin: 0;
+    padding: 10px;
+    border-radius: 7px;
+    background: #F5F7FB;
+    color: #536176;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: inherit;
+    font-size: 0.68rem;
+    line-height: 1.6;
+}
+.sway-proposal-version-snapshot small {
+    color: #7B8798;
+    font-size: 0.65rem;
+}
+@media (max-width: 620px) {
+    .sway-proposal-version-item summary {
+        align-items: flex-start;
+    }
+    .sway-proposal-version-item summary time {
+        width: 100%;
+        margin-left: 0;
+    }
+}
+
+
+/* Keep the structured proposal fields compact inside the existing scrollable modal. */
+.sway-proposal-review-fields .sway-proposal-section-field textarea {
+    min-height: 112px;
+}
+body.sway-dark-mode .sway-proposal-section-field > span,
+body.sway-dark-mode .sway-proposal-pricing-placeholder strong,
+body.sway-dark-mode .sway-proposal-version-snapshot > strong {
+    color: #E5EBF5;
+}
+body.sway-dark-mode .sway-proposal-section-field > small,
+body.sway-dark-mode .sway-proposal-structure-heading > span,
+body.sway-dark-mode .sway-proposal-history-section > div:first-child > span,
+body.sway-dark-mode .sway-proposal-pricing-placeholder p,
+body.sway-dark-mode .sway-proposal-version-snapshot small {
+    color: #9EABC0;
+}
+body.sway-dark-mode .sway-proposal-section-field textarea {
+    border-color: #2A3A58;
+    background: #162238;
+    color: #EDF2F9;
+}
+body.sway-dark-mode .sway-proposal-section-field textarea[readonly] {
+    background: #121D30;
+    color: #9EABC0;
+}
+body.sway-dark-mode .sway-proposal-pricing-placeholder,
+body.sway-dark-mode .sway-proposal-version-item {
+    border-color: #2A3A58;
+    background: #121D30;
+}
+body.sway-dark-mode .sway-proposal-version-item summary,
+body.sway-dark-mode .sway-proposal-version-snapshot pre {
+    background: #162238;
+    color: #C4D0E0;
+}
