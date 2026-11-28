@@ -26,7 +26,8 @@ fi
 profiles_content=""
 if [[ -r "$profiles_file" ]]; then
     profiles_content="$(cat "$profiles_file" 2>/dev/null || true)"
-elif command -v sudo >/dev/null 2>&1; then
+fi
+if [[ -z "$profiles_content" ]] && command -v sudo >/dev/null 2>&1; then
     profiles_content="$(sudo -n cat "$profiles_file" 2>/dev/null || true)"
 fi
 if [[ -n "$profiles_content" ]]; then
