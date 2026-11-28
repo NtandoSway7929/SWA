@@ -180,7 +180,8 @@ jobs:
           fi
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$GITHUB_WORKSPACE/supabase/migrations/20261128140000_swayphics_task_blocked_status.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
-          do $
+          begin;
+          do $test$
           begin
             insert into public.tasks (title, status)
             values ('Blocked status migration smoke test', 'blocked');
@@ -194,7 +195,7 @@ jobs:
                 null;
             end;
           end;
-          $;
+          $test$;
           rollback;
           SQL
 
