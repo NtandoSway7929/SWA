@@ -659,3 +659,19 @@ This confirms Docker applied the requested log rotation settings to the four con
 The private-gateway Compose template now gives explicit maximum sizes to Crawl4AI's writable tmpfs mounts, Caddy's temporary/data/config mounts, and Cloudflared's temporary mount. Crawl4AI's configured tmpfs ceilings total 1,088 MiB, in addition to its 1 GiB shared-memory allocation, within its 4 GiB container memory ceiling. Caddy's three tmpfs mounts total 72 MiB; Cloudflared's temporary mount is 32 MiB.
 
 A runtime verifier reads Docker's inspected HostConfig.Tmpfs values and checks the exact byte ceilings for Crawl4AI and Caddy. Its regression tests cover missing mounts and changed sizes. This is intended to prevent unexpectedly unbounded tmpfs growth, but it does not establish that the chosen sizes are sufficient for real crawls. If a workload exceeds a mount limit, writes can fail; representative workload testing is required before deployment. Cloudflared's mount is covered by Compose configuration validation but is not runtime-tested because the tunnel connector is intentionally not started in CI.
+
+
+
+### Runtime tmpfs ceilings verified on live Docker containers — 28 November 2026
+
+The isolated POC workflow passed [GitHub Actions run 203](https://github.com/NtandoSway7929/SWA/actions/runs/46137238782), commit 506b1224a3bed369d90e89ebfd2aa5530dd45fb1. All three workflow jobs passed.
+
+The live Docker smoke test inspected the actual HostConfig.Tmpfs settings for Crawl4AI and Caddy and confirmed the exact configured sizes:
+- Crawl4AI: /tmp 512 MiB; Redis 128 MiB; output directory 256 MiB; each of its three app/cache working directories 64 MiB.
+- Caddy: /data 32 MiB; /config 8 MiB; /tmp 32 MiB.
+
+The verifier parses Docker's human-readable size suffixes and checks the byte-equivalent values. Regression tests passed for expected sizes, missing mounts, missing size options and altered size values. The Compose configuration also validates with the new limits.
+
+During test development, the first runtime check revealed that Docker inspect reports size values with suffixes such as `512m`, rather than always returning raw bytes. The verifier was updated to parse those suffixes; the first missing-mount assertion was also corrected to reflect the actual missing-size failure. Run 203 confirms the corrected tests and live checks pass.
+
+The tmpfs ceilings can cause writes to fail if a crawl exceeds the allocated space. They are not a substitute for workload testing. The 4 GiB crawler memory cap includes its 1 GiB shared-memory allocation and the configured tmpfs mounts, but no representative concurrency or memory-pressure benchmark has yet been performed. No host was selected, no paid server purchased, and no production service changed.
