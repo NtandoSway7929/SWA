@@ -21,6 +21,8 @@ assert.match(adminHtml, /proposal-sales-handoff\.css\?v=20261128-accepted-quote-
     "the admin dashboard must load accepted quote handoff styling");
 assert.match(adminHtml, /proposal-sales-handoff\.js\?v=20261128-accepted-quote-sales-1/,
     "the admin dashboard must load accepted quote handoff actions");
+assert.match(adminHtml, /proposal-sales-handoff\.css\?v=20261128-accepted-quote-sales-1/,
+    "the admin dashboard must load accepted quote handoff styling");
 assert.match(adminHtml, /proposal-delivery\.js[\s\S]*proposal-sales-handoff\.js/,
     "sales handoff actions must load after proposal delivery actions");
 
