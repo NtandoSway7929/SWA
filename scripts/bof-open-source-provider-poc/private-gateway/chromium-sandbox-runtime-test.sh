@@ -82,7 +82,7 @@ curl --connect-timeout 3 --max-time 90 --fail --silent --show-error \
   -X POST "http://127.0.0.1:${port}/crawl" \
   -H "Authorization: Bearer $token" \
   -H "Content-Type: application/json" \
-  --data '{"urls":["https://example.com"],"browser_config":{},"crawler_config":{}}' \
+  --data '{"urls":["https://example.com"],"browser_config":{},"crawler_config":{"delay_before_return_html":5}}' \
   >"$response_file" &
 request_pid=$!
 chromium_seen=false
@@ -93,7 +93,7 @@ while :; do
   if [ -z "$request_state" ] || [[ "$request_state" == Z* ]]; then
     break
   fi
-  observation="$(docker exec "$name" python -c '
+  observation="$(docker exec --user 0 "$name" python -c '
 import glob, os
 for path in glob.glob("/proc/[0-9]*/cmdline"):
     pid = path.split("/")[2]
