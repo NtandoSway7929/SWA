@@ -65,7 +65,7 @@ jobs:
             CRAWL4AI_API_TOKEN=ci-placeholder-only \
             BOF_GATEWAY_PUBLIC_URL=https://bof-inspect.swayphics.co.za \
             CLOUDFLARED_TUNNEL_TOKEN_FILE="$token_file" \
-            docker compose --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml config --format json \
+            docker compose --profile tunnel --file scripts/bof-open-source-provider-poc/private-gateway/compose.yml config --format json \
               > "$RUNNER_TEMP/bof-private-gateway-compose.json"
           node scripts/bof-open-source-provider-poc/private-gateway/validate-host-egress-policy.cjs \
             --compose "$RUNNER_TEMP/bof-private-gateway-compose.json"
