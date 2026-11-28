@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # Ephemeral CI-only runtime test. It uses the candidate constrained Chromium seccomp
-# profile; AppArmor remains unconfined for this diagnostic and must be hardened separately.
+# profile and Docker's default AppArmor profile; host userns restriction is adjusted by CI.
 # It does not alter host sysctls, AppArmor policy, Docker daemon config or production.
 image="unclecode/crawl4ai:0.9.6@sha256:4603d7c4d69769673dfa1214fa9abbcac2a874d4d9af07d784782af528b65c68"
 name="bof-chromium-sandbox-ci"
@@ -37,7 +37,7 @@ done
 
 profile_path="$(cd "$(dirname "$0")" && pwd)/chromium-seccomp.json"
 test -r "$profile_path"
-echo "Starting pinned Crawl4AI with sandbox=true, non-root appuser, no capabilities, no-new-privileges and the candidate constrained Chromium seccomp profile; AppArmor is unconfined for this diagnostic only."
+echo "Starting pinned Crawl4AI with sandbox=true, non-root appuser, no capabilities, no-new-privileges, candidate constrained seccomp profile and Docker's default AppArmor profile."
 docker run --detach --name "$name" \
   --publish "127.0.0.1:${port}:11235" \
   --env "CRAWL4AI_API_TOKEN=$token" \
@@ -46,7 +46,6 @@ docker run --detach --name "$name" \
   --cap-drop ALL \
   --security-opt no-new-privileges:true \
   --security-opt "seccomp=$profile_path" \
-  --security-opt apparmor=unconfined \
   --read-only \
   --tmpfs /tmp \
   --tmpfs /var/lib/redis:uid=999,gid=999,mode=0700 \
@@ -148,4 +147,5 @@ fi
 
 echo "PASS: Chromium renderer process was observed without --no-sandbox."
 echo "PASS: Chromium sandbox launched with user namespaces under the candidate filtered seccomp profile."
-echo "LIMIT: AppArmor was unconfined for this test. The candidate seccomp profile still needs review and separate host/AppArmor validation before deployment."
+echo "PASS: Docker's default AppArmor profile and the candidate filtered seccomp profile allowed Chromium's sandbox with the host userns restriction disabled."
+echo "LIMIT: the host sysctl was changed only on the disposable runner; production host configuration and operational impact still require review."
