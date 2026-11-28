@@ -233,6 +233,10 @@ function validateComposeConfig(compose, policy) {
         }
     }
 
+    const crawlEnvironment = services.crawl4ai?.environment;
+    assert(crawlEnvironment && crawlEnvironment.CRAWL4AI_CHROMIUM_SANDBOX === "true",
+        "Private gateway Compose must default Crawl4AI Chromium sandboxing to true.");
+
     for (const serviceName of topology.services_must_not_publish_host_ports) {
         const ports = services[serviceName]?.ports;
         assert(ports === undefined || (Array.isArray(ports) && ports.length === 0),

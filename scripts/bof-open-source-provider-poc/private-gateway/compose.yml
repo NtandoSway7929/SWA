@@ -32,6 +32,8 @@ services:
     image: unclecode/crawl4ai:0.9.6@sha256:4603d7c4d69769673dfa1214fa9abbcac2a874d4d9af07d784782af528b65c68
     environment:
       CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:?Set CRAWL4AI_API_TOKEN in the private deployment environment}
+      # Secure deployment default. CI may explicitly override this for API-only smoke tests.
+      CRAWL4AI_CHROMIUM_SANDBOX: ${CRAWL4AI_CHROMIUM_SANDBOX:-true}
     networks:
       - crawl_internal
       - crawl_egress
