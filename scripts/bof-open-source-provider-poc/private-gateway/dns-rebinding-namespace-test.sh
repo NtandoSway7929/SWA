@@ -242,7 +242,7 @@ grep -Fxq "A query 1: 1.1.1.1" "$dns_log"
 grep -Fxq "A query 2: 10.201.2.2" "$dns_log"
 grep -Fxq "/pinned" "$target_log"
 grep -Fxq "/redirect" "$target_log"
-if grep -Eq '^/(rebinding|private)
+if grep -Eq '^/(rebinding|private)$' "$target_log"; then
   echo "FAIL: blocked destination request reached the target fixture" >&2
   exit 1
 fi
